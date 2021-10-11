@@ -1,5 +1,13 @@
-frisc64: frisc64.o
-	ld -o frisc64 frisc64.o -lSystem -syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64 
+LDFLAGS = -syslibroot `xcrun -sdk macosx --show-sdk-path` -lSystem -e _start -arch arm64
+CFLAGS = -lc -e main
+LSTFLGS =
+DEBUGFLGS =
 
-frisc64.o: main.asm
-	as -o frisc64.o main.asm
+
+all: frisc
+
+%.o : %.s
+	as -march="armv8.2-a+fp16" $(DEBUGFLGS) $(LSTFLGS) $< -o $@
+
+frisc: main.asm
+	clang $(CFLAGS) -g -o frisc64 main.asm 
