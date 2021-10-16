@@ -4,10 +4,10 @@ LSTFLGS =
 DEBUGFLGS =
 
 
-all: frisc
+all: a64
 
 %.o : %.s
 	as -march="armv8.2-a+fp16" $(DEBUGFLGS) $(LSTFLGS) $< -o $@
 
 frisc: main.asm
-	clang $(CFLAGS) -g -o frisc64 main.asm 
+	clang $(CFLAGS) -g -o a64 main.asm 
