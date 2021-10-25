@@ -2,4 +2,8 @@
 *.a
 *.dylib
 *.dSYM
+*.c
+*.out
+main_1.asm
 a64
+test.s 
