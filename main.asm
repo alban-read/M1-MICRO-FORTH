@@ -3,10 +3,13 @@
 ;; X29 frame ptr
 ;; X30 aka LR
 ;; X28 data section pointer
+;; X0-X7 and D0-D7, are used to pass arguments to assembly functions, 
+;; X19-X28 callee saved
+;; X8 indirect result 
+;; X9-X15 temp
 ;; this program links to the libc.
 
-;; words are seperated by one or more spaces.
-;; immediate words are capitalized and run as soon as they are seen
+;; words are separated by one or more spaces.
 ;; numeric values are converted to numbers and pushed to the stack.
 ;; 
 
@@ -25,9 +28,9 @@ getline:
 		ADD     X1, X28, zpadsz@PAGEOFF
 		ADRP	X28, zpadptr@PAGE	
 		ADD     X0, X28, zpadptr@PAGEOFF
-		STP		LR, XZR, [SP, #-16]!	
+		STP		LR, X16, [SP, #-16]!	
 		BL		_getline
-		LDP		LR, XZR, [SP], #16	
+		LDP		LR, X16, [SP], #16	
 		RET
 
    	    ; Ok prompt
@@ -68,9 +71,15 @@ sayword:
         B		sayit
 				
 sayunderflow:
-	 	ADRP	X28, ps10@PAGE	
-		ADD		X0, X28, ps10@PAGEOFF
+	 	ADRP	X0, ps10@PAGE	
+		ADD		X0, X0, ps10@PAGEOFF
         B		sayit
+
+sayoverflow:
+	 	ADRP	X28, ps11@PAGE	
+		ADD		X0, X28, ps11@PAGEOFF
+        B		sayit
+
 
 
 sayeol:
@@ -80,17 +89,15 @@ sayeol:
 		B		finish
 
 sayit:		
-        STP		LR, XZR, [SP, #-16]!
+     
 		ADRP	X8, ___stdoutp@GOTPAGE
 		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 		LDR		X1, [X8]
-
- 		STP		X1, X0, [SP, #-16]!
+   		STP		LR, X16, [SP, #-16]!
+ 		STP		X1, X1, [SP, #-16]!
 		BL		_fputs	 
 		ADD     SP, SP, #16 
-        
-		
-		LDP     LR, XZR, [SP], #16
+		LDP     LR, X16, [SP], #16
 		RET
 
 
@@ -182,15 +189,48 @@ advancespaces: ; byte ptr in x23, advance past spaces until zero
 90:		RET
 
 
-print: 			; prints top of stack		
-		STP		LR, XZR, [SP, #-16]!
-		ADRP	X28, dsp@PAGE	   
-	    ADD		X28, X28, dsp@PAGEOFF
-		LDR		X16, [X28]
+addz:			; add tos to 2os leaving result tos
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		ADD		W3, W1, W2
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
+		RET
+
+subz:			; add tos to 2os leaving result tos
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		SUB		W3, W2, W1
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
+		RET
+
+
+mulz:	; mul tos with 2os leaving result tos
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		MUL		W3, W2, W1
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
+		RET
+
+
+divz:	; div tos by 2os leaving result tos
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		UDIV	W3, W2, W1
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
+		RET
+
+
+emitz:	; output tos as char
+
+	
 		LDR		W1, [X16, #-4]
 		SUB		X16, X16, #4
-		STR		X16, [X28]
 
+		; check underflow
 		ADRP	X28, spu@PAGE	   
 	    ADD		X28, X28, spu@PAGEOFF
 		CMP		X16, X28
@@ -202,41 +242,90 @@ print: 			; prints top of stack
 		ADRP	X28, dsp@PAGE	   
 	    ADD		X28, X28, dsp@PAGEOFF
 		STR		X27, [X28]
+		MOV		X16, X27 
 		; report underflow
-		B.lt	sayunderflow
+	 
+		B		sayunderflow
+		
+12:		MOV		X0, X1 
+		STP		LR, X16, [SP, #-16]!
+ 		STP		X0, X0, [SP, #-16]!
+		BL		_putchar	 
+		ADD     SP, SP, #16 
+		LDP     LR, X16, [SP], #16
+		RET
+
+
+print: 			; prints int on top of stack		
+	
+		LDR		W1, [X16, #-4]
+		SUB		X16, X16, #4
+
+		; check underflow
+		ADRP	X28, spu@PAGE	   
+	    ADD		X28, X28, spu@PAGEOFF
+		CMP		X16, X28
+		b.gt	12f	
+
+		; reset stack
+		ADRP	X27, sp1@PAGE	   
+	    ADD		X27, X27, sp1@PAGEOFF
+		ADRP	X28, dsp@PAGE	   
+	    ADD		X28, X28, dsp@PAGEOFF
+		STR		X27, [X28]
+		MOV		X16, X27 
+		; report underflow
+	 
+		B		sayunderflow
 		
 12:
 
 	 	ADRP	X28, ps9@PAGE	   
 		ADD		X0, X28, ps9@PAGEOFF
+		STP		LR, X16, [SP, #-16]!
 		STP		X1, X0, [SP, #-16]!
 		BL		_printf		 
 		ADD     SP, SP, #16 
-
-
-		LDP		LR, XZR, [SP], #16	
+		LDP		LR, X16, [SP], #16	
 		RET
 
 
 word2number:	; converts ascii at word to 32bit number
-		STP		LR, XZR, [SP, #-16]!
+				; IN X16
+
 		ADRP	X28, zword@PAGE	   
 	    ADD		X0, X28, zword@PAGEOFF
+		STP		LR, X16, [SP, #-16]!
 		BL		_atoi
-		; push onto dsp
-		; data stack pointer
+		LDP     LR, X16, [SP], #16
+
+		STR		W0, [X16], #4
+
+		; check for overflow
+		ADRP	X28, spo@PAGE	   
+	    ADD		X28, X28, spo@PAGEOFF
+		CMP		X16, X28
+		b.lt	95f
+
+		; reset stack
+		ADRP	X27, sp1@PAGE	   
+	    ADD		X27, X27, sp1@PAGEOFF
 		ADRP	X28, dsp@PAGE	   
 	    ADD		X28, X28, dsp@PAGEOFF
-		LDR		X16, [X28]
-		STR		W0, [X16], #4
-		STR		X16, [X28]
-95:		LDP     LR, XZR, [SP], #16
+		STR		X27, [X28]
+		MOV		X16, X27 
+		; report overfow
+	
+		B		sayoverflow
+
+
+95:		
 		RET
 
 collectword:  ; byte ptr in x23, x22 
 			  ; copy and advance byte ptr until space.
 
-		STP		LR, XZR, [SP, #-16]!
+		STP		LR, X16, [SP, #-16]!
 		; reset word to zeros;
 		ADRP	X28, zword@PAGE	   
 	    ADD		X22, X28, zword@PAGEOFF
@@ -280,22 +369,22 @@ collectword:  ; byte ptr in x23, x22
 90:		MOV     W0, #0x00
 		STRB	W0, [X22], #1
 		STRB	W0, [X22], #1
-95:		LDP     LR, XZR, [SP], #16
+95:		LDP     LR, X16, [SP], #16
 		RET
 
 		; announciate version
 announce:		
-		STP		LR, XZR, [SP, #-16]!
-        ADRP	X28, ver@PAGE	     
-		ADD		X0, X28, ver@PAGEOFF
+	
+        ADRP	X0, ver@PAGE	     
+		ADD		X0, X0, ver@PAGEOFF
         LDR     X1, [X0]
-	 	ADRP	X28, ps1@PAGE	   
-		ADD		X0, X28, ps1@PAGEOFF
-
+	 	ADRP	X0, ps1@PAGE	   
+		ADD		X0, X0, ps1@PAGEOFF
+		STP		LR, X16, [SP, #-16]!
 		STP		X1, X0, [SP, #-16]!
 		BL		_printf		 
-		ADD     SP, SP, #16 
-		LDP		LR, XZR, [SP], #16	
+		ADD     SP, SP, #16  
+		LDP		LR, X16, [SP], #16	
 		RET
 
 		; exit the program
@@ -305,16 +394,12 @@ finish:
 		LDP		X19, X20, [SP], #16
 		RET
 
-
-bye_then:
-		; found Bye
-		BL		saybye
-		B		finish
+ 
 
 ;; leaf
 get_word: ; get word from zword into x22
-		ADRP	X28, zword@PAGE	   
-	    ADD		X22, X28, zword@PAGEOFF
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
 		LDR		X22, [X22]
 		RET
 
@@ -329,8 +414,17 @@ empty_word: ; is word empty?
 		RET
 
 
-main:	STP		X19, X20, [SP, #-16]!
-		STR		LR, [SP, #-16]!
+;; start running here
+
+main:	 
+		 
+
+init:	
+
+		ADRP	X28, dsp@PAGE	   
+	    ADD		X28, X28, dsp@PAGEOFF
+		LDR		X16, [X28]  ;; <-- data stack pointer to X16
+
 
    	    BL  announce
 input: 	BL  sayok
@@ -357,57 +451,91 @@ input: 	BL  sayok
 	    ADD		X21, X28, dbye@PAGEOFF
 		LDR		X21, [X21]
 		CMP		X21, X22
-		B.eq	bye_then  ; bye then
+		B.ne	outer  
+		
+		; Bye - we are leaving the program
 
-		; look for CR - which displays a CR
-		BL		get_word
-		ADRP	X28, dcr@PAGE	   
-	    ADD		X21, X28, dcr@PAGEOFF
-		LDR		X21, [X21]
-		CMP		X21, X22
-		B.ne	23f
-		BL		saycr  	; bye then
+		ADRP	X28, ps3@PAGE	
+		ADD		X0, X28, ps3@PAGEOFF  
+		ADRP	X8, ___stdoutp@GOTPAGE
+		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+		LDR		X1, [X8]
 
-		; look for PRINT - which prints int from top of stack
-23:
-		BL		get_word
-		ADRP	X28, dpr@PAGE	   
-	    ADD		X21, X28, dpr@PAGEOFF
-		LDR		X21, [X21]
-		CMP		X21, X22
-		B.ne	22f
-		BL		print  	; bye then
+   	 
+ 		STP		X1, X0, [SP, #-16]!
+		BL		_fputs	 
+		ADD     SP, SP, #16 
+		MOV		X0, #0
+		BL		_exit
 
-		; look for dot an alias of PRINT
-22:
-		BL		get_word
-		ADRP	X28, ddot@PAGE	   
-	    ADD		X21, X28, ddot@PAGEOFF
-		LDR		X21, [X21]
+
+
+		; outer interpreter
+		; look for WORDs - when found execute function	
+
+outer:	
+		; from here X28 is current word.
+		ADRP	X28, wlist@PAGE	   
+	    ADD		X28, X28, wlist@PAGEOFF
+
+find_word:	
+
+		BL		get_word	
+		LDR		X21, [X28]
+		CMP     X21, #0
+		B.eq    finish_list	
+
 		CMP		X21, X22
-		B.ne	20f
-		BL		print  	; bye then
+		B.ne	next_word
+
+		; found word, exec function
+		LDR     X0,	[X28, #16]
+		CMP		X0, #0 
+		B.eq	finish_list
+
+		STP		X28, XZR, [SP, #-16]!
+		BLR		X0	 
+		LDP		X28, XZR, [SP]
+
+next_word:		
+		ADD		X28, X28, #24
+		B       find_word
+
+finish_list: 
 
 
 20:
-		; look for number and if found push it to Data Stack
-		ADRP	X28, zword@PAGE	   
-	    ADD		X22, X28, zword@PAGEOFF
+		; look for an integer number 0..9 and if found push it to Data Stack
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
+		
+	
 		LDRB	W0, [X22]
 		CMP 	W0, #'9'
 		B.gt    21f
 		CMP     W0, #'0'
 		B.lt    21f
+
+23:		ADD		X22, X22, #1
+		LDRB	W0, [X22]
+		CMP		W0, #0
+		B.eq	24f
+		CMP 	W0, #'9'
+		B.gt    21f
+		CMP     W0, #'0'
+		B.lt    21f
+		B		23b
+24:
 		BL		word2number
 
 
-
-		; not a number
+		; not an int number
 21:
 
-		B	10b		
+		B	10b	
 
-        B   bye_then
+		MOV		X0,#0
+        BL		_exit
 		 
 
 
@@ -424,48 +552,51 @@ input: 	BL  sayok
 dpage: .zero 4
 zstdin: .zero 16
 
-ver:    .double 0.10 
+ver:    .double 0.31 
 
 ps1:    .ascii  "Version %2.2f\n"
         .zero   4
 
 .align 8
 
-ps2:    .ascii  "Ok\n"
-		.zero 16
-.align 	8
-
-ps3:	.ascii "Bye.."
+ps2:    .ascii  "\nOk\n"
 		.zero 16
 
+.align 	8
+ps3:	.ascii "\nBye..\n"
+		.zero 16
+
 
 .align 	8
-
 ps4:	.ascii "Exit no more input.."
 		.zero 16
 
 .align 	8
-
 ps5:	.ascii "Word too long.."
 		.zero 16
 
 .align 	8
-
 ps6:	.ascii "\r\n"
 		.zero 16
 
 .align 	8
-
 ps7:	.ascii "["
 		.zero 16
 
+.align 	8
 ps8:	.ascii "]"
 		.zero 16
 
+.align 	8
 ps9:	.ascii "%3d"
 		.zero 16
 
+.align 	8
 ps10:	.ascii "stack underflow"
+		.zero 16
+
+.align 	8
+ps11:	.ascii "stack overflow"
 		.zero 16
 
 
@@ -473,11 +604,13 @@ ps10:	.ascii "stack underflow"
 spaces:	.ascii "                              "
 		.zero 16
 
+
+; this is the data stack
 .align  8
 sps:	.zero 8*8	
-spu:	 
-sp1:    .zero 256*8
-spo:	 
+spu:	.zero 4
+sp1:    .zero 256*4  
+spo:	.zero 4
 sp0:    .zero 8*8
 dsp:	.quad sp1
 
@@ -494,18 +627,72 @@ zpos:    .quad 0
 zpadsz:  .quad 1024
 zpadptr: .quad zpad
 
+.align 8
+addressbuffer:
+		.zero 128*8
+
+
 
  .align 8
  dbye:		.ascii "BYE" 
 			.zero 5
 			.zero 8
+			.quad 0
+
+ wlist:	    ; each word is 16 bytes zero ascii	
+			; with pointer to function to branch to.
+			; 24 bytes
+
  dcr:		.ascii "CR" 
 			.zero 6	
 			.zero 8	
+			.quad saycr
+
  dpr:		.ascii "PRINT" 
 			.zero 3
 			.zero 8	
+			.quad print
 
  ddot:		.ascii "." 
 			.zero 7
 			.zero 8	
+			.quad print
+
+ dok:		.ascii "OK" 
+			.zero 6
+			.zero 8	
+			.quad sayok			
+
+ daddz:		.ascii "+" 
+			.zero 7
+			.zero 8	
+			.quad addz
+
+ dsubz:		.ascii "-" 
+			.zero 7
+			.zero 8	
+			.quad subz
+
+ dmulz:		.ascii "*" 
+			.zero 7
+			.zero 8	
+			.quad mulz
+
+ ddivz:		.ascii "/" 
+			.zero 7
+			.zero 8	
+			.quad divz
+
+ 			.ascii ".VERSION" 
+			.zero 8	
+			.quad announce
+
+			.ascii "EMIT" 
+			.zero 4
+			.zero 8	
+			.quad emitz
+
+			; the end of the list
+ dend:		.quad 0
+			.quad 0
+			.quad 0
