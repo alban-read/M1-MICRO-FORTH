@@ -11,7 +11,10 @@
 ;; X16 data stack
 ;; X15 return stack
 ;; X14 IP (interpretive pointer)
-;; X13 CSP code stack
+;; X13 CSP code pointer stack
+;; X12
+;; X11
+
 
 ;; X28 dictionary
 ;; X22 word 
@@ -73,12 +76,12 @@ sayword:
 		ADD		X0, X0, zword@PAGEOFF
         B		sayit
 				
-sayunderflow:
+sayoverflow:
 	 	ADRP	X0, tovflr@PAGE	
 		ADD		X0, X0, tovflr@PAGEOFF
         B		sayit
 
-sayoverflow:
+sayunderflow:
 	 	ADRP	X0,	 tunder@PAGE	
 		ADD		X0, X0,	tunder@PAGEOFF
         B		sayit
@@ -439,7 +442,64 @@ next_word:
 		SUB		X28, X28, #24
 		B       find_word
 
-finish_list: 
+finish_list: ; we did not find a defined word.
+
+	 
+
+check_integer_variables:
+
+		; look for a single letter variable name
+		; followed by @ (fetch) or ! (store)
+ 
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
+		LDRB	W0, [X22, #1]
+		CMP		W0, #'@'
+		B.eq	ivfetch
+		CMP		W0, #'!'
+		B.eq	ivset
+		B		20f
+
+ivfetch: ; from variable push to stack
+		LDRB 	W0,	[X22]
+		LSL		X0, X0, #3
+		ADRP	X27,ivars@PAGE 
+		ADD		X27, X27, ivars@PAGEOFF
+		LDR		W0, [X27, X0]
+		STR		W0, [X16], #4	
+		; todo check overflow.
+		B       10b
+
+ivset:	; from stack set variable
+		LDRB 	W0,	[X22]
+		LSL     X0, X0, #3
+		LDR		W1, [X16, #-4]
+		SUB		X16, X16, #4
+		; todo check under-flow.
+
+		; check underflow
+		ADRP	X2, spu@PAGE	   
+	    ADD		X2, X2, spu@PAGEOFF
+		CMP		X16, X2
+		b.gt	ivset2	
+
+		; reset stack
+		ADRP	X26, sp1@PAGE	   
+	    ADD		X26, X26, sp1@PAGEOFF
+		ADRP	X2, dsp@PAGE	   
+	    ADD		X2, X2, dsp@PAGEOFF
+		STR		X26, [X2]
+		MOV		X16, X26 
+		; report underflow
+		BL		sayunderflow
+		B		10b
+
+ivset2:		
+		ADRP	X27,ivars@PAGE 
+		ADD		X27, X27, ivars@PAGEOFF
+		ADD     X27, X27, X0
+		STR		W1, [X27]
+		B		10b
 
 
 20:
@@ -512,13 +572,13 @@ enter_compiler:
 		; - [DOCOL, SEMI] is essentially a NOOP. 
 		
 create_word: 
-	
+
 
 
 
 exit_compiler:
 
-		BL sayok
+		; BL sayok
 
 
 
@@ -639,8 +699,12 @@ rpo:	.zero 4
 rp0:    .zero 8*8
 rsp:	.quad rp1
 
+; global, single letter, integer variables
+.align 16
+ivars:	.zero 256*16	
 
 
+; used for line input
 .align 8
 zpad:    .ascii "ZPAD STARTS HERE"
 		 .zero 1024
