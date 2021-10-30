@@ -7,7 +7,7 @@
 ;; X19-X28 callee saved
 ;; X8 indirect result 
 ;; X9-X15 temp
-;; this program links to the libc.
+;; this program links to the libc, which is obviously cheating.
 
 ;; words are separated by one or more spaces.
 ;; numeric values are converted to numbers and pushed to the stack.
@@ -35,34 +35,34 @@ getline:
 
    	    ; Ok prompt
 sayok: 	
-        ADRP	X28, ps2@PAGE	
-		ADD		X0, X28, ps2@PAGEOFF
+        ADRP	X28, tok@PAGE	
+		ADD		X0, X28, tok@PAGEOFF
 		B		sayit
 
 saycr: 	
-        ADRP	X28, ps6@PAGE	
-		ADD		X0, X28, ps6@PAGEOFF
+        ADRP	X28, tcr@PAGE	
+		ADD		X0, X28, tcr@PAGEOFF
 		B		sayit
 
 saylb:
-	 	ADRP	X28, ps7@PAGE	
-		ADD		X0, X28, ps7@PAGEOFF
+	 	ADRP	X28, tlbr@PAGE	
+		ADD		X0, X28, tlbr@PAGEOFF
         B		sayit		
 
 sayrb:
-	 	ADRP	X28, ps8@PAGE	
-		ADD		X0, X28, ps8@PAGEOFF
+	 	ADRP	X28, trbr@PAGE	
+		ADD		X0, X28, trbr@PAGEOFF
         B		sayit		
 
 
 saybye:
-	 	ADRP	X28, ps3@PAGE	
-		ADD		X0, X28, ps3@PAGEOFF
+	 	ADRP	X28, tbye@PAGE	
+		ADD		X0, X28, tbye@PAGEOFF
         B		sayit
 
 sayerrlength:
-	 	ADRP	X28, ps5@PAGE	
-		ADD		X0, X28, ps5@PAGEOFF
+	 	ADRP	X28, tlong@PAGE	
+		ADD		X0, X28, tlong@PAGEOFF
         B		sayit
 				
 sayword:
@@ -71,20 +71,20 @@ sayword:
         B		sayit
 				
 sayunderflow:
-	 	ADRP	X0, ps10@PAGE	
-		ADD		X0, X0, ps10@PAGEOFF
+	 	ADRP	X0, tver0@PAGE	
+		ADD		X0, X0, tver0@PAGEOFF
         B		sayit
 
 sayoverflow:
-	 	ADRP	X28, ps11@PAGE	
-		ADD		X0, X28, ps11@PAGEOFF
+	 	ADRP	X28, tver1@PAGE	
+		ADD		X0, X28, tver1@PAGEOFF
         B		sayit
 
 
 
 sayeol:
-		ADRP	X28, ps4@PAGE	
-		ADD		X0, X28, ps4@PAGEOFF
+		ADRP	X28, texit@PAGE	
+		ADD		X0, X28, texit@PAGEOFF
 		BL		sayit
 		B		finish
 
@@ -119,63 +119,9 @@ resetline:
 		MOV     X0, X23
 
 		MOV     X1, #0
+		.rept 	512
 		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		; 128
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		; 256
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		; 384
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		; 512
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
+		.endr
 		RET
 
 advancespaces: ; byte ptr in x23, advance past spaces until zero
@@ -280,8 +226,8 @@ print: 			; prints int on top of stack
 		
 12:
 
-	 	ADRP	X28, ps9@PAGE	   
-		ADD		X0, X28, ps9@PAGEOFF
+	 	ADRP	X28, tdec@PAGE	   
+		ADD		X0, X28,tdec@PAGEOFF
 		STP		LR, X16, [SP, #-16]!
 		STP		X1, X0, [SP, #-16]!
 		BL		_printf		 
@@ -378,8 +324,8 @@ announce:
         ADRP	X0, ver@PAGE	     
 		ADD		X0, X0, ver@PAGEOFF
         LDR     X1, [X0]
-	 	ADRP	X0, ps1@PAGE	   
-		ADD		X0, X0, ps1@PAGEOFF
+	 	ADRP	X0, tver@PAGE	   
+		ADD		X0, X0, tver@PAGEOFF
 		STP		LR, X16, [SP, #-16]!
 		STP		X1, X0, [SP, #-16]!
 		BL		_printf		 
@@ -427,10 +373,12 @@ init:
 
 
    	    BL  announce
+
 input: 	BL  sayok
 		BL  resetword
 		BL  resetline
 		BL  getline
+
 10:		BL  advancespaces
 
 		BL  collectword
@@ -455,13 +403,12 @@ input: 	BL  sayok
 		
 		; Bye - we are leaving the program
 
-		ADRP	X28, ps3@PAGE	
-		ADD		X0, X28, ps3@PAGEOFF  
+		ADRP	X28, tbye@PAGE	
+		ADD		X0, X28, tbye@PAGEOFF  
 		ADRP	X8, ___stdoutp@GOTPAGE
 		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 		LDR		X1, [X8]
 
-   	 
  		STP		X1, X0, [SP, #-16]!
 		BL		_fputs	 
 		ADD     SP, SP, #16 
@@ -469,23 +416,25 @@ input: 	BL  sayok
 		BL		_exit
 
 
-
 		; outer interpreter
-		; look for WORDs - when found execute function	
+		; look for WORDs - when found execute the words function	
+		; we are in immediate interpretd mode, we see a word and we execute its code.
 
 outer:	
 		; from here X28 is current word.
-		ADRP	X28, wlist@PAGE	   
-	    ADD		X28, X28, wlist@PAGEOFF
-
+		ADRP	X28, sdict@PAGE	   
+	    ADD		X28, X28, sdict@PAGEOFF
+	 
 find_word:	
 
 		BL		get_word	
 		LDR		X21, [X28]
-		CMP     X21, #0
+		CMP     X21, #0        ; end of list?
 		B.eq    finish_list	
+		CMP     X21, #-1       ; undefined entry in list?
+		b.eq    next_word
 
-		CMP		X21, X22
+		CMP		X21, X22       ; is this our word?
 		B.ne	next_word
 
 		; found word, exec function
@@ -494,18 +443,20 @@ find_word:
 		B.eq	finish_list
 
 		STP		X28, XZR, [SP, #-16]!
-		BLR		X0	 
+		BLR		X0	 ;; call function
 		LDP		X28, XZR, [SP]
 
 next_word:		
-		ADD		X28, X28, #24
+		SUB		X28, X28, #24
 		B       find_word
 
 finish_list: 
 
 
 20:
-		; look for an integer number 0..9 and if found push it to Data Stack
+		; look for an integer number conntaing decimal digits.
+		; If found immediately push it onto our Data Stack
+
 		ADRP	X22, zword@PAGE	   
 	    ADD		X22, X22, zword@PAGEOFF
 		
@@ -520,29 +471,35 @@ finish_list:
 		LDRB	W0, [X22]
 		CMP		W0, #0
 		B.eq	24f
+		CMP 	W0, #'.'
+		B.eq	decimal_number
 		CMP 	W0, #'9'
 		B.gt    21f
 		CMP     W0, #'0'
 		B.lt    21f
+		
 		B		23b
 24:
 		BL		word2number
 
+		; the word may be a decimal number
+decimal_number:
 
-		; not an int number
+
+
+
+
+
+
 21:
 
 		B	10b	
 
 		MOV		X0,#0
         BL		_exit
-		 
-
-
-
-		;brk #0xF000
 		
 
+		;brk #0xF000
 
 
 .data
@@ -554,49 +511,51 @@ zstdin: .zero 16
 
 ver:    .double 0.31 
 
-ps1:    .ascii  "Version %2.2f\n"
+;; text literals
+
+tver:    .ascii  "Version %2.2f\n"
         .zero   4
 
 .align 8
 
-ps2:    .ascii  "\nOk\n"
+tok:    .ascii  "\nOk\n"
 		.zero 16
 
 .align 	8
-ps3:	.ascii "\nBye..\n"
+tbye:	.ascii "\nBye..\n"
 		.zero 16
 
 
 .align 	8
-ps4:	.ascii "Exit no more input.."
+texit:	.ascii "Exit no more input.."
 		.zero 16
 
 .align 	8
-ps5:	.ascii "Word too long.."
+tlong:	.ascii "Word too long.."
 		.zero 16
 
 .align 	8
-ps6:	.ascii "\r\n"
+tcr:	.ascii "\r\n"
 		.zero 16
 
 .align 	8
-ps7:	.ascii "["
+tlbr:	.ascii "["
 		.zero 16
 
 .align 	8
-ps8:	.ascii "]"
+trbr:	.ascii "]"
 		.zero 16
 
 .align 	8
-ps9:	.ascii "%3d"
+tdec:	.ascii "%3d"
 		.zero 16
 
 .align 	8
-ps10:	.ascii "stack underflow"
+tver0:	.ascii "stack underflow"
 		.zero 16
 
 .align 	8
-ps11:	.ascii "stack overflow"
+tver1:	.ascii "stack overflow"
 		.zero 16
 
 
@@ -639,9 +598,16 @@ addressbuffer:
 			.zero 8
 			.quad 0
 
- wlist:	    ; each word is 16 bytes zero ascii	
-			; with pointer to function to branch to.
+ wlist:	    ; each word is 16 bytes of zero terminated ascii	
+			; with a pointer to the adress of the machine code function to call.
 			; 24 bytes
+
+			; the end of the list
+ dend:		.quad 0
+			.quad 0
+			.quad 0
+
+			; primitive code word headings.
 
  dcr:		.ascii "CR" 
 			.zero 6	
@@ -692,7 +658,15 @@ addressbuffer:
 			.zero 8	
 			.quad emitz
 
-			; the end of the list
- dend:		.quad 0
+ ; user defined word headings x 128
+ duserdef:
+			.rept 128 ; <-- 128 words
+			.quad -1 
 			.quad 0
+			.quad 0	 
+			.endr
+ sdict:		.quad -1 
 			.quad 0
+			.quad 0	 			
+
+
