@@ -772,19 +772,63 @@ dsemic: ;  ";" semi, end word, stop compiling.
 
 
 dltz: ; "<" less than
+		
+lessthanz:
+		LDR		X0, [X16, #-8] 
+		LDR		X1, [X16, #-16]
+		CMP  	X0, X1		
+		B.gt	10f
+		B.eq	10f
+		MVN		X0, XZR ; true
+		B		20f
+10:
+		MOV		X0, XZR
+20:
+		STR 	X0, [X16, #-16]
+		SUB		X16, X16, #8
 		RET
+
 
 dltc: ;  "<"  
 		RET		
 
 dequz: ; "=" less than
+	
+equalz:
+		LDR		X0, [X16, #-8] 
+		LDR		X1, [X16, #-16]
+		CMP  	X0, X1		
+		B.ne	10f
+		MVN		X0, XZR ; true
+		B		20f
+10:
+		MOV		X0, XZR
+20:
+		STR 	X0, [X16, #-16]
+		SUB		X16, X16, #8
 		RET
+
 
 dequc: ;  "="  
 		RET		
 
 dgtz: ; ">" greater than
-		RET
+
+greaterthanz:
+		LDR		X0, [X16, #-8] 
+		LDR		X1, [X16, #-16]
+		CMP  	X0, X1		
+		B.lt	10f
+		B.eq	10f
+		MVN		X0, XZR ; true
+		B		20f
+10:
+		MOV		X0, XZR
+20:
+		STR 	X0, [X16, #-16]
+		SUB		X16, X16, #8
+		RET		
+
 
 dgtc: ;  ">"  
 		RET		
@@ -817,7 +861,7 @@ storz:  ; ( n address -- )
 		RET
 
 
-stackit: ; push W0 to stack.
+stackit: ; push x0 to stack.
 
 		STR		X0, [X16], #8
 		RET
