@@ -86,8 +86,6 @@ sayunderflow:
 		ADD		X0, X0,	tunder@PAGEOFF
         B		sayit
 
-
-
 sayeol:
 		ADRP	X0, texit@PAGE	
 		ADD		X0, X0, texit@PAGEOFF
@@ -413,13 +411,47 @@ input: 	BL  sayok
 		; we are in immediate mode, we see a word and we execute its code.
 
 outer:	
-		; from here X28 is current word.
+		; from here X28 is current word in sdict
 		ADRP	X28, sdict@PAGE	   
 	    ADD		X28, X28, sdict@PAGEOFF
-	 
+
 find_word:	
 
-		BL		get_word	
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
+		LDRB	W0, [X22, #1]
+		CMP		W0, #0
+
+		B.ne	fw1	
+
+short_words:
+
+		; we have a byte length word.
+		; search bytewords dictionary
+
+		LDRB 	W0,	[X22]
+		LSL		X0, X0, #5
+		ADRP	X1,bytewords@PAGE 
+		ADD		X1, X1, bytewords@PAGEOFF
+		ADD		X1, X1, X0 ; words address
+
+		; found word, exec z function
+		LDR     X2,	[X1, #8]
+		CMP		X2, #0 
+
+		B.eq	10b ; no exec
+
+		LDR     X0,  [X1, #24] ; data 
+		STP		X28, XZR, [SP, #-16]!
+		BLR		X2	 ;; call function
+		LDP		X28, XZR, [SP]
+		B		10b
+
+	
+fw1:	; look in long word dict
+	
+		 
+		BL 		get_word
 		LDR		X21, [X28]
 		CMP     X21, #0        ; end of list?
 		B.eq    finish_list	
@@ -542,10 +574,10 @@ compiler:
 	    ADD		X22, X22, zword@PAGEOFF
 		
 		LDRB	W0, [X22]
-		CMP 	W0, #':' 	; do we enter the compiler
-		B.ne	exit_compiler
+		CMP 	W0, #':' 	; do we enter the compiler ?
+		B.ne	exit_compiler ; no..
 
-		; from here we compile words.
+		; yes, from here we compile a new word.
 
 enter_compiler:
 
@@ -591,7 +623,977 @@ exit_compiler:
 		;brk #0xF000
 
 
+
+;; these functions are all single letter words.
+;; z is run time, c is the optional compile time behaviour.
+
+dstorez:	; ( addr value -- )
+		RET
+
+dstorec:	; ( addr value -- )
+		RET
+
+
+dquotz:	; " 
+		RET
+
+dquotc:	; " 
+		RET
+
+dhashz:	; # 
+		RET
+
+dhashc:	; #
+		RET
+
+ddollarz: ; $ 
+		RET
+
+ddollarc: ; $ 
+		RET
+
+dmodz: ; % 
+		RET
+
+dmodc: ; % 
+		RET
+
+
+dandz: ; & 
+		RET
+
+dandc: ; & 
+		RET
+
+dtickz: ; '
+		RET
+
+dtickc: ; '
+		RET
+
+dlrbz: ; (
+		RET
+
+dlrbc: ; (
+		RET
+
+drrbz: ; )
+		RET
+
+drrbc: ; )
+		RET
+
+dstarz: ; *
+		B		mulz
+		RET
+
+dstarc: ; *
+		RET
+
+dcomaz: ; , compile tos into dict.
+		RET
+
+dcomac: ; ,
+		RET
+
+dsubz: ; -  subtract
+		B  		subz
+		RET
+
+dsubc: ;  subtract
+		RET
+
+ddotz: ; . print tos
+		B  		print
+		RET
+
+ddotc: ; 
+		RET
+
+
+ddivz: ; / divide
+		B  		divz
+		RET
+
+ddivc: ; 
+		RET
+
+
+dplusz: ; +
+		B  		addz
+		RET
+
+dplusc: ; 
+		RET
+
+
+dcolonz: ; : define new word, docol
+		RET
+
+dcolonc: ;  : compile word 
+		RET		
+
+dsemiz: ; ";" semi, end word, return.
+		RET
+
+dsemic: ;  ";" semi, end word, stop compiling.
+		RET		
+
+
+dltz: ; "<" less than
+		RET
+
+dltc: ;  "<"  
+		RET		
+
+dequz: ; "=" less than
+		RET
+
+dequc: ;  "="  
+		RET		
+
+dgtz: ; ">" greater than
+		RET
+
+dgtc: ;  ">"  
+		RET		
+
+dqmz: ; "?" if zero
+		RET
+
+dqmc: ;  "?"  
+		RET		
+
+datz: ; "@" at - fetch 
+		RET
+
+datc: ;  "@"  
+		RET		
+
+
+
+
+stackit: ; push W0 to stack.
+
+		STR		W0, [X16], #4
+		RET
+
+dvaradd: ; load the value in X0 (a global variable) to the stack
+		LDR		W0, [X0]
+		STR		W0, [X16], #4
+		RET
+
+
+diloopz: ; special I loop variable
+		RET
+
+djloopz: ; special J loop variable
+		RET
+
+dkloopz: ; special K loop variable
+		RET
+
+diloopc: ; special I loop variable
+		RET
+
+djloopc: ; special J loop variable
+		RET
+
+dkloopc: ; special K loop variable
+		RET
+
+dlsbz:  ; [ 
+		RET
+		
+
+dlsbc:  ; [
+		RET
+
+
+dshlashz:  ; \
+		RET
+		
+
+dshlashc:  ; \
+		RET
+
+
+drsbz:  ; ]
+		RET
+		
+
+drsbc:  ; ]
+		RET
+
+
+dtophatz:  ; 
+		RET
+		
+
+dtophatc:  ; 
+		RET
+
+
+dunderscorez:  ; 
+		RET
+		
+
+dunderscorec:  ; 
+		RET
+
+
+dbacktkz:  ; 
+		RET
+		
+
+dbacktkc:  ;   
+		RET
+
+dlcbz: ;  {   lcb
+		RET
+
+dlcbc: ;  {   lcb
+		RET
+
+
+
+dpipez: ; |  pipe
+		RET
+
+
+dpipec: ; |  pipe
+		RET
+
+
+drcbz: ;  }   rcb
+		RET
+
+drcbc: ;  }  rcb
+		RET
+
+dtildez: ;  ~  tilde
+		RET
+
+dtildec: ;  ~  tilde
+		RET
+
+
+ddelz:	; del (127)
+		RET
+
+ddelc:	; del (127)
+		RET
+
+
 .data
+
+
+ .align 8
+ bytewords:	; single character words
+			; 32 byte struct
+			; we can just look these up without searching a list
+  
+			; control code, unprintable, byte codes.
+			.rept 33 		; 
+			.quad 0			; word name etc
+			.quad 0			; function address
+			.quad 0			; data
+			.quad 0			; data
+			.endr
+
+			; printable, byte codes, symbols we can use.
+
+			; ascii 33 !
+			.byte 33		; word name etc
+			.zero 7
+			.quad dstorez	; function address
+			.quad dstorec	;			 
+			.quad 0			; data
+
+			; ascii 34 " double quote
+			.byte 34		; word name etc
+			.zero 7
+			.quad dquotz	; function address
+			.quad dquotc    ; compile time
+			.quad 0			; data
+
+			; ascii 35 # hash -- used for numeric formats
+			.byte 35		; word name etc
+			.zero 7
+			.quad dhashz	; function address
+			.quad dhashc    ; compile time
+			.quad 0			; data
+
+			; ascii 36 $    used for strings
+			.byte 36		; word name etc
+			.zero 7
+			.quad ddollarz	; function address
+			.quad ddollarc   ; compile time
+			.quad 0			; data
+
+			; ascii 37 %    used for mod
+			.byte 37	   	; word name etc
+			.zero 7
+			.quad dmodz		; function address
+			.quad dmodc   	; compile time
+			.quad 0			; data
+
+			; ascii 38 &    used for and
+			.byte 38	    ; word name etc
+			.zero 7
+			.quad dandz	    ; function address
+			.quad dandc     ; compile time
+			.quad 0			; data
+
+			; ascii 39 '    used for tick
+			.byte 39	    ; word name etc
+			.zero 7
+			.quad dtickz	; function address
+			.quad dtickc    ; compile time
+			.quad 0			; data
+
+			; ascii 40 (    lrb
+			.byte 40	    ; word name etc
+			.zero 7
+			.quad dlrbz		; function address
+			.quad dlrbc    	; compile time
+			.quad 0			; data
+
+			; ascii 41 )    rrb
+			.byte 41	    ; word name etc
+			.zero 7
+			.quad drrbz		; function address
+			.quad drrbc    	; compile time
+			.quad 0			; data
+
+			; ascii 42 *    multiply
+			.byte 42	    ; word name etc
+			.zero 7
+			.quad dstarz	; function address
+			.quad dstarc    ; compile time
+			.quad 0			; data
+
+			; ascii 43 +    plus
+			.byte 43	    ; word name etc
+			.zero 7
+			.quad dplusz	; function address
+			.quad dplusc    ; compile time
+			.quad 0			; data
+
+
+			; ascii 44 ,    compile into dictionary
+			.byte 44	    ; word name etc
+			.zero 7
+			.quad dcomaz	; function address
+			.quad dcomac    ; compile time
+			.quad 0			; data
+
+
+			; ascii 45 -    sub
+			.byte 45	    ; word name etc
+			.zero 7
+			.quad dsubz		; function address
+			.quad dsubc     ; compile time
+			.quad 0			; data
+
+			; ascii 46 .    dot
+			.byte 46	    ; word name etc
+			.zero 7
+			.quad ddotz		; function address
+			.quad ddotc     ; compile time
+			.quad 0			; data
+
+
+			; ascii 47 /    div
+			.byte 47	    ; word name etc
+			.zero 7
+			.quad ddivz		; function address
+			.quad ddivc     ; compile time
+			.quad 0			; data
+
+			; digits, we stack these.
+
+			; ascii 48 0    zero
+			.byte 48	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 0			; data to stack
+
+			; ascii 49 1    one
+			.byte 49	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 1			; data to stack
+
+			; ascii 50 2    two
+			.byte 50	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 2			; data to stack
+
+			; ascii 51 3    three
+			.byte 51	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 3			; data to stack
+
+			; ascii 52 4    four
+			.byte 52	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 4			; data to stack
+
+			; ascii 53 5    five
+			.byte 53	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 5			; data to stack
+
+			; ascii 54 6    
+			.byte 54	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 6			; data to stack
+
+			; ascii 55 7   
+			.byte 55	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 7			; data to stack
+
+			; ascii 56 8   
+			.byte 56	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 8			; data to stack
+
+			; ascii 57 9   
+			.byte 57	    ; word name etc
+			.zero 7
+			.quad stackit	; function address
+			.quad 0		    ; compile time
+			.quad 9			; data to stack
+
+			; ascii 58 : - define word, docol   
+			.byte 58	    ; word name etc
+			.zero 7
+			.quad dcolonz		; function address of docol
+			.quad dcolonc		; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 59 ; - end word, semi   
+			.byte 58	    ; word name etc
+			.zero 7
+			.quad dsemiz	; function address of docol
+			.quad dsemic	; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 60 ; < less than 
+			.byte 60	    ; word name etc
+			.zero 7
+			.quad dltz		; function address of docol
+			.quad dltc		; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 61 ; = equ 
+			.byte 61	    ; word name etc
+			.zero 7
+			.quad dequz		; function address of docol
+			.quad dequc		; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 62 >   
+			.byte 62	    ; word name etc
+			.zero 7
+			.quad dgtz		; function address of docol
+			.quad dgtc		; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 63  ?  
+			.byte 63	    ; word name etc
+			.zero 7
+			.quad dqmz		; function address of docol
+			.quad dqmc		; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 64  @ fetch  
+			.byte 64	    ; word name etc
+			.zero 7
+			.quad datz		; function address of docol
+			.quad datc		; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 65 variable A  
+			.byte 65	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad  8 * 65 + ivars	 
+
+			; ascii 66 variable B ..  
+			.byte 66	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 66 + ivars	
+
+			; ascii 67 variable C ..  
+			.byte 67	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 67 + ivars	
+
+			; .. variable 
+			.byte 68	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 68 + ivars	
+
+			; .. variable 
+			.byte 69	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 69 + ivars	
+
+			; .. variable 
+			.byte 70	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 70 + ivars	
+
+			; .. variable 
+			.byte 71	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 71 + ivars	
+
+			; .. variable H 
+			.byte 72	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 72 + ivars	
+
+			; special I loop vbariable 
+			.byte 73	    ; word name etc
+			.zero 7
+			.quad diloopz	 
+			.quad diloopc	 
+			.quad 0
+
+			; special J loop variable 
+			.byte 74	    ; word name etc
+			.zero 7
+			.quad djloopz	 
+			.quad djloopc	 
+			.quad 0
+
+			; special K loop variable 
+			.byte 75	    ; word name etc
+			.zero 7
+			.quad dkloopz	 
+			.quad dkloopc	 
+			.quad 0
+
+			; .. variable L 
+			.byte 76	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 76 + ivars
+
+		 	; .. variable M 
+			.byte 77	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 77 + ivars
+
+ 			; .. variable N 
+			.byte 78	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 78 + ivars
+
+			; .. variable O 
+			.byte 79	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 79 + ivars
+
+			; .. variable P 
+			.byte 80	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 80 + ivars
+
+			; .. variable Q 
+			.byte 81	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 81 + ivars
+
+			; .. variable R 
+			.byte 82	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 82 + ivars
+
+			; .. variable S 
+			.byte 83	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 83 + ivars
+
+			; .. variable T 
+			.byte 84	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 84 + ivars
+
+			; .. variable U 
+			.byte 85	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 85 + ivars
+
+			; .. variable V
+			.byte 86	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 86 + ivars
+
+			; .. variable W
+			.byte 87	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 87 + ivars
+
+			; .. variable X
+			.byte 88	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 88 + ivars
+
+			; .. variable Y
+			.byte 89	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 89 + ivars
+
+			; .. variable Z
+			.byte 90	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 90 + ivars
+
+			; end of A..Z
+
+
+			; ascii 93 [ lsb stop interpreting and compile
+			.byte 91	    ; word name etc
+			.zero 7
+			.quad dlsbz		; function address  
+			.quad dlsbc		; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 92 \ 	; slash
+			.byte 92	    ; word name etc
+			.zero 7
+			.quad dshlashz		; function address  
+			.quad dshlashc		; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 93 ] rsb stop interpreting and compile
+			.byte 93	    ; word name etc
+			.zero 7
+			.quad drsbz		; function address  
+			.quad drsbc		; compile time action..
+			.quad 0			; data to stack
+
+			
+			; ascii 94  top hat
+			.byte 94	    ; word name etc
+			.zero 7
+			.quad dtophatz	; function address  
+			.quad dtophatc	; compile time action..
+			.quad 0			; data to stack
+
+			; ascii 95  underscore
+			.byte 95	    	; word name etc
+			.zero 7
+			.quad dunderscorez	; function address  
+			.quad dunderscorec	; compile time action..
+			.quad 0				; data to stack
+
+			; ascii 96  backtick
+			.byte 96	    	; word name etc
+			.zero 7
+			.quad dbacktkz		; function address  
+			.quad dbacktkc		; compile time action..
+			.quad 0				; data to stack
+
+
+			;; lower case 
+
+
+			; ascii 97 variable A  
+			.byte 97	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad  8 * 97 + ivars	 
+
+			; ascii 98 variable B ..  
+			.byte 98	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 98 + ivars	
+
+			; ascii 99 variable C ..  
+			.byte 99	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 99 + ivars	
+
+			; .. variable 
+			.byte 100	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 100 + ivars	
+
+			; .. variable 
+			.byte 101	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 101 + ivars	
+
+			; .. variable 
+			.byte 102	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 102 + ivars	
+
+			; .. variable 
+			.byte 103	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 103 + ivars	
+
+			; .. variable H 
+			.byte 104	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 104 + ivars	
+
+			; special I loop vbariable 
+			.byte 105	    ; word name etc
+			.zero 7
+			.quad diloopz	 
+			.quad diloopc	 
+			.quad 0
+
+			; special J loop variable 
+			.byte 106	    ; word name etc
+			.zero 7
+			.quad djloopz	 
+			.quad djloopc	 
+			.quad 0
+
+			; special K loop variable 
+			.byte 107	    ; word name etc
+			.zero 7
+			.quad dkloopz	 
+			.quad dkloopc	 
+			.quad 0
+
+			; .. variable L 
+			.byte 108	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 108 + ivars
+
+		 	; .. variable M 
+			.byte 109	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 109 + ivars
+
+ 			; .. variable N 
+			.byte 110	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 110 + ivars
+
+			; .. variable O 
+			.byte 111	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 111 + ivars
+
+			; .. variable P 
+			.byte 112	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 112 + ivars
+
+			; .. variable Q 
+			.byte 113	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 113 + ivars
+
+			; .. variable R 
+			.byte 114	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 114 + ivars
+
+			; .. variable S 
+			.byte 115	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 115 + ivars
+
+			; .. variable T 
+			.byte 116	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 116 + ivars
+
+			; .. variable U 
+			.byte 117	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 117 + ivars
+
+			; .. variable V
+			.byte 118	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 118 + ivars
+
+			; .. variable W
+			.byte 119	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 119 + ivars
+
+			; .. variable X
+			.byte 120	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 120 + ivars
+
+			; .. variable Y
+			.byte 121	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 121 + ivars
+
+			; .. variable Z
+			.byte 122	    ; word name etc
+			.zero 7
+			.quad dvaradd	;  
+			.quad 0			; compile time action..
+			.quad 8 * 122 + ivars
+
+
+			; ascii 123 {   lcb
+			.byte 123	    ; word name etc
+			.zero 7
+			.quad dlcbz		; function address
+			.quad dlcbc    	; compile time
+			.quad 0			; data
+
+			; ascii 124 |  pipe
+			.byte 124	    ; word name etc
+			.zero 7
+			.quad dpipez	; function address
+			.quad dpipec    ; compile time
+			.quad 0			; data
+
+			; ascii 125  } rcb
+			.byte 125	    ; word name etc
+			.zero 7
+			.quad drcbz		; function address
+			.quad drcbz    ; compile time
+			.quad 0			; data
+
+			; ascii 126 ~  tilde
+			.byte 125	    ; word name etc
+			.zero 7
+			.quad dtildez	; function address
+			.quad dtildec   ; compile time
+			.quad 0			; data
+
+			; ascii 127 del
+			.byte 127	    ; word name etc
+			.zero 7
+			.quad ddelz		; function address
+			.quad ddelc     ; compile time
+			.quad 0			; data
+
+			; non ascii 7 bit byte codes
+			.rept 127 		; 
+			.quad 0			; word name etc
+			.quad 0			; function address
+			.quad 0			; data
+			.quad 0			; data
+			.endr
+
+
+
+			.quad 0
+
 
 .align 8
 
@@ -723,13 +1725,15 @@ addressbuffer:
 
 
 
+			   
+
  .align 8
  dbye:		.ascii "BYE" 
 			.zero 5
 			.zero 8
 			.quad 0
 
- wlist:	    ; each word is 16 bytes of zero terminated ascii	
+ 		    ; each word is 16 bytes of zero terminated ascii	
 			; with a pointer to the adress of the machine code function to call.
 			; 24 bytes
 
@@ -760,22 +1764,22 @@ addressbuffer:
 			.zero 8	
 			.quad sayok			
 
- daddz:		.ascii "+" 
+ 			.ascii "+" 
 			.zero 7
 			.zero 8	
 			.quad addz
 
- dsubz:		.ascii "-" 
+ 			.ascii "-" 
 			.zero 7
 			.zero 8	
 			.quad subz
 
- dmulz:		.ascii "*" 
+ 			.ascii "*" 
 			.zero 7
 			.zero 8	
 			.quad mulz
 
- ddivz:		.ascii "/" 
+ 			.ascii "/" 
 			.zero 7
 			.zero 8	
 			.quad divz
