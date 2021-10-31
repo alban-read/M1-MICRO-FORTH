@@ -138,80 +138,61 @@ advancespaces: ; byte ptr in x23, advance past spaces until zero
 
 
 addz:			; add tos to 2os leaving result tos
-		LDR		X1, [X16, #-8]
-		LDR		X2, [X16, #-16]
-		ADD		X3, X1, X2
-		STR		X3, [X16, #-16]
-		SUB		X16, X16, #8
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		ADD		W3, W1, W2
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
 		RET
 
 subz:			; add tos to 2os leaving result tos
-		LDR		X1, [X16, #-8]
-		LDR		X2, [X16, #-16]
-		SUB		X3, X2, X1
-		STR		X3, [X16, #-16]
-		SUB		X16, X16, #8
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		SUB		W3, W2, W1
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
 		RET
 
 
 mulz:	; mul tos with 2os leaving result tos
-		LDR		X1, [X16, #-8]
-		LDR		X2, [X16, #-16]
-		MUL		X3, X2, X1
-		STR		X3, [X16, #-16]
-		SUB		X16, X16, #8
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		MUL		W3, W2, W1
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
 		RET
 
 andz:	; and tos with 2os leaving result tos
-		LDR		X1, [X16, #-8]
-		LDR		X2, [X16, #-16]
-		AND		X3, X2, X1
-		STR		X3, [X16, #-16]
-		SUB		X16, X16, #8
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		AND		W3, W2, W1
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
 		RET
-
-
-negz:	;  
-		LDR		X1, [X16, #-8]
-		NEG		X1, X1
-		STR		X1, [X16, #-8]
-		RET		
 
 orz:	; or tos with 2os leaving result tos
-		LDR		X1, [X16, #-8]
-		LDR		X2, [X16, #-16]
-		ORR		X3, X2, X1
-		STR		X3, [X16, #-16]
-		SUB		X16, X16, #8
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		ORR		W3, W2, W1
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
 		RET
 
 
-sdivz:	; div tos by 2os leaving result tos
-		LDR		X1, [X16, #-8]
-		LDR		X2, [X16, #-16]
-		SDIV	X3, X2, X1
-		STR		X3, [X16, #-16]
-		SUB		X16, X16, #8
+divz:	; div tos by 2os leaving result tos
+		LDR		W1, [X16, #-4]
+		LDR		W2, [X16, #-8]
+		UDIV	W3, W2, W1
+		STR		W3, [X16, #-8]
+		SUB		X16, X16, #4
 		RET
-
-		; unsigned does not work in a way I understand.
-udivz:	; div tos by 2os leaving result tos
-		LDR		X1, [X16, #-8]
-		LDR		X2, [X16, #-16]
-		SDIV	X3, X2, X1
-		STR		X3, [X16, #-16]
-		SUB		X16, X16, #8
-		RET
-
-
-
 
 
 emitz:	; output tos as char
 
 	
-		LDR		X1, [X16, #-8]
-		SUB		X16, X16, #8
+		LDR		W1, [X16, #-4]
+		SUB		X16, X16, #4
 
 		; check underflow
 		ADRP	X0, spu@PAGE	   
@@ -241,11 +222,25 @@ emitz:	; output tos as char
 
 print: ; prints int on top of stack		
 	
-		LDR		X1, [X16, #-8]
-		SUB		X16, X16, #8
+		LDR		W1, [X16, #-4]
+		SUB		X16, X16, #4
 
-		
-		
+		; check underflow
+		ADRP	X0, spu@PAGE	   
+	    ADD		X0, X0, spu@PAGEOFF
+		CMP		X16, X0
+		b.gt	12f	
+
+		; reset stack
+		ADRP	X27, sp1@PAGE	   
+	    ADD		X27, X27, sp1@PAGEOFF
+		ADRP	X0, dsp@PAGE	   
+	    ADD		X0, X0, dsp@PAGEOFF
+		STR		X27, [X0]
+		MOV		X16, X27 
+		; report underflow
+	 
+		B		sayunderflow
 		
 12:
 
@@ -268,7 +263,7 @@ word2number:	; converts ascii at word to 32bit number
 		BL		_atoi
 		LDP     LR, X16, [SP], #16
 
-		STR		X0, [X16], #8
+		STR		W0, [X16], #4
 
 		; check for overflow
 		ADRP	X0, spo@PAGE	   
@@ -518,16 +513,16 @@ ivfetch: ; from variable push to stack
 		LSL		X0, X0, #3
 		ADRP	X27,ivars@PAGE 
 		ADD		X27, X27, ivars@PAGEOFF
-		LDR		X0, [X27, X0]
-		STR		X0, [X16], #8	
+		LDR		W0, [X27, X0]
+		STR		W0, [X16], #4	
 		; todo check overflow.
 		B       10b
 
 ivset:	; from stack set variable
 		LDRB 	W0,	[X22]
 		LSL     X0, X0, #3
-		LDR		X1, [X16, #-8]
-		SUB		X16, X16, #8
+		LDR		W1, [X16, #-4]
+		SUB		X16, X16, #4
 		; todo check under-flow.
 
 		; check underflow
@@ -551,7 +546,7 @@ ivset2:
 		ADRP	X27,ivars@PAGE 
 		ADD		X27, X27, ivars@PAGEOFF
 		ADD     X27, X27, X0
-		STR		X1, [X27]
+		STR		W1, [X27]
 		B		10b
 
 
@@ -649,7 +644,6 @@ exit_compiler:
 ;; z is run time, c is the optional compile time behaviour.
 
 dstorez:	; ( addr value -- )
-		B		storz
 		RET
 
 dstorec:	; ( addr value -- )
@@ -735,19 +729,11 @@ ddotc: ;
 
 
 ddivz: ; / divide
-		B  		udivz
+		B  		divz
 		RET
 
 ddivc: ; 
 		RET
-
-dsdivz: ; \ divide
-		B  		sdivz
-		RET
-
-dsdivc: ; 
-		RET
-
 
 
 dplusz: ; +
@@ -796,34 +782,22 @@ dqmc: ;  "?"
 		RET		
 
 datz: ; "@" at - fetch 
-		B 		atz
 		RET
 
 datc: ;  "@"  
 		RET		
 
 
-atz: 
-		LDR		X0, [X16, #-8] 
-		LDR     X0, [X0]
-		STR		X0, [X16, #-8]
-		RET
-
-storz:  ; ( n address -- )
-		LDR		X0, [X16, #-8] 
-		LDR		X1, [X16, #-16]
-		STR 	X1, [X0]
-		SUB		X16, X16, #16
-		RET
 
 
 stackit: ; push W0 to stack.
 
-		STR		X0, [X16], #8
+		STR		W0, [X16], #4
 		RET
 
-dvaradd: ; address of variable
-		STR		X0, [X16], #8
+dvaradd: ; load the value in X0 (a global variable) to the stack
+		LDR		W0, [X0]
+		STR		W0, [X16], #4
 		RET
 
 
@@ -978,7 +952,7 @@ trbr:	.ascii "]"
 		.zero 16
 
 .align 	8
-tdec:	.ascii "%3ld"
+tdec:	.ascii "%3d"
 		.zero 16
 
 .align 	8
@@ -1186,8 +1160,8 @@ addressbuffer:
 			; ascii 47 /    div
 			.byte 47	    ; word name etc
 			.zero 7
-			.quad dsdivz	; function address
-			.quad dsdivc    ; compile time
+			.quad ddivz		; function address
+			.quad ddivc     ; compile time
 			.quad 0			; data
 
 			; digits, we stack these.
@@ -1830,12 +1804,6 @@ addressbuffer:
 			.quad 0
 			.quad 0
 
-			.ascii "NEGATE" 
-			.zero 4
-			.zero 8	
-			.quad negz
-			.quad 0
-			.quad 0	
 
 
  ; user defined word headings x 128

@@ -1,20 +1,56 @@
-## dumb interpeter
+## dumb [as an especially dumb rock] interpeter
+
+### purpose
+
+Learn ARM64, have some fun.
+
+
+### approach
+
+create small machine code words 
+
+and allow them to be tested interactively
+
+and allow them to be combined by composition into larger words.
+
+
+### expedience
+
+It is ok to start by using the standard C library to get up and running.
+
+Later may migrate to only use system calls.
+
+ASCII text
+
+
+### goals
+
+Do not use 64 bit values all over the place just because it is a 64bit processor
+
+Use 32bit values 32 bit values will do.
+
+Use bytes if bytes will do.
+
+
+### notes
 
 nnn      convert number and push it
 
-a-z      fetch 64bit variable address and push it
+a-Z      fetch  
 
 @        fetch value from stacked address
-
 !        store 2nd into tos
 
-.        pop and display tos
+primitive words
+
+. + - * / etc
 
 compile a new word
 
 : new-word 
   word word word ;
 
+### still thinking about how many levels of indirection are needed to run composed words.
 
 immediate mode
 find word, fetch code pointer (to primitive word), call it.
