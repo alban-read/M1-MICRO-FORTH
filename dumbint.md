@@ -32,6 +32,30 @@ Use 32bit values 32 bit values will do.
 Use bytes if bytes will do.
 
 
+### Dictionary
+
+The dictionary contains word headers, a pointer to the words functions (runtime and compile time), and an element of data for the word.
+
+There are two dictionaries.
+
+1 Single byte word names.
+
+A single letter word can be located using the letter as an index.
+
+The single letter name is essentially a byte code as far as the interpeter is contained.
+
+
+2 Multi byte word names (up to 15).
+
+The multi byte dictionary has 27 entry points, based on the starting letter A..Z, and all other.
+
+
+
+
+
+
+
+
 ### notes
 
 nnn      convert number and push it

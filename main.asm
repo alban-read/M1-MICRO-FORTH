@@ -136,6 +136,9 @@ advancespaces: ; byte ptr in x23, advance past spaces until zero
 		B		10b
 90:		RET
 
+absz:			
+		RET
+
 
 addz:			; add tos to 2os leaving result tos
 		LDR		X1, [X16, #-8]
@@ -176,6 +179,9 @@ negz:	;
 		NEG		X1, X1
 		STR		X1, [X16, #-8]
 		RET		
+
+
+
 
 orz:	; or tos with 2os leaving result tos
 		LDR		X1, [X16, #-8]
@@ -242,11 +248,7 @@ emitz:	; output tos as char
 print: ; prints int on top of stack		
 	
 		LDR		X1, [X16, #-8]
-		SUB		X16, X16, #8
-
-		
-		
-		
+		SUB		X16, X16, #8	
 12:
 
 	 	ADRP	X0, tdec@PAGE	   
@@ -432,9 +434,7 @@ input: 	BL  sayok
 		; we are in immediate mode, we see a word and we execute its code.
 
 outer:	
-		; from here X28 is current word in sdict
-		ADRP	X28, sdict@PAGE	   
-	    ADD		X28, X28, sdict@PAGEOFF
+		
 
 find_word:	
 
@@ -471,16 +471,182 @@ short_words:
 	
 fw1:	; look in long word dict
 	
-		 
+		LDRB 	W0,	[X22]	; first letter
+		CMP		W0, #'A'
+		B.ne	201f
+		ADRP	X28, adict@PAGE	   
+	    ADD		X28, X28, adict@PAGEOFF	
+		B		251f
+
+201:	CMP		W0, #'B'
+		B.ne	221f
+		ADRP	X28, bdict@PAGE	   
+	    ADD		X28, X28, bdict@PAGEOFF	
+	 	B       251f
+
+
+221:	CMP		W0, #'C'
+		B.ne	202f
+		ADRP	X28, cdict@PAGE	   
+	    ADD		X28, X28, cdict@PAGEOFF	
+	 	B       251f		 
+
+202:	CMP		W0, #'D'
+		B.ne	203f
+		ADRP	X28, ddict@PAGE	   
+	    ADD		X28, X28, ddict@PAGEOFF	
+		B       251f
+ 
+203:	CMP		W0, #'E'
+		B.ne	204f
+		ADRP	X28, edict@PAGE	   
+	    ADD		X28, X28, edict@PAGEOFF	
+		B       251f
+ 
+204:	CMP		W0, #'F'
+		B.ne	205f
+		ADRP	X28, fdict@PAGE	   
+	    ADD		X28, X28, fdict@PAGEOFF	
+		B       251f
+
+205:	CMP		W0, #'G'
+		B.ne	206f
+		ADRP	X28, gdict@PAGE	   
+	    ADD		X28, X28, gdict@PAGEOFF	
+		B       251f
+
+
+206:	CMP		W0, #'H'
+		B.ne	207f
+		ADRP	X28, hdict@PAGE	   
+	    ADD		X28, X28, hdict@PAGEOFF	
+		B       251f
+
+207:	CMP		W0, #'I'
+		B.ne	208f
+		ADRP	X28, idict@PAGE	   
+	    ADD		X28, X28, idict@PAGEOFF	
+		B       251f
+
+208:	CMP		W0, #'J'
+		B.ne	209f
+		ADRP	X28, jdict@PAGE	   
+	    ADD		X28, X28, jdict@PAGEOFF	
+		B       251f
+
+209:	CMP		W0, #'K'
+		B.ne	210f
+		ADRP	X28, kdict@PAGE	   
+	    ADD		X28, X28, kdict@PAGEOFF	
+		B       251f
+
+210:	CMP		W0, #'L'
+		B.ne	211f
+		ADRP	X28, ldict@PAGE	   
+	    ADD		X28, X28, ldict@PAGEOFF	
+		B       251f
+
+211:	CMP		W0, #'M'
+		B.ne	212f
+		ADRP	X28, mdict@PAGE	   
+	    ADD		X28, X28, mdict@PAGEOFF	
+		B       251f
+
+212:	CMP		W0, #'N'
+		B.ne	213f
+		ADRP	X28, ndict@PAGE	   
+	    ADD		X28, X28, ndict@PAGEOFF	
+		B       251f
+
+213:	CMP		W0, #'O'
+		B.ne	214f
+		ADRP	X28, odict@PAGE	   
+	    ADD		X28, X28, odict@PAGEOFF	
+		B       251f
+
+214:	CMP		W0, #'P'
+		B.ne	215f
+		ADRP	X28, pdict@PAGE	   
+	    ADD		X28, X28, pdict@PAGEOFF	
+		B       217f
+
+215:	CMP		W0, #'Q'
+		B.ne	216f
+		ADRP	X28, qdict@PAGE	   
+	    ADD		X28, X28, qdict@PAGEOFF	
+		B       251f
+
+216:	CMP		W0, #'R'
+		B.ne	217f
+		ADRP	X28, rdict@PAGE	   
+	    ADD		X28, X28, rdict@PAGEOFF	
+		B       251f
+
+217:	CMP		W0, #'S'
+		B.ne	218f
+		ADRP	X28, sdict@PAGE	   
+	    ADD		X28, X28, sdict@PAGEOFF	
+		B       251f
+
+218:	CMP		W0, #'T'
+		B.ne	219f
+		ADRP	X28, tdict@PAGE	   
+	    ADD		X28, X28, tdict@PAGEOFF	
+		B       251f
+
+219:	CMP		W0, #'U'
+		B.ne	220f
+		ADRP	X28, tdict@PAGE	   
+	    ADD		X28, X28, tdict@PAGEOFF	
+		B       251f
+
+220:	CMP		W0, #'V'
+		B.ne	221f
+		ADRP	X28, tdict@PAGE	   
+	    ADD		X28, X28, tdict@PAGEOFF	
+		B       251f
+
+221:	CMP		W0, #'W'
+		B.ne	222f
+		ADRP	X28, tdict@PAGE	   
+	    ADD		X28, X28, tdict@PAGEOFF	
+		B       251f
+
+222:	CMP		W0, #'X'
+		B.ne	223f
+		ADRP	X28, tdict@PAGE	   
+	    ADD		X28, X28, tdict@PAGEOFF	
+		B       251f
+
+223:	CMP		W0, #'Y'
+		B.ne	224f
+		ADRP	X28, tdict@PAGE	   
+	    ADD		X28, X28, tdict@PAGEOFF	
+		B       251f
+
+224:	CMP		W0, #'Z'
+		B.ne	225f
+		ADRP	X28, tdict@PAGE	   
+	    ADD		X28, X28, tdict@PAGEOFF	
+		B       251f		
+
+225:
+		; search from bottom of dictionary
+		; from here X28 is current word in sdict
+		ADRP	X28, startdict@PAGE	   
+	    ADD		X28, X28, startdict@PAGEOFF
+251:	
+		SUB		X28, X28, #40
+252: 
 		BL 		get_word
 		LDR		X21, [X28]
 		CMP     X21, #0        ; end of list?
 		B.eq    finish_list	
 		CMP     X21, #-1       ; undefined entry in list?
-		b.eq    next_word
+		b.eq    251b
 
 		CMP		X21, X22       ; is this our word?
-		B.ne	next_word
+		B.ne	251b
 
 		; found word, exec function
 		LDR     X2,	[X28, #16]
@@ -490,10 +656,7 @@ fw1:	; look in long word dict
 		STP		X28, XZR, [SP, #-16]!
 		BLR		X2	 ;; call function
 		LDP		X28, XZR, [SP]
-
-next_word:		
-		SUB		X28, X28, #40
-		B       find_word
+		B       251b
 
 finish_list: ; we did not find a defined word.
 
@@ -841,13 +1004,13 @@ dqmc: ;  "?"
 
 datz: ; "@" at - fetch 
 		B 		atz
-		RET
+ 
 
 datc: ;  "@"  
 		RET		
 
 
-atz: 
+atz: ;  ( address -- n ) fetch var.
 		LDR		X0, [X16, #-8] 
 		LDR     X0, [X0]
 		STR		X0, [X16, #-8]
@@ -859,6 +1022,22 @@ storz:  ; ( n address -- )
 		STR 	X1, [X0]
 		SUB		X16, X16, #16
 		RET
+
+nplusz:	;
+		LDR		X1, [X16, #-8]
+		ADD		X1, X1, X0
+		STR		X1, [X16, #-8]
+		RET
+
+dnplusz:
+		B 		nplusz
+
+
+dnplusc:
+		RET	
+
+
+		
 
 
 stackit: ; push x0 to stack.
@@ -911,6 +1090,17 @@ drsbz:  ; ]
 
 drsbc:  ; ]
 		RET
+
+
+dabsz:  ; ABS
+		RET
+		
+
+dabsc:  ; 
+		RET
+
+
+
 
 
 dtophatz:  ; 
@@ -1097,6 +1287,353 @@ zpad:    .ascii "ZPAD STARTS HERE"
 
 .align 8
 zword: .zero 64
+
+ .align 8
+ dbye:		.ascii "BYE" 
+			.zero 5
+			.zero 8
+			.quad 0
+			.quad 0
+
+
+ 		    ; each word is 16 bytes of zero terminated ascii	
+			; a pointer to the adress of the run time machine code function to call.
+			; a pointer to the adress of the compile time machine code function to call.
+			; a data element
+
+			; the end of the list
+ dend:		.quad 0	; name
+			.quad 0	; name
+			.quad 0	; zptr
+			.quad 0 ; cptr
+			.quad 0 ; cdata
+			; primitive code word headings.
+
+			.ascii "ABS" 
+			.zero 6	
+			.zero 8	
+			.quad dabsz
+			.quad dabsc
+			.quad 0
+adict:
+
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+bdict:
+
+			.ascii "CR" 
+			.zero 6	
+			.zero 8	
+			.quad saycr
+			.quad 0
+			.quad 0
+
+cdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+
+ddict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+			.ascii "EMIT" 
+			.zero 4
+			.zero 8	
+			.quad emitz
+			.quad 0
+			.quad 0
+
+edict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+
+fdict:		
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+
+gdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+
+hdict:
+
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+idict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+jdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+kdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+ldict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+mdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+			.ascii "NEGATE" 
+			.zero 4
+			.zero 8	
+			.quad negz
+			.quad 0
+			.quad 0	
+
+ndict:		
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+			.ascii "OK" 
+			.zero 6
+			.zero 8	
+			.quad sayok			
+			.quad 0
+			.quad 0
+
+odict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+			.ascii "PRINT" 
+			.zero 3
+			.zero 8	
+			.quad print
+			.quad 0
+			.quad 0
+
+pdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+
+qdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+rdict:
+
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+	sdict:
+
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+tdict:
+
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+udict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+ 		
+vdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+			
+			
+wdict:
+
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+xdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+ydict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+zdict:
+			.rept 33  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+			.ascii "1+"
+			.zero 6
+			.zero 8
+			.quad dnplusz
+			.quad 0
+			.quad 1
+
+			.ascii "2+"
+			.zero 6
+			.zero 8
+			.quad dnplusz
+			.quad 0
+			.quad 2
+
+			.ascii ".VERSION" 
+			.zero 8	
+			.quad announce
+			.quad 0
+			.quad 0
+ 
+ duserdef:
+			.rept 33 ; 
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
+ startdict:		
+ 			.quad -1 
+			.quad  0
+			.quad -1	
+			.quad 0	
+			.quad 0	
+
 
 .align 8
 zpos:    .quad 0
@@ -1818,82 +2355,5 @@ addressbuffer:
 			.quad 0
 			   
 
- .align 8
- dbye:		.ascii "BYE" 
-			.zero 5
-			.zero 8
-			.quad 0
-			.quad 0
 
-
- 		    ; each word is 16 bytes of zero terminated ascii	
-			; a pointer to the adress of the run time machine code function to call.
-			; a pointer to the adress of the compile time machine code function to call.
-			; a data element
-
-			; the end of the list
- dend:		.quad 0	; name
-			.quad 0	; name
-			.quad 0	; zptr
-			.quad 0 ; cptr
-			.quad 0 ; cdata
-
-			; primitive code word headings.
-
-			.ascii "CR" 
-			.zero 6	
-			.zero 8	
-			.quad saycr
-			.quad 0
-			.quad 0
-
-			.ascii "PRINT" 
-			.zero 3
-			.zero 8	
-			.quad print
-			.quad 0
-			.quad 0
-
-			.ascii "OK" 
-			.zero 6
-			.zero 8	
-			.quad sayok			
-			.quad 0
-			.quad 0
-
- 			.ascii ".VERSION" 
-			.zero 8	
-			.quad announce
-			.quad 0
-			.quad 0
-
-			.ascii "EMIT" 
-			.zero 4
-			.zero 8	
-			.quad emitz
-			.quad 0
-			.quad 0
-
-			.ascii "NEGATE" 
-			.zero 4
-			.zero 8	
-			.quad negz
-			.quad 0
-			.quad 0	
-
-
- ; user defined word headings x 128
- duserdef:
-			.rept 128 ; <-- 128 words
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
- sdict:		.quad -1 
-			.quad  0
-			.quad -1	
-			.quad 0	
-			.quad 0	
 
