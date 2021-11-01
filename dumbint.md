@@ -40,7 +40,7 @@ There are two dictionaries.
 
 1 Single byte word names.
 
-A single letter word can be located using the letter as an index.
+A single letter word can be located using the letter as an index into the dictionary that contains 256 words.
 
 The single letter name is essentially a byte code as far as the interpeter is contained.
 
@@ -49,6 +49,9 @@ The single letter name is essentially a byte code as far as the interpeter is co
 
 The multi byte dictionary has 27 entry points, based on the starting letter A..Z, and all other.
 
+It is not sorted other than by the first letter of each word.
+
+The dictionary is 'full of holes' for user defined words, spread throughout it.
 
 
 
