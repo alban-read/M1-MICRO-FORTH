@@ -56,17 +56,22 @@ The dictionary is 'full of holes' for user defined words, spread throughout it.
 
 
 
-
-
-
 ### notes
 
 nnn      convert number and push it
 
-a-Z      fetch  
+a-Z      fetch address of global variable
 
 @        fetch value from stacked address
 !        store 2nd into tos
+
+e.g. set variable
+
+100 A !
+
+get and print the variables value on a new line
+
+CR A @ . 
 
 primitive words
 
