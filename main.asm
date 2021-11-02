@@ -25,9 +25,21 @@
 ;; X28 dictionary
 ;; X22 word 
 
+.data
+
+.align 8
+
+ver:    .double 0.32 
+tver:   .ascii  "Version %2.2f\n"
+        .zero   4
+
+
+
+.text
+
 .global main 
 
-.align 4			 
+.align 8			 
 
 
  		; get line from terminal
@@ -185,8 +197,6 @@ negz:	;
 		NEG		X1, X1
 		STR		X1, [X16, #-8]
 		RET		
-
-
 
 
 orz:	; or tos with 2os leaving result tos
@@ -448,7 +458,6 @@ find_word:
 	    ADD		X22, X22, zword@PAGEOFF
 		LDRB	W0, [X22, #1]
 		CMP		W0, #0
-
 		B.ne	fw1	
 
 short_words:
@@ -475,168 +484,183 @@ short_words:
 		B		10b
 
 	
-fw1:	; look in long word dict
+fw1:	; look in long word dict 
+	   	; dictionary entry points based on first charachter
 	
 		LDRB 	W0,	[X22]	; first letter
-		CMP		W0, #'A'
+		
+		; lower case and check for a..z
+		ORR		W0, W0, 0x20
+
+		CMP		W0, #'z'	
+		B.gt 	searchall
+		
+		CMP		W0, #'a'
+		B.lt	searchall
+
+		; We have a..z, A..Z, so narrow the search.
+
+		CMP		W0, #'a'
 		B.ne	201f
 		ADRP	X28, adict@PAGE	   
 	    ADD		X28, X28, adict@PAGEOFF	
 		B		251f
 
-201:	CMP		W0, #'B'
+201:	CMP		W0, #'b'
 		B.ne	221f
 		ADRP	X28, bdict@PAGE	   
 	    ADD		X28, X28, bdict@PAGEOFF	
 	 	B       251f
 
 
-221:	CMP		W0, #'C'
+221:	CMP		W0, #'c'
 		B.ne	202f
 		ADRP	X28, cdict@PAGE	   
 	    ADD		X28, X28, cdict@PAGEOFF	
 	 	B       251f		 
 
-202:	CMP		W0, #'D'
+202:	CMP		W0, #'d'
 		B.ne	203f
 		ADRP	X28, ddict@PAGE	   
 	    ADD		X28, X28, ddict@PAGEOFF	
 		B       251f
  
-203:	CMP		W0, #'E'
+203:	CMP		W0, #'e'
 		B.ne	204f
 		ADRP	X28, edict@PAGE	   
 	    ADD		X28, X28, edict@PAGEOFF	
 		B       251f
  
-204:	CMP		W0, #'F'
+204:	CMP		W0, #'f'
 		B.ne	205f
 		ADRP	X28, fdict@PAGE	   
 	    ADD		X28, X28, fdict@PAGEOFF	
 		B       251f
 
-205:	CMP		W0, #'G'
+205:	CMP		W0, #'g'
 		B.ne	206f
 		ADRP	X28, gdict@PAGE	   
 	    ADD		X28, X28, gdict@PAGEOFF	
 		B       251f
 
 
-206:	CMP		W0, #'H'
+206:	CMP		W0, #'h'
 		B.ne	207f
 		ADRP	X28, hdict@PAGE	   
 	    ADD		X28, X28, hdict@PAGEOFF	
 		B       251f
 
-207:	CMP		W0, #'I'
+207:	CMP		W0, #'i'
 		B.ne	208f
 		ADRP	X28, idict@PAGE	   
 	    ADD		X28, X28, idict@PAGEOFF	
 		B       251f
 
-208:	CMP		W0, #'J'
+208:	CMP		W0, #'j'
 		B.ne	209f
 		ADRP	X28, jdict@PAGE	   
 	    ADD		X28, X28, jdict@PAGEOFF	
 		B       251f
 
-209:	CMP		W0, #'K'
+209:	CMP		W0, #'k'
 		B.ne	210f
 		ADRP	X28, kdict@PAGE	   
 	    ADD		X28, X28, kdict@PAGEOFF	
 		B       251f
 
-210:	CMP		W0, #'L'
+210:	CMP		W0, #'l'
 		B.ne	211f
 		ADRP	X28, ldict@PAGE	   
 	    ADD		X28, X28, ldict@PAGEOFF	
 		B       251f
 
-211:	CMP		W0, #'M'
+211:	CMP		W0, #'m'
 		B.ne	212f
 		ADRP	X28, mdict@PAGE	   
 	    ADD		X28, X28, mdict@PAGEOFF	
 		B       251f
 
-212:	CMP		W0, #'N'
+212:	CMP		W0, #'n'
 		B.ne	213f
 		ADRP	X28, ndict@PAGE	   
 	    ADD		X28, X28, ndict@PAGEOFF	
 		B       251f
 
-213:	CMP		W0, #'O'
+213:	CMP		W0, #'o'
 		B.ne	214f
 		ADRP	X28, odict@PAGE	   
 	    ADD		X28, X28, odict@PAGEOFF	
 		B       251f
 
-214:	CMP		W0, #'P'
+214:	CMP		W0, #'p'
 		B.ne	215f
 		ADRP	X28, pdict@PAGE	   
 	    ADD		X28, X28, pdict@PAGEOFF	
 		B       217f
 
-215:	CMP		W0, #'Q'
+215:	CMP		W0, #'q'
 		B.ne	216f
 		ADRP	X28, qdict@PAGE	   
 	    ADD		X28, X28, qdict@PAGEOFF	
 		B       251f
 
-216:	CMP		W0, #'R'
+216:	CMP		W0, #'r'
 		B.ne	217f
 		ADRP	X28, rdict@PAGE	   
 	    ADD		X28, X28, rdict@PAGEOFF	
 		B       251f
 
-217:	CMP		W0, #'S'
+217:	CMP		W0, #'s'
 		B.ne	218f
 		ADRP	X28, sdict@PAGE	   
 	    ADD		X28, X28, sdict@PAGEOFF	
 		B       251f
 
-218:	CMP		W0, #'T'
+218:	CMP		W0, #'t'
 		B.ne	219f
 		ADRP	X28, tdict@PAGE	   
 	    ADD		X28, X28, tdict@PAGEOFF	
 		B       251f
 
-219:	CMP		W0, #'U'
+219:	CMP		W0, #'u'
 		B.ne	220f
-		ADRP	X28, tdict@PAGE	   
-	    ADD		X28, X28, tdict@PAGEOFF	
+		ADRP	X28, udict@PAGE	   
+	    ADD		X28, X28, udict@PAGEOFF	
 		B       251f
 
-220:	CMP		W0, #'V'
+220:	CMP		W0, #'v'
 		B.ne	221f
-		ADRP	X28, tdict@PAGE	   
-	    ADD		X28, X28, tdict@PAGEOFF	
+		ADRP	X28, vdict@PAGE	   
+	    ADD		X28, X28, vdict@PAGEOFF	
 		B       251f
 
-221:	CMP		W0, #'W'
+221:	CMP		W0, #'w'
 		B.ne	222f
-		ADRP	X28, tdict@PAGE	   
-	    ADD		X28, X28, tdict@PAGEOFF	
+		ADRP	X28, wdict@PAGE	   
+	    ADD		X28, X28, wdict@PAGEOFF	
 		B       251f
 
-222:	CMP		W0, #'X'
+222:	CMP		W0, #'x'
 		B.ne	223f
-		ADRP	X28, tdict@PAGE	   
-	    ADD		X28, X28, tdict@PAGEOFF	
+		ADRP	X28, xdict@PAGE	   
+	    ADD		X28, X28, ydict@PAGEOFF	
 		B       251f
 
-223:	CMP		W0, #'Y'
+223:	CMP		W0, #'y'
 		B.ne	224f
 		ADRP	X28, tdict@PAGE	   
 	    ADD		X28, X28, tdict@PAGEOFF	
 		B       251f
 
-224:	CMP		W0, #'Z'
+224:	CMP		W0, #'z'
 		B.ne	225f
 		ADRP	X28, tdict@PAGE	   
 	    ADD		X28, X28, tdict@PAGEOFF	
 		B       251f		
 
 225:
+
+searchall:
 		; search from bottom of dictionary
 		; from here X28 is current word in sdict
 		ADRP	X28, startdict@PAGE	   
@@ -926,6 +950,36 @@ dplusz: ; +
 dplusc: ; 
 		RET
 
+ddropz: ;  
+		RET
+
+ddropc: ;   
+		RET	
+
+ddupz: ;  
+		RET
+
+ddupc: ;   
+		RET	
+
+dswapz: ;  
+		RET
+
+dswapc: ;   
+		RET	
+
+drotz: ;  
+		RET
+
+dpickc: ;   
+		RET	
+
+dpickz: ;  
+		RET
+
+drotc: ;   
+		RET			
+
 
 dcolonz: ; : define new word, docol
 		RET
@@ -1043,6 +1097,18 @@ dnplusc:
 		RET	
 
 
+nmulz:	; perform shift left to multiply
+		LDR		X1, [X16, #-8]
+		LSL		X1, X1, X0
+		STR		X1, [X16, #-8]
+		RET
+
+dnmulz:
+		B 		nmulz
+
+
+dnmulc:
+		RET	
 		
 
 
@@ -1081,22 +1147,17 @@ dlsbz:  ; [
 dlsbc:  ; [
 		RET
 
-
 dshlashz:  ; \
 		RET
 		
-
 dshlashc:  ; \
 		RET
-
 
 drsbz:  ; ]
 		RET
 		
-
 drsbc:  ; ]
 		RET
-
 
 dabsz:  ; ABS
 		RET
@@ -1104,8 +1165,6 @@ dabsz:  ; ABS
 
 dabsc:  ; 
 		RET
-
-
 
 
 
@@ -1171,21 +1230,17 @@ ddelc:	; del (127)
 
 .data
 
-
-
-
-
 .align 8
+ 
 
 dpage: .zero 4
 zstdin: .zero 16
 
-ver:    .double 0.31 
+
 
 ;; text literals
 
-tver:    .ascii  "Version %2.2f\n"
-        .zero   4
+
 
 .align 8
 
@@ -1306,6 +1361,8 @@ zword: .zero 64
 			; a pointer to the adress of the run time machine code function to call.
 			; a pointer to the adress of the compile time machine code function to call.
 			; a data element
+			; gaps for capacity are stacked towards 'a'  
+			;  
 
 			; the end of the list
  dend:		.quad 0	; name
@@ -1315,15 +1372,23 @@ zword: .zero 64
 			.quad 0 ; cdata
 			; primitive code word headings.
 
+			.rept 44  
+			.quad -1 
+			.quad 0
+			.quad -1 
+			.quad 0
+			.quad 0
+			.endr
+
 			.ascii "ABS" 
-			.zero 6	
+			.zero 5	
 			.zero 8	
 			.quad dabsz
 			.quad dabsc
 			.quad 0
 adict:
 
-			.rept 33  
+			.rept 44 
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1341,7 +1406,7 @@ bdict:
 			.quad 0
 
 cdict:
-			.rept 33  
+			.rept 40  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1349,9 +1414,22 @@ cdict:
 			.quad 0
 			.endr
 
+			.ascii "DUP" 
+			.zero 5	
+			.zero 8	
+			.quad ddupz
+			.quad ddupc
+			.quad 0
+
+			.ascii "DROP" 
+			.zero 4	
+			.zero 8	
+			.quad ddropz
+			.quad ddropc
+			.quad 0
 
 ddict:
-			.rept 33  
+			.rept 40 
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1359,7 +1437,7 @@ ddict:
 			.quad 0
 			.endr
 
-			.rept 33  
+			.rept 40 
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1375,7 +1453,7 @@ ddict:
 			.quad 0
 
 edict:
-			.rept 33  
+			.rept 40 
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1385,7 +1463,7 @@ edict:
 
 
 fdict:		
-			.rept 33  
+			.rept 38  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1395,7 +1473,7 @@ fdict:
 
 
 gdict:
-			.rept 33  
+			.rept 38  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1406,7 +1484,7 @@ gdict:
 
 hdict:
 
-			.rept 33  
+			.rept 36  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1415,7 +1493,7 @@ hdict:
 			.endr
 
 idict:
-			.rept 33  
+			.rept 36  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1424,7 +1502,7 @@ idict:
 			.endr
 
 jdict:
-			.rept 33  
+			.rept 34  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1433,7 +1511,7 @@ jdict:
 			.endr
 
 kdict:
-			.rept 33  
+			.rept 34  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1442,7 +1520,7 @@ kdict:
 			.endr
 
 ldict:
-			.rept 33  
+			.rept 34  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1451,7 +1529,7 @@ ldict:
 			.endr
 
 mdict:
-			.rept 33  
+			.rept 32  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1460,14 +1538,14 @@ mdict:
 			.endr
 
 			.ascii "NEGATE" 
-			.zero 4
+			.zero 2
 			.zero 8	
 			.quad negz
 			.quad 0
 			.quad 0	
 
 ndict:		
-			.rept 33  
+			.rept 32  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1483,7 +1561,7 @@ ndict:
 			.quad 0
 
 odict:
-			.rept 33  
+			.rept 32  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1498,8 +1576,16 @@ odict:
 			.quad 0
 			.quad 0
 
+			.ascii "PICK" 
+			.zero 4
+			.zero 8	
+			.quad dpickz
+			.quad dpickc
+			.quad 0
+
+
 pdict:
-			.rept 33  
+			.rept 32  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1509,17 +1595,24 @@ pdict:
 
 
 qdict:
-			.rept 33  
+			.rept 30  
 			.quad -1 
 			.quad 0
 			.quad -1 
 			.quad 0
 			.quad 0
 			.endr
+
+			.ascii "ROT" 
+			.zero 5
+			.zero 8	
+			.quad drotz
+			.quad drotc
+			.quad 0
 
 rdict:
 
-			.rept 33  
+			.rept 30  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1527,9 +1620,16 @@ rdict:
 			.quad 0
 			.endr
 
-	sdict:
+			.ascii "SWAP" 
+			.zero 4
+			.zero 8	
+			.quad dswapz
+			.quad dswapc
+			.quad 0
 
-			.rept 33  
+sdict:
+
+			.rept 30  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1539,7 +1639,7 @@ rdict:
 
 tdict:
 
-			.rept 33  
+			.rept 30  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1548,7 +1648,7 @@ tdict:
 			.endr
 
 udict:
-			.rept 33  
+			.rept 28  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1558,7 +1658,7 @@ udict:
 
  		
 vdict:
-			.rept 33  
+			.rept 28  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1569,7 +1669,7 @@ vdict:
 			
 wdict:
 
-			.rept 33  
+			.rept 28  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1578,7 +1678,7 @@ wdict:
 			.endr
 
 xdict:
-			.rept 33  
+			.rept 28  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1587,7 +1687,7 @@ xdict:
 			.endr
 
 ydict:
-			.rept 33  
+			.rept 24  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1596,7 +1696,7 @@ ydict:
 			.endr
 
 zdict:
-			.rept 33  
+			.rept 24  
 			.quad -1 
 			.quad 0
 			.quad -1 
@@ -1618,6 +1718,69 @@ zdict:
 			.quad 0
 			.quad 2
 
+			.ascii "2*"
+			.zero 6
+			.zero 8
+			.quad dnmulz
+			.quad 0
+			.quad 1
+
+			.ascii "4+"
+			.zero 6
+			.zero 8
+			.quad dnplusz
+			.quad 0
+			.quad 4
+
+			.ascii "4*"
+			.zero 6
+			.zero 8
+			.quad dnmulz
+			.quad 0
+			.quad 2
+
+			.ascii "8+"
+			.zero 6
+			.zero 8
+			.quad dnplusz
+			.quad 0
+			.quad 8
+
+			.ascii "8*"
+			.zero 6
+			.zero 8
+			.quad dnmulz
+			.quad 0
+			.quad 3
+
+			.ascii "16+"
+			.zero 5
+			.zero 8
+			.quad dnplusz
+			.quad 0
+			.quad 16
+
+			.ascii "16*"
+			.zero 5
+			.zero 8
+			.quad dnmulz
+			.quad 0
+			.quad 4
+
+			.ascii "32*"
+			.zero 5
+			.zero 8
+			.quad dnmulz
+			.quad 0
+			.quad 5
+
+			.ascii "64*"
+			.zero 5
+			.zero 8
+			.quad dnmulz
+			.quad 0
+			.quad 6
+
 			.ascii ".VERSION" 
 			.zero 8	
 			.quad announce
@@ -1625,7 +1788,7 @@ zdict:
 			.quad 0
  
  duserdef:
-			.rept 33 ; 
+			.rept 32 ; 
 			.quad -1 
 			.quad 0
 			.quad -1 
