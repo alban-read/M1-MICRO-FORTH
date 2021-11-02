@@ -1,17 +1,19 @@
 ## dumb [as an especially dumb rock] interpeter
 
+Inspired by FORTH.
+
 ### purpose
 
-Learn ARM64, have some fun.
+Learn ARM64, have some fun, create useful things.
 
 
 ### approach
 
-create small machine code words 
+create small machine code primitive words 
 
-and allow them to be tested interactively
+ .. allow them to be tested interactively
 
-and allow them to be combined by composition into larger words.
+ .. allow new words to be composed, mainly by concatenation.
 
 
 ### expedience
@@ -20,7 +22,9 @@ It is ok to start by using the standard C library to get up and running.
 
 Later may migrate to only use system calls.
 
-ASCII text
+ASCII text is used for function names and vaiables, not Unicode
+
+Unicode will be supported only in strings when they are added
 
 
 ### goals
@@ -30,6 +34,11 @@ Do not use 64 bit values all over the place just because it is a 64bit processor
 Use 32bit values 32 bit values will do.
 
 Use bytes if bytes will do.
+
+Support integer and decimal maths
+
+Support Strings of Unicode Runes in a safe and sensible way
+
 
 
 ### Dictionary
@@ -58,7 +67,9 @@ The dictionary is 'full of holes' for user defined words, spread throughout it.
 
 ### notes
 
-nnn      convert number and push it
+nnn      convert text to integer number and push it
+
+nn.nn    convert text to decimal number and push it
 
 a-Z      fetch address of global variable
 
@@ -85,7 +96,7 @@ compile a new word
 ### still thinking about how many levels of indirection are needed to run composed words.
 
 immediate mode
-find word, fetch code pointer (to primitive word), call it.
+find word, fetch code pointer (to primitive word), fetch word data, and call it.
     if number push
 
 compiling mode
