@@ -941,6 +941,21 @@ dsdivz: ; \ divide
 dsdivc: ; 
 		RET
 
+; break to debugger
+dbreakz: 
+		
+		BRK #01
+		RET
+
+dbreakc: ; 
+		RET
+
+
+
+
+
+
+
 
 
 dplusz: ; +
@@ -951,25 +966,45 @@ dplusc: ;
 		RET
 
 ddropz: ;  
+		SUB 	X16, X16, #8
 		RET
 
 ddropc: ;   
 		RET	
 
 ddupz: ;  
+		LDR 	X0, [X16, #-8] 
+		STR		X0, [X16], #8
 		RET
+	
 
 ddupc: ;   
 		RET	
 
 dswapz: ;  
+		LDP    X0, X1, [X16, #-16]
+		STP    X1, X0, [X16, #-16]
 		RET
 
 dswapc: ;   
 		RET	
 
 drotz: ;  
+		LDP		X1, X0, [X16, #-16] 
+		LDR     X2, [X16, #-24]   
+		STP		X0, X2, [X16, #-16]  
+		STR		X1, [X16, #-24]  
 		RET
+
+
+doverz: ;
+		LDR 	X0, [X16, #-16] 
+		STR		X0, [X16], #8
+		RET
+
+doverc:	
+		RET
+
 
 dpickc: ;   
 		RET	
@@ -1396,6 +1431,14 @@ adict:
 			.quad 0
 			.endr
 
+			.ascii "BREAK" 
+			.zero 3
+			.zero 8	
+			.quad dbreakz
+			.quad dbreakc
+			.quad 0
+			
+
 bdict:
 
 			.ascii "CR" 
@@ -1552,6 +1595,14 @@ ndict:
 			.quad 0
 			.quad 0
 			.endr
+
+
+			.ascii "OVER" 
+			.zero 4
+			.zero 8	
+			.quad doverz		
+			.quad doverc
+			.quad 0
 
 			.ascii "OK" 
 			.zero 6
