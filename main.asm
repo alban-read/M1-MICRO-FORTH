@@ -755,7 +755,14 @@ ivset2:
 		ADRP	X22, zword@PAGE	   
 	    ADD		X22, X22, zword@PAGEOFF
 		
+		; tolerate a negative number
 		LDRB	W0, [X22]
+		CMP		W0, #'-'
+		B.ne	22f 
+		ADD		X22, X22, #1
+		LDRB	W0, [X22]
+
+22:
 		CMP 	W0, #'9'
 		B.gt    compiler
 		CMP     W0, #'0'
@@ -1137,6 +1144,23 @@ storz:  ; ( n address -- )
 		SUB		X16, X16, #16
 		RET
 
+
+
+nsubz:	;
+		LDR		X1, [X16, #-8]
+		SUB		X1, X1, X0
+		STR		X1, [X16, #-8]
+		RET
+
+dnsubz:	
+		B 		nsubz
+
+
+dnsubc:	
+		RET	
+
+
+
 nplusz:	;
 		LDR		X1, [X16, #-8]
 		ADD		X1, X1, X0
@@ -1164,6 +1188,20 @@ dnmulz:
 dnmulc:
 		RET	
 		
+
+
+
+ndivz:	; perform shift right to divide
+		LDR		X1, [X16, #-8]
+		LSR		X1, X1, X0
+		STR		X1, [X16, #-8]
+		RET
+
+dndivz:
+		B 		ndivz
+
+dndivc:
+		RET
 
 
 stackit: ; push x0 to stack.
@@ -1214,6 +1252,11 @@ drsbc:  ; ]
 		RET
 
 dabsz:  ; ABS
+
+		LDR		X0, [X16, #-8]
+		CMP 	X0,  #1
+		CSNEG   X0, X0, X0, pl	
+		STR     X0, [X16, #-8]
 		RET
 		
 
@@ -1797,10 +1840,33 @@ zdict:
 			.quad 0
 			.quad 2
 
+
+			.ascii "1-"
+			.zero 6
+			.zero 8
+			.quad dnsubz
+			.quad 0
+			.quad 1
+
+			.ascii "2-"
+			.zero 6
+			.zero 8
+			.quad dnsubz
+			.quad 0
+			.quad 2
+
 			.ascii "2*"
 			.zero 6
 			.zero 8
 			.quad dnmulz
+			.quad 0
+			.quad 1
+
+
+			.ascii "2/"
+			.zero 6
+			.zero 8
+			.quad dndivz
 			.quad 0
 			.quad 1
 
@@ -1818,6 +1884,14 @@ zdict:
 			.quad 0
 			.quad 2
 
+			.ascii "4/"
+			.zero 6
+			.zero 8
+			.quad dndivz
+			.quad 0
+			.quad 2
+
+
 			.ascii "8+"
 			.zero 6
 			.zero 8
@@ -1825,10 +1899,18 @@ zdict:
 			.quad 0
 			.quad 8
 
+
 			.ascii "8*"
 			.zero 6
 			.zero 8
 			.quad dnmulz
+			.quad 0
+			.quad 3
+
+			.ascii "8/"
+			.zero 6
+			.zero 8
+			.quad dndivz
 			.quad 0
 			.quad 3
 
@@ -1846,6 +1928,13 @@ zdict:
 			.quad 0
 			.quad 4
 
+			.ascii "16/"
+			.zero 5
+			.zero 8
+			.quad dndivz
+			.quad 0
+			.quad 4
+
 			.ascii "32*"
 			.zero 5
 			.zero 8
@@ -1853,10 +1942,25 @@ zdict:
 			.quad 0
 			.quad 5
 
+			.ascii "32/"
+			.zero 5
+			.zero 8
+			.quad dndivz
+			.quad 0
+			.quad 5
+
+
 			.ascii "64*"
 			.zero 5
 			.zero 8
 			.quad dnmulz
+			.quad 0
+			.quad 6
+
+			.ascii "64/"
+			.zero 5
+			.zero 8
+			.quad dndivz
 			.quad 0
 			.quad 6
 
