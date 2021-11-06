@@ -867,7 +867,15 @@ ddollarz: ; $
 ddollarc: ; $ 
 		RET
 
-dmodz: ; % 
+dmodz: ; %  MOD
+		LDP  	X0, X1,  [X16, #-16]  
+		UDIV 	X2, X0, X1
+		MSUB 	X3, X2, X1, X0 
+		STR 	X3, [X16, #-16]
+		SUB 	X16, X16, #8
+		RET
+
+
 		RET
 
 dmodc: ; % 
@@ -940,6 +948,17 @@ dsdivz: ; \ divide
 
 dsdivc: ; 
 		RET
+
+dsmodz: ; /MOD
+		LDP  	X0, X1,  [X16, #-16]  
+		UDIV 	X2, X0, X1
+		MSUB 	X3, X2, X1, X0 
+		STP	 	X3, X2, [X16, #-16]  
+		RET
+
+dsmodc:
+		RET
+
 
 ; break to debugger
 dbreakz: 
@@ -1571,6 +1590,15 @@ ldict:
 			.quad 0
 			.endr
 
+
+			.ascii "MOD" 
+			.zero 5
+			.zero 8	
+			.quad dmodz
+			.quad dmodc
+			.quad 0
+
+
 mdict:
 			.rept 32  
 			.quad -1 
@@ -1831,6 +1859,14 @@ zdict:
 			.quad dnmulz
 			.quad 0
 			.quad 6
+
+
+			.ascii "/MOD" 
+			.zero 4
+			.zero 8	
+			.quad dsmodz
+			.quad dsmodc
+			.quad 0
 
 			.ascii ".VERSION" 
 			.zero 8	
