@@ -233,8 +233,6 @@ udivz:	; div tos by 2os leaving result tos - ??? not clear this is correct.
 
 
 
-
-
 emitz:	; output tos as char
 	
 		LDR		X1, [X16, #-8]
@@ -247,6 +245,71 @@ emitz:	; output tos as char
 		BL		_putchar	 
 		ADD     SP, SP, #16 
 		LDP     LR, X16, [SP], #16
+		RET
+
+
+emitchz:	; output X0 as char
+		STP		LR, X16, [SP, #-16]!
+ 		STP		X0, X0, [SP, #-16]!
+		BL		_putchar	 
+		ADD     SP, SP, #16 
+		LDP     LR, X16, [SP], #16
+		RET
+
+emitchc:	; output X0 as char
+		RET
+
+
+
+
+reprintz:
+	 
+		LDP		X1, X0, [X16, #-16]
+		SUB		X16, X16, #16
+20:		CMP     X1, #0
+		B.eq	10f
+		STP     X0, X1,  [SP, #-16]!
+		STP		LR, X16, [SP, #-16]!
+ 		STP		X0, X0, [SP, #-16]!
+		BL		_putchar	 
+		ADD     SP, SP, #16 
+		LDP     LR, X16, [SP], #16
+		LDP     X0, X1, [SP], #16
+		SUB		X1, X1, #1
+		B		20b
+
+10:
+		RET
+
+
+reprintc:
+		RET
+	 
+
+
+spacesz:
+		; number of spaces
+		
+		LDR		X1, [X16, #-8]
+		SUB		X16, X16, #8
+20:		CMP     X1, #0
+		B.eq	10f
+		MOV     X0, #32
+		STP     X0, X1,  [SP, #-16]!
+		STP		LR, X16, [SP, #-16]!
+ 		STP		X0, X0, [SP, #-16]!
+		BL		_putchar	 
+		ADD     SP, SP, #16 
+		LDP     LR, X16, [SP], #16
+		LDP     X0, X1, [SP], #16
+		SUB		X1, X1, #1
+		B		20b
+
+10:
+		RET
+
+
+spacesc:	
 		RET
 
 
@@ -412,101 +475,7 @@ empty_wordQ: ; is word empty?
 		RET
 
 
-;; start running here
-
-main:	 
-		 
-
-init:	
-
-		ADRP	X0, dsp@PAGE	   
-	    ADD		X0, X0, dsp@PAGEOFF
-		LDR		X16, [X0]  ;; <-- data stack pointer to X16
-
-
-   	    BL  announce
-
-input: 	BL  chkoverflow
-		BL  chkunderflow
-		BL  sayok
-		BL  resetword
-		BL  resetline
-		BL  getline
-
-advance_word:
-
-10:		BL  advancespaces
-
-		BL  collectword
-
-		; check if we have read all available words in the line
-		BL 		empty_wordQ
-		B.eq	input ; get next line
-	 
-		; look for BYE - which does quit.
-		BL		get_word
-		ADRP	X0, dbye@PAGE	   
-	    ADD		X21, X0, dbye@PAGEOFF
-		LDR		X21, [X21]
-		CMP		X21, X22
-		B.ne	outer  
-		
-		; Bye - we are leaving the program
-
-		ADRP	X0, tbye@PAGE	
-		ADD		X0, X0, tbye@PAGEOFF  
-		ADRP	X8, ___stdoutp@GOTPAGE
-		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
-		LDR		X1, [X8]
-
- 		STP		X1, X0, [SP, #-16]!
-		BL		_fputs	 
-		ADD     SP, SP, #16 
-		MOV		X0, #0
-		BL		_exit
-
-
-		; outer interpreter
-		; look for WORDs - when found, execute the words function	
-		; we are in immediate mode, we see a word and we execute its code.
-
-outer:	
-		
-
-find_word:	
-
-		ADRP	X22, zword@PAGE	   
-	    ADD		X22, X22, zword@PAGEOFF
-		LDRB	W0, [X22, #1]
-		CMP		W0, #0
-		B.ne	fw1	
-
-short_words:
-
-		; we have a byte length word.
-		; search bytewords dictionary
-
-		LDRB 	W0,	[X22]
-		LSL		X0, X0, #5
-		ADRP	X1,bytewords@PAGE 
-		ADD		X1, X1, bytewords@PAGEOFF
-		ADD		X1, X1, X0 ; words address
-
-		; found word, exec z function
-		LDR     X2,	[X1, #8]
-		CMP		X2, #0 
-
-		B.eq	advance_word ; no exec
-
-		LDR     X0,  [X1, #24] ; data 
-		STP		X28, XZR, [SP, #-16]!
-		BLR		X2	 ;; call function
-		LDP		X28, XZR, [SP]
-		B		advance_word
-
-	
-fw1:	; look in long word dict 
-	   	; dictionary entry points based on first charachter
+start_point: ; dictionary entry points are based on first charachter
 	
 		LDRB 	W0,	[X22]	; first letter
 		
@@ -688,6 +657,114 @@ searchall:
 	    ADD		X28, X28, startdict@PAGEOFF
 251:	
 		SUB		X28, X28, #40
+
+		RET
+
+
+;; start running here
+
+main:	 
+		 
+
+init:	
+
+		ADRP	X0, dsp@PAGE	   
+	    ADD		X0, X0, dsp@PAGEOFF
+		LDR		X16, [X0]  ;; <-- data stack pointer to X16
+
+
+   	    BL  announce
+
+input: 	BL  chkoverflow
+		BL  chkunderflow
+		BL  sayok
+		BL  resetword
+		BL  resetline
+		BL  getline
+
+advance_word:
+
+10:		BL  advancespaces
+
+		BL  collectword
+
+		; check if we have read all available words in the line
+		BL 		empty_wordQ
+		B.eq	input ; get next line
+	 
+		; look for BYE - which does quit.
+		BL		get_word
+		ADRP	X0, dbye@PAGE	   
+	    ADD		X21, X0, dbye@PAGEOFF
+		LDR		X21, [X21]
+		CMP		X21, X22
+		B.ne	outer  
+		
+		; Bye - we are leaving the program
+
+		ADRP	X0, tbye@PAGE	
+		ADD		X0, X0, tbye@PAGEOFF  
+		ADRP	X8, ___stdoutp@GOTPAGE
+		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+		LDR		X1, [X8]
+
+ 		STP		X1, X0, [SP, #-16]!
+		BL		_fputs	 
+		ADD     SP, SP, #16 
+		MOV		X0, #0
+		BL		_exit
+
+
+		; outer interpreter
+		; look for WORDs - when found, execute the words function	
+		; we are in immediate mode, we see a word and we execute its code.
+
+outer:	
+		
+
+interpret_word:	
+
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
+		LDRB	W0, [X22, #1]
+		CMP		W0, #0
+		B.ne	fw1	
+
+short_words:
+
+		; we have a byte length word.
+
+		; check if we need to enter the compiler loop.
+		LDRB	W0, [X22]
+		CMP 	W0, #':' 	; do we enter the compiler ?
+		B.eq	enter_compiler
+
+
+		; otherwise just search bytewords dictionary
+
+		LDRB 	W0,	[X22]
+		LSL		X0, X0, #5
+		ADRP	X1,bytewords@PAGE 
+		ADD		X1, X1, bytewords@PAGEOFF
+		ADD		X1, X1, X0 ; words address
+
+		; found word, exec z function
+		LDR     X2,	[X1, #8]
+		CMP		X2, #0 
+
+		B.eq	advance_word ; no exec
+
+		LDR     X0,  [X1, #24] ; data 
+		STP		X28, XZR, [SP, #-16]!
+		BLR		X2	 ;; call function
+		LDP		X28, XZR, [SP]
+		B		advance_word
+		
+
+fw1:
+		BL		start_point	
+
+
 252: 
 		BL 		get_word
 		LDR		X21, [X28]
@@ -812,6 +889,12 @@ decimal_number:
 		; TODO: decimals
 
 
+
+
+
+		; from here we are no longer interpreting the line.
+		; we are compiling input until we get see a ';'
+
 compiler:
 
 		ADRP	X22, zword@PAGE	   
@@ -846,20 +929,44 @@ enter_compiler:
 		; 6. set the first code space element to DOCOL 
 		; 7. set the next code space elemement to SEMI
 		; - [DOCOL, SEMI] is essentially a NOOP. 
-		
+
+
+
+
 create_word: 
 
 
+
+		; we need to repeat all of the parsing functions here in the compiling loop.
+		; in this loop we compile each word rather than just executing it.
+		; all words have a compile action, so they essentially compile themselves..
+
+compile_word:
+
+
+
+
+
+
 exit_compiler:
+
 
 		; BL sayok
 
 		B	advance_word ; back to main loop
 
 
-; at this point we have not found this word
+
+
+
+
+
+
 
 not_compiling:
+
+; at this point we have not found this word
+; display word not found as an error.
 
 		BL		saycr
 		BL		saylb
@@ -1238,9 +1345,22 @@ stackit: ; push x0 to stack.
 		STR		X0, [X16], #8
 		RET
 
-dvaradd: ; address of variable
+dvaraddz: ; address of variable
 		STR		X0, [X16], #8
 		RET
+
+dvaraddc: ; compile address of variable
+		RET
+
+dconstz: ; value of constant
+		STR		X0, [X16], #8
+		RET
+
+
+dconstc: ; value of constant
+		STR		X0, [X16], #8
+		RET
+
 
 
 diloopz: ; special I loop variable
@@ -1487,15 +1607,15 @@ zword: .zero 64
 			; a pointer to the adress of the run time machine code function to call.
 			; a pointer to the adress of the compile time machine code function to call.
 			; a data element
-			; gaps for capacity are stacked towards 'a'  
+			; gaps for capacity are stacked up towards 'a'  
 			;  
 
 			; the end of the list
  dend:		.quad 0	; name
 			.quad 0	; name
-			.quad 0	; zptr
-			.quad 0 ; cptr
-			.quad 0 ; cdata
+			.quad 0	; zptr - run time action
+			.quad 0 ; cptr - compile time action
+			.quad 0 ; cdata - class data 
 			; primitive code word headings.
 
 			.rept 44  
@@ -1528,6 +1648,14 @@ adict:
 			.quad dbreakz
 			.quad dbreakc
 			.quad 0
+
+
+			.ascii "BL" 
+			.zero 6
+			.zero 8	
+			.quad dconstz
+			.quad dconstc
+			.quad 32
 			
 
 bdict:
@@ -1754,6 +1882,13 @@ qdict:
 			.quad 0
 			.endr
 
+			.ascii "REPRINT" 
+			.zero 1
+			.zero 8	
+			.quad reprintz
+			.quad reprintc
+			.quad 0
+
 			.ascii "ROT" 
 			.zero 5
 			.zero 8	
@@ -1777,6 +1912,20 @@ rdict:
 			.quad dswapz
 			.quad dswapc
 			.quad 0
+
+			.ascii "SPACES" 
+			.zero 2
+			.zero 8	
+			.quad spacesz
+			.quad spacesc
+			.quad 32
+
+			.ascii "SPACE" 
+			.zero 3
+			.zero 8	
+			.quad emitchz
+			.quad emitchc
+			.quad 32
 
 sdict:
 
@@ -2284,56 +2433,56 @@ addressbuffer:
 			; ascii 65 variable A  
 			.byte 65	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad  8 * 65 + ivars	 
 
 			; ascii 66 variable B ..  
 			.byte 66	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 66 + ivars	
 
 			; ascii 67 variable C ..  
 			.byte 67	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 67 + ivars	
 
 			; .. variable 
 			.byte 68	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 68 + ivars	
 
 			; .. variable 
 			.byte 69	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 69 + ivars	
 
 			; .. variable 
 			.byte 70	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 70 + ivars	
 
 			; .. variable 
 			.byte 71	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 71 + ivars	
 
 			; .. variable H 
 			.byte 72	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 72 + ivars	
 
@@ -2361,105 +2510,105 @@ addressbuffer:
 			; .. variable L 
 			.byte 76	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 76 + ivars
 
 		 	; .. variable M 
 			.byte 77	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 77 + ivars
 
  			; .. variable N 
 			.byte 78	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 78 + ivars
 
 			; .. variable O 
 			.byte 79	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 79 + ivars
 
 			; .. variable P 
 			.byte 80	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 80 + ivars
 
 			; .. variable Q 
 			.byte 81	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 81 + ivars
 
 			; .. variable R 
 			.byte 82	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 82 + ivars
 
 			; .. variable S 
 			.byte 83	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 83 + ivars
 
 			; .. variable T 
 			.byte 84	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 84 + ivars
 
 			; .. variable U 
 			.byte 85	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 85 + ivars
 
 			; .. variable V
 			.byte 86	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 86 + ivars
 
 			; .. variable W
 			.byte 87	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 87 + ivars
 
 			; .. variable X
 			.byte 88	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 88 + ivars
 
 			; .. variable Y
 			.byte 89	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 89 + ivars
 
 			; .. variable Z
 			.byte 90	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 90 + ivars
 
@@ -2516,56 +2665,56 @@ addressbuffer:
 			; ascii 97 variable A  
 			.byte 97	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad  8 * 97 + ivars	 
 
 			; ascii 98 variable B ..  
 			.byte 98	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 98 + ivars	
 
 			; ascii 99 variable C ..  
 			.byte 99	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 99 + ivars	
 
 			; .. variable 
 			.byte 100	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 100 + ivars	
 
 			; .. variable 
 			.byte 101	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 101 + ivars	
 
 			; .. variable 
 			.byte 102	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 102 + ivars	
 
 			; .. variable 
 			.byte 103	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 103 + ivars	
 
 			; .. variable H 
 			.byte 104	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 104 + ivars	
 
@@ -2593,105 +2742,105 @@ addressbuffer:
 			; .. variable L 
 			.byte 108	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 108 + ivars
 
 		 	; .. variable M 
 			.byte 109	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 109 + ivars
 
  			; .. variable N 
 			.byte 110	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 110 + ivars
 
 			; .. variable O 
 			.byte 111	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 111 + ivars
 
 			; .. variable P 
 			.byte 112	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 112 + ivars
 
 			; .. variable Q 
 			.byte 113	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 113 + ivars
 
 			; .. variable R 
 			.byte 114	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 114 + ivars
 
 			; .. variable S 
 			.byte 115	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 115 + ivars
 
 			; .. variable T 
 			.byte 116	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 116 + ivars
 
 			; .. variable U 
 			.byte 117	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 117 + ivars
 
 			; .. variable V
 			.byte 118	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 118 + ivars
 
 			; .. variable W
 			.byte 119	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 119 + ivars
 
 			; .. variable X
 			.byte 120	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 120 + ivars
 
 			; .. variable Y
 			.byte 121	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 121 + ivars
 
 			; .. variable Z
 			.byte 122	    ; word name etc
 			.zero 7
-			.quad dvaradd	;  
+			.quad dvaraddz	;  
 			.quad 0			; compile time action..
 			.quad 8 * 122 + ivars
 
