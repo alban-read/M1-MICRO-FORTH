@@ -1205,8 +1205,22 @@ ddupz: ;
 		RET
 	
 
+dqdupc: ;   
+		RET	
+
+
+dqdupz: ;  ?DUP 
+		LDR 	X0, [X16, #-8]
+		CMP		X0, #0
+		B.eq	10f 
+		STR		X0, [X16], #8
+10:		
+		RET
+	
+
 ddupc: ;   
 		RET	
+
 
 dswapz: ;  
 		LDP    X0, X1, [X16, #-16]
@@ -1223,6 +1237,10 @@ drotz: ;
 		STR		X1, [X16, #-24]  
 		RET
 
+drotc: ;   
+		RET		
+
+
 
 doverz: ;
 		LDR 	X0, [X16, #-16] 
@@ -1234,13 +1252,31 @@ doverc:
 
 
 dpickc: ;   
+	
 		RET	
 
 dpickz: ;  
+		LDR		X0, [X16, #-8]!
+		ADD     X0, X0, #1
+		NEG     X0, X0
+		LDR		X1, [X16, X0, LSL #3]
+		STR		X1, [X16], #8
 		RET
 
-drotc: ;   
-		RET			
+	
+
+dnipc: ;   
+		RET	
+
+dnipz: ;  
+	
+		LDP		X0, X1, [X16, #-16]  
+		STR 	X1, [X16, #-16]  
+		SUB 	X16, X16, #8
+		RET
+
+
+
 
 
 dcolonz: ; : define new word, docol
@@ -1880,6 +1916,15 @@ mdict:
 			.quad 0
 			.quad 0	
 
+			.ascii "NIP" 
+			.zero 5
+			.zero 8	
+			.quad dnipz
+			.quad dnipc
+			.quad 0	
+
+
+
 ndict:		
 			.rept 32  
 			.quad -1 
@@ -2228,7 +2273,16 @@ zdict:
 			.quad announce
 			.quad 0
 			.quad 0
- 
+
+ 			.ascii "?DUP" 
+			.zero 4	
+			.zero 8
+			.quad dqdupz
+			.quad dqdupc
+			.quad 0
+
+
+
  duserdef:
 			.rept 32 ; 
 			.quad -1 
