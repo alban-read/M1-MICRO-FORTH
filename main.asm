@@ -1211,8 +1211,7 @@ dqdupc: ;
 
 dqdupz: ;  ?DUP 
 		LDR 	X0, [X16, #-8]
-		CMP		X0, #0
-		B.eq	10f 
+		CBZ		X0, 10f
 		STR		X0, [X16], #8
 10:		
 		RET
