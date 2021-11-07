@@ -117,6 +117,66 @@ sayeol:
 		BL		sayit
 		B		finish
 
+
+; first print all defined words in the long word dictionary
+; then print all the words in the bytewords dictionary.
+
+dotwords:
+	
+		ADRP	X8, ___stdoutp@GOTPAGE
+		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+		LDR		X1, [X8]
+
+	 	ADRP	X2, dend@PAGE	
+		ADD		X2, X2, dend@PAGEOFF
+
+20:		ADD		X2, X2, #40
+		LDR		X0, [X2]
+		CMP     X0, #-1
+		B.eq    10f
+		CMP     X0, #0
+		B.eq    30f
+
+		MOV     X0, X2
+		STP		X2, X1, [SP, #-16]!
+		STP		LR, X16, [SP, #-16]!
+		BL		_fputs	 
+		MOV     X0, #32
+		BL      _putchar
+		LDP     LR, X16, [SP], #16
+		LDP     X2, X1, [SP], #16
+
+
+10:		; skip non word
+		B		20b  
+
+30:
+ 	 	ADRP	X2, fstbyteword@PAGE	
+		ADD		X2, X2, fstbyteword@PAGEOFF
+
+40:		
+
+		LDR		X0, [X2, #8]
+		CMP     X0, #-1
+		B.eq    50f
+		CMP     X0, #0
+		B.eq    15f
+
+		LDRB	W0, [X2]
+		STP		X2, X1, [SP, #-16]!
+		STP		LR, X16, [SP, #-16]!
+		BL		_putchar 
+		MOV     W0, #32
+		BL      _putchar
+		LDP     LR, X16, [SP], #16
+		LDP     X2, X1, [SP], #16
+
+50:		; skip non word
+		ADD		X2, X2, #32
+		B		40b  
+15:
+		RET
+
 sayit:		
      
 		ADRP	X8, ___stdoutp@GOTPAGE
@@ -737,6 +797,11 @@ short_words:
 		; check if we need to enter the compiler loop.
 		LDRB	W0, [X22]
 		CMP 	W0, #':' 	; do we enter the compiler ?
+		B.eq	enter_compiler
+
+		; check if we need to enter the compiler loop.
+		LDRB	W0, [X22]
+		CMP 	W0, #']' 	; do we enter the compiler ?
 		B.eq	enter_compiler
 
 
@@ -1965,6 +2030,14 @@ vdict:
 			.quad 0
 			.quad 0
 			.endr
+
+
+			.ascii "WORDS" 
+			.zero 3
+			.zero 8	
+			.quad dotwords
+			.quad 0
+			.quad 0
 			
 			
 wdict:
@@ -2172,6 +2245,12 @@ zdict:
 			.quad 0	
 			.quad 0	
 
+			.quad 0 
+			.quad 0
+			.quad 0
+			.quad 0	
+			.quad 0	
+
 
 .align 8
 zpos:    .quad 0
@@ -2193,7 +2272,7 @@ addressbuffer:
   
 			; control code, unprintable, byte codes.
 			.rept 33 		; 
-			.quad 0			; word name etc
+			.quad -1		; word name etc
 			.quad 0			; function address
 			.quad 0			; data
 			.quad 0			; data
@@ -2201,7 +2280,7 @@ addressbuffer:
 
 			; printable, byte codes, symbols we can use.
 
-			; ascii 33 !
+fstbyteword: ; ascii 33 !
 			.byte 33		; word name etc
 			.zero 7
 			.quad dstorez	; function address
@@ -2389,7 +2468,7 @@ addressbuffer:
 			.quad 0			; data to stack
 
 			; ascii 59 ; - end word, semi   
-			.byte 58	    ; word name etc
+			.byte 59	    ; word name etc
 			.zero 7
 			.quad dsemiz	; function address of docol
 			.quad dsemic	; compile time action..
@@ -2882,15 +2961,21 @@ addressbuffer:
 
 			; non ascii 7 bit byte codes
 			.rept 127 		; 
-			.quad 0			; word name etc
+			.quad -1		; word name etc
 			.quad 0			; function address
 			.quad 0			; data
 			.quad 0			; data
 			.endr
 
-
-
 			.quad 0
+			.quad 0
+			.quad 0
+			.quad 0
+			.quad 0
+			.quad 0
+			.quad 0
+			.quad 0
+
 			   
 
 
