@@ -84,6 +84,13 @@ saybye:
 		ADD		X0, X0, tbye@PAGEOFF
         B		sayit
 
+
+saynotfound:
+	 	ADRP	X0, tcomer4@PAGE	
+		ADD		X0, X0, tcomer4@PAGEOFF
+        B		sayit
+
+
 sayerrlength:
 	 	ADRP	X0, tlong@PAGE	
 		ADD		X0, X0, tlong@PAGEOFF
@@ -192,7 +199,7 @@ andz:	; and tos with 2os leaving result tos
 		RET
 
 
-negz:	;  
+negz:	;  negate 
 		LDR		X1, [X16, #-8]
 		NEG		X1, X1
 		STR		X1, [X16, #-8]
@@ -215,9 +222,8 @@ sdivz:	; div tos by 2os leaving result tos
 		STR		X3, [X16, #-16]
 		SUB		X16, X16, #8
 		RET
-
-		; unsigned does not work in a way I understand.
-udivz:	; div tos by 2os leaving result tos
+ 
+udivz:	; div tos by 2os leaving result tos - ??? not clear this is correct.
 		LDR		X1, [X16, #-8]
 		LDR		X2, [X16, #-16]
 		SDIV	X3, X2, X1
@@ -230,27 +236,10 @@ udivz:	; div tos by 2os leaving result tos
 
 
 emitz:	; output tos as char
-
 	
 		LDR		X1, [X16, #-8]
 		SUB		X16, X16, #8
 
-		; check underflow
-		ADRP	X0, spu@PAGE	   
-	    ADD		X0, X0, spu@PAGEOFF
-		CMP		X16, X0
-		b.gt	12f	
-
-		; reset stack
-		ADRP	X27, sp1@PAGE	   
-	    ADD		X27, X27, sp1@PAGEOFF
-		ADRP	X0, dsp@PAGE	   
-	    ADD		X0, X0, dsp@PAGEOFF
-		STR		X27, [X0]
-		MOV		X16, X27 
-		; report underflow
-	 
-		B		sayunderflow
 		
 12:		MOV		X0, X1 
 		STP		LR, X16, [SP, #-16]!
@@ -289,6 +278,34 @@ word2number:	; converts ascii at word to 32bit number
 		STR		X0, [X16], #8
 
 		; check for overflow
+		B 			chkoverflow
+		RET
+
+
+
+
+chkunderflow: ; check for stack underflow
+		ADRP	X0, spu@PAGE	   
+	    ADD		X0, X0, spu@PAGEOFF
+		CMP		X16, X0
+		b.gt	12f	
+
+		; reset stack
+		ADRP	X27, sp1@PAGE	   
+	    ADD		X27, X27, sp1@PAGEOFF
+		ADRP	X0, dsp@PAGE	   
+	    ADD		X0, X0, dsp@PAGEOFF
+		STR		X27, [X0]
+		MOV		X16, X27 
+		; report underflow
+	 
+		B		sayunderflow
+
+12:
+		RET
+
+chkoverflow:; check for stack overflow
+
 		ADRP	X0, spo@PAGE	   
 	    ADD		X0, X0, spo@PAGEOFF
 		CMP		X16, X0
@@ -305,9 +322,9 @@ word2number:	; converts ascii at word to 32bit number
 	
 		B		sayoverflow
 
-
-95:		
+95:
 		RET
+
 
 collectword:  ; byte ptr in x23, x22 
 			  ; copy and advance byte ptr until space.
@@ -409,10 +426,14 @@ init:
 
    	    BL  announce
 
-input: 	BL  sayok
+input: 	BL  chkoverflow
+		BL  chkunderflow
+		BL  sayok
 		BL  resetword
 		BL  resetline
 		BL  getline
+
+advance_word:
 
 10:		BL  advancespaces
 
@@ -475,13 +496,13 @@ short_words:
 		LDR     X2,	[X1, #8]
 		CMP		X2, #0 
 
-		B.eq	10b ; no exec
+		B.eq	advance_word ; no exec
 
 		LDR     X0,  [X1, #24] ; data 
 		STP		X28, XZR, [SP, #-16]!
 		BLR		X2	 ;; call function
 		LDP		X28, XZR, [SP]
-		B		10b
+		B		advance_word
 
 	
 fw1:	; look in long word dict 
@@ -686,7 +707,7 @@ searchall:
 		STP		X28, XZR, [SP, #-16]!
 		BLR		X2	 ;; call function
 		LDP		X28, XZR, [SP]
-		B       251b
+		B       advance_word
 
 finish_list: ; we did not find a defined word.
 
@@ -714,7 +735,7 @@ ivfetch: ; from variable push to stack
 		LDR		X0, [X27, X0]
 		STR		X0, [X16], #8	
 		; todo check overflow.
-		B       10b
+		B       advance_word
 
 ivset:	; from stack set variable
 		LDRB 	W0,	[X22]
@@ -781,9 +802,11 @@ ivset2:
 		
 		B		23b
 24:
+		; we have a valid number, so translate it
 		BL		word2number
-		B       compiler
-		; the word may be a decimal number
+		B       advance_word
+
+		; OR the word may be a decimal number
 
 decimal_number:
 		; TODO: decimals
@@ -796,7 +819,7 @@ compiler:
 		
 		LDRB	W0, [X22]
 		CMP 	W0, #':' 	; do we enter the compiler ?
-		B.ne	exit_compiler ; no..
+		B.ne	not_compiling ; no..
 
 		; yes, from here we compile a new word.
 
@@ -827,15 +850,27 @@ enter_compiler:
 create_word: 
 
 
-
-
 exit_compiler:
 
 		; BL sayok
 
+		B	advance_word ; back to main loop
 
 
-		B	10b	
+; at this point we have not found this word
+
+not_compiling:
+
+		BL		saycr
+		BL		saylb
+		BL		sayword
+		BL		sayrb
+		BL 		saynotfound
+		
+		B		advance_word
+
+
+exit_program:		
 
 		MOV		X0,#0
         BL		_exit
@@ -975,12 +1010,6 @@ dbreakz:
 
 dbreakc: ; 
 		RET
-
-
-
-
-
-
 
 
 
@@ -1374,23 +1403,23 @@ tdec:	.ascii "%3ld"
 		.zero 16
 
 .align 	8
-tovflr:	.ascii "stack over-flow"
+tovflr:	.ascii "\nstack over-flow"
 		.zero 16
 
 .align 	8
-tunder:	.ascii "stack under-flow"
+tunder:	.ascii "\nstack under-flow"
 		.zero 16
 
 .align 	8
-tcomer1: .ascii "Compiler error ':' expects a word to define."
+tcomer1: .ascii "\nCompiler error ':' expects a word to define."
 		.zero 16
 
 .align 	8
-tcomer3: .ascii "Compiler error  "
+tcomer3: .ascii "\nCompiler error  "
 		.zero 16
 
 .align 	8
-tcomer4: .ascii "Compiler error  "
+tcomer4: .ascii "<-- Word was not recognized. "
 		.zero 16
 
 .align 	8
