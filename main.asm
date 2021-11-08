@@ -39,7 +39,6 @@
 
 
 .macro makeword name:req, runtime=-1, comptime=-1, datavalue=-1
-
 10:
 	.asciz	"\name"
 20:
@@ -51,7 +50,6 @@
 .endm
 
 .macro makeemptywords n=32 
-
 	.rept  \n
 	.quad 	-1
 	.quad	0
@@ -1173,7 +1171,12 @@ dandz: ; &
 dandc: ; & 
 		RET
 
-dtickz: ; '
+
+dtickz: ; ' - get address of word data field
+
+
+
+
 		RET
 
 dtickc: ; '
@@ -1791,67 +1794,33 @@ zword: .zero 64
 			makeemptywords 44
 
 
-			.ascii "ABS" 
-			.zero 5	
-			.zero 8	
-			.quad dabsz
-			.quad dabsc
-			.quad 0
+			makeword "ABS" , dabsz, dabsc, 0
+		 
 adict:
 
 			makeemptywords 44
 
-			.ascii "BREAK" 
-			.zero 3
-			.zero 8	
-			.quad dbreakz
-			.quad dbreakc
-			.quad 0
-
-
-			.ascii "BL" 
-			.zero 6
-			.zero 8	
-			.quad dconstz
-			.quad dconstc
-			.quad 32
+			 makeword "BREAK",  dbreakz, dbreakc, 0
+	  		 makeword "BL",  dconstz, dconstz, 32
 			
 
 bdict:
-
-			.ascii "CR" 
-			.zero 6	
-			.zero 8	
-			.quad saycr
-			.quad 0
-			.quad 0
-
+			makeword "CR", saycr, 0, 0
+		
 cdict:
 			makeemptywords 40
 
-			.ascii "DUP" 
-			.zero 5	
-			.zero 8	
-			.quad ddupz
-			.quad ddupc
-			.quad 0
+			makeword "DUP", ddupz , ddupc, 0 
+	 
 
-			.ascii "DROP" 
-			.zero 4	
-			.zero 8	
-			.quad ddropz
-			.quad ddropc
-			.quad 0
+			makeword "DROP", ddropz , ddropc, 0 
+		 
 
 ddict:
 			makeemptywords 40
 
-			.ascii "EMIT" 
-			.zero 4
-			.zero 8	
-			.quad emitz
-			.quad 0
-			.quad 0
+			makeword "EMIT", emitz , 0, 0 
+		 
 
 edict:
 			makeemptywords 40
@@ -1927,43 +1896,25 @@ pdict:
 qdict:
 			makeemptywords 30
 
-			.ascii "REPRINT" 
-			.zero 1
-			.zero 8	
-			.quad reprintz
-			.quad reprintc
-			.quad 0
+			makeword "REPRINT", reprintz , reprintc, 0 
+	 
 
-			.ascii "ROT" 
-			.zero 5
-			.zero 8	
-			.quad drotz
-			.quad drotc
-			.quad 0
+			makeword "ROT", drotz , drotc, 0 
+
+		
 
 rdict:
 
 			makeemptywords 30
 
-			.ascii "SWAP" 
-			.zero 4
-			.zero 8	
-			.quad dswapz
-			.quad dswapc
-			.quad 0
+			makeword "SWAP", dswapz , dswapc, 0 
+	
 
-			.ascii "SPACES" 
-			.zero 2
-			.zero 8	
-			.quad spacesz
-			.quad spacesc
-			.quad 32
+			makeword "SPACES", spacesz , spacesc, 0 
+		
 
-			.ascii "SPACE" 
-			.zero 3
-			.zero 8	
-			.quad emitchz
-			.quad emitchc
+			makeword "SPACE", emitchz , emitchc, 32
+			 
 			.quad 32
 
 sdict:
@@ -1981,13 +1932,9 @@ udict:
 vdict:
 			makeemptywords 28
 
-
-			.ascii "WORDS" 
-			.zero 3
-			.zero 8	
-			.quad dotwords
-			.quad 0
-			.quad 0
+			makeword "WORDS", dotwords , 0, 0 
+		 
+ 
 			
 			
 wdict:
