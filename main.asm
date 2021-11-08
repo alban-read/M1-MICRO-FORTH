@@ -14,22 +14,60 @@
 ;; X8 indirect result 
 
 ;; related to the interpreter
-;; X16 data stack
-;; X15 return stack
-;; X14 IP (interpretive pointer)
-;; X13 CSP code pointer stack
-;; X12
-;; X11
+; X16 is the data stack
+; X15 is the interpreter pointer
+; X14 is the return stack
+; X13 is the dictionary pointer
+; X12 
 
 
 ;; X28 dictionary
 ;; X22 word 
 
+
+.macro save_registers  
+		STP		X12, X13, [SP, #-16]!
+		STP		X14, X15, [SP, #-16]!
+		STP		LR,  X16, [SP, #-16]!
+.endm
+
+.macro restore_registers  
+	 	LDP     LR, X16, [SP], #16
+		LDP		X14, X15, [SP], #16	
+		LDP		X12, X13, [SP], #16	
+.endm
+
+
+.macro makeword name:req, runtime=-1, comptime=-1, datavalue=-1
+
+10:
+	.asciz	"\name"
+20:
+	.zero	16 - ( 20b-10b )
+	.quad	\runtime
+	.quad   \comptime
+	.quad   \datavalue
+
+.endm
+
+.macro makeemptywords n=32 
+
+	.rept  \n
+	.quad 	-1
+	.quad	0
+	.quad   -1
+	.quad   0
+	.quad   0
+	.endr
+.endm
+
+
+
 .data
 
 .align 8
 
-ver:    .double 0.32 
+ver:    .double 0.35
 tver:   .ascii  "Version %2.2f\n"
         .zero   4
 
@@ -52,9 +90,9 @@ getline:
 		ADD     X1, X0, zpadsz@PAGEOFF
 		ADRP	X0, zpadptr@PAGE	
 		ADD     X0, X0, zpadptr@PAGEOFF
-		STP		LR, X16, [SP, #-16]!	
+		save_registers
 		BL		_getline
-		LDP		LR, X16, [SP], #16	
+		restore_registers
 		RET
 
    	    ; Ok prompt
@@ -139,11 +177,11 @@ dotwords:
 
 		MOV     X0, X2
 		STP		X2, X1, [SP, #-16]!
-		STP		LR, X16, [SP, #-16]!
+		save_registers
 		BL		_fputs	 
 		MOV     X0, #32
 		BL      _putchar
-		LDP     LR, X16, [SP], #16
+		restore_registers
 		LDP     X2, X1, [SP], #16
 
 
@@ -164,11 +202,11 @@ dotwords:
 
 		LDRB	W0, [X2]
 		STP		X2, X1, [SP, #-16]!
-		STP		LR, X16, [SP, #-16]!
+		save_registers
 		BL		_putchar 
 		MOV     W0, #32
 		BL      _putchar
-		LDP     LR, X16, [SP], #16
+		restore_registers
 		LDP     X2, X1, [SP], #16
 
 50:		; skip non word
@@ -182,11 +220,11 @@ sayit:
 		ADRP	X8, ___stdoutp@GOTPAGE
 		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 		LDR		X1, [X8]
-   		STP		LR, X16, [SP, #-16]!
+   		save_registers
  		STP		X1, X1, [SP, #-16]!
 		BL		_fputs	 
 		ADD     SP, SP, #16 
-		LDP     LR, X16, [SP], #16
+		restore_registers
 		RET
 
 
@@ -300,20 +338,20 @@ emitz:	; output tos as char
 
 		
 12:		MOV		X0, X1 
-		STP		LR, X16, [SP, #-16]!
+		save_registers
  		STP		X0, X0, [SP, #-16]!
 		BL		_putchar	 
 		ADD     SP, SP, #16 
-		LDP     LR, X16, [SP], #16
+		restore_registers
 		RET
 
 
 emitchz:	; output X0 as char
-		STP		LR, X16, [SP, #-16]!
+		save_registers
  		STP		X0, X0, [SP, #-16]!
 		BL		_putchar	 
 		ADD     SP, SP, #16 
-		LDP     LR, X16, [SP], #16
+		restore_registers
 		RET
 
 emitchc:	; output X0 as char
@@ -329,11 +367,11 @@ reprintz:
 20:		CMP     X1, #0
 		B.eq	10f
 		STP     X0, X1,  [SP, #-16]!
-		STP		LR, X16, [SP, #-16]!
+		save_registers
  		STP		X0, X0, [SP, #-16]!
 		BL		_putchar	 
 		ADD     SP, SP, #16 
-		LDP     LR, X16, [SP], #16
+		restore_registers
 		LDP     X0, X1, [SP], #16
 		SUB		X1, X1, #1
 		B		20b
@@ -356,11 +394,11 @@ spacesz:
 		B.eq	10f
 		MOV     X0, #32
 		STP     X0, X1,  [SP, #-16]!
-		STP		LR, X16, [SP, #-16]!
+		save_registers
  		STP		X0, X0, [SP, #-16]!
 		BL		_putchar	 
 		ADD     SP, SP, #16 
-		LDP     LR, X16, [SP], #16
+		restore_registers
 		LDP     X0, X1, [SP], #16
 		SUB		X1, X1, #1
 		B		20b
@@ -381,11 +419,11 @@ print: ; prints int on top of stack
 
 	 	ADRP	X0, tdec@PAGE	   
 		ADD		X0, X0,tdec@PAGEOFF
-		STP		LR, X16, [SP, #-16]!
+		save_registers
 		STP		X1, X0, [SP, #-16]!
 		BL		_printf		 
 		ADD     SP, SP, #16 
-		LDP		LR, X16, [SP], #16	
+		restore_registers  
 		RET
 
 
@@ -394,10 +432,11 @@ word2number:	; converts ascii at word to 32bit number
 
 		ADRP	X0, zword@PAGE	   
 	    ADD		X0, X0, zword@PAGEOFF
-		STP		LR, X16, [SP, #-16]!
-		BL		_atoi
-		LDP     LR, X16, [SP], #16
 
+		save_registers
+		BL		_atoi
+		restore_registers  
+		
 		STR		X0, [X16], #8
 
 		; check for overflow
@@ -503,11 +542,11 @@ announce:
         LDR     X1, [X0]
 	 	ADRP	X0, tver@PAGE	   
 		ADD		X0, X0, tver@PAGEOFF
-		STP		LR, X16, [SP, #-16]!
+		save_registers
 		STP		X1, X0, [SP, #-16]!
 		BL		_printf		 
 		ADD     SP, SP, #16  
-		LDP		LR, X16, [SP], #16	
+		restore_registers
 		RET
 
 		; exit the program
@@ -535,7 +574,7 @@ empty_wordQ: ; is word empty?
 		RET
 
 
-start_point: ; dictionary entry points are based on first charachter
+start_point: ; dictionary entry points are based on first letters in words
 	
 		LDRB 	W0,	[X22]	; first letter
 		
@@ -767,10 +806,11 @@ advance_word:
 		ADRP	X8, ___stdoutp@GOTPAGE
 		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 		LDR		X1, [X8]
-
+		save_registers
  		STP		X1, X0, [SP, #-16]!
 		BL		_fputs	 
 		ADD     SP, SP, #16 
+		restore_registers
 		MOV		X0, #0
 		BL		_exit
 
@@ -1049,6 +1089,36 @@ exit_program:
 		
 
 		;brk #0xF000
+
+
+; The inner interpreter - interprets 'compiled' code threads.
+; a compiled word is a list of entries in the dictionary
+
+; X16 is the data stack
+; X15 is the interpreter pointer
+; X14 is the return stack
+; X13 is the dictionary pointer
+
+
+; IP --> [WORD HEADER: data word]  
+;		 etc
+
+inner_interpreter:
+
+exec_word:
+
+		; X0 is address of word header
+		MOV  	X15, X0 
+ 
+next:	LDR		X1, [X15, #8]!
+		LDR     X0,	[X1] ; data
+		LDR		X1, [X1, #-16] ; run time function
+		BLR		X1
+		B		next
+
+
+
+
 
 
 
@@ -1702,8 +1772,8 @@ zword: .zero 64
 			.quad 0
 			.quad 0
 
-
- 		    ; each word is 16 bytes of zero terminated ascii	
+			; WORDS in the large word list have a 40 byte header.
+ 		    ; each word name is 16 bytes of zero terminated ascii	
 			; a pointer to the adress of the run time machine code function to call.
 			; a pointer to the adress of the compile time machine code function to call.
 			; a data element
@@ -1718,13 +1788,8 @@ zword: .zero 64
 			.quad 0 ; cdata - class data 
 			; primitive code word headings.
 
-			.rept 44  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 44
+
 
 			.ascii "ABS" 
 			.zero 5	
@@ -1734,13 +1799,7 @@ zword: .zero 64
 			.quad 0
 adict:
 
-			.rept 44 
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 44
 
 			.ascii "BREAK" 
 			.zero 3
@@ -1768,13 +1827,7 @@ bdict:
 			.quad 0
 
 cdict:
-			.rept 40  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 40
 
 			.ascii "DUP" 
 			.zero 5	
@@ -1791,21 +1844,7 @@ cdict:
 			.quad 0
 
 ddict:
-			.rept 40 
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
-
-			.rept 40 
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 40
 
 			.ascii "EMIT" 
 			.zero 4
@@ -1815,33 +1854,15 @@ ddict:
 			.quad 0
 
 edict:
-			.rept 40 
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 40
 
 
 fdict:		
-			.rept 38  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 40
 
 
 gdict:
-			.rept 38  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 38
 
 
 hdict:
@@ -1855,41 +1876,16 @@ hdict:
 			.endr
 
 idict:
-			.rept 36  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 36
 
 jdict:
-			.rept 34  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 34
 
 kdict:
-			.rept 34  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 34
 
 ldict:
-			.rept 34  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
-
+			makeemptywords 34
 
 			.ascii "MOD" 
 			.zero 5
@@ -1900,96 +1896,36 @@ ldict:
 
 
 mdict:
-			.rept 32  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 34
 
-			.ascii "NEGATE" 
-			.zero 2
-			.zero 8	
-			.quad negz
-			.quad 0
-			.quad 0	
 
-			.ascii "NIP" 
-			.zero 5
-			.zero 8	
-			.quad dnipz
-			.quad dnipc
-			.quad 0	
+			makeword "NEGATE", negz, 0, 0
+
+			makeword "NIP", dnipz, dnipc, 0	
 
 
 
 ndict:		
-			.rept 32  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 32
 
 
-			.ascii "OVER" 
-			.zero 4
-			.zero 8	
-			.quad doverz		
-			.quad doverc
-			.quad 0
-
-			.ascii "OK" 
-			.zero 6
-			.zero 8	
-			.quad sayok			
-			.quad 0
-			.quad 0
-
+			makeword "OVER", doverz, doverc, 0
+		
 odict:
-			.rept 32  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 32
 
-			.ascii "PRINT" 
-			.zero 3
-			.zero 8	
-			.quad print
-			.quad 0
-			.quad 0
 
-			.ascii "PICK" 
-			.zero 4
-			.zero 8	
-			.quad dpickz
-			.quad dpickc
-			.quad 0
+			makeword "PRINT", print, 0, 0
+
+			makeword "PICK", dpickz, dpickc, 0
 
 
 pdict:
-			.rept 32  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 32
 
 
 qdict:
-			.rept 30  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 30
 
 			.ascii "REPRINT" 
 			.zero 1
@@ -2007,13 +1943,7 @@ qdict:
 
 rdict:
 
-			.rept 30  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 30
 
 			.ascii "SWAP" 
 			.zero 4
@@ -2038,42 +1968,18 @@ rdict:
 
 sdict:
 
-			.rept 30  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 30
 
 tdict:
 
-			.rept 30  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 30
 
 udict:
-			.rept 28  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 28
 
  		
 vdict:
-			.rept 28  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 28
 
 
 			.ascii "WORDS" 
@@ -2086,40 +1992,16 @@ vdict:
 			
 wdict:
 
-			.rept 28  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 28
 
 xdict:
-			.rept 28  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 28
 
 ydict:
-			.rept 24  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 24
 
 zdict:
-			.rept 24  
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 24
 
 			.ascii "1+"
 			.zero 6
@@ -2283,13 +2165,7 @@ zdict:
 
 
  duserdef:
-			.rept 32 ; 
-			.quad -1 
-			.quad 0
-			.quad -1 
-			.quad 0
-			.quad 0
-			.endr
+			makeemptywords 32
 
  startdict:		
  			.quad -1 
