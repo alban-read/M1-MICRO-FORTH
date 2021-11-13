@@ -38,42 +38,89 @@
 .endm
 
 
-.macro makeword name:req, runtime=-1, comptime=-1, datavalue=-1
+
+; dictionary headers
+; a pointer which is passed to the word in X0
+; a 16 byte (including zero) terminated ascii name
+; a function pointer for run time action that is called.
+; optional compile time function OR data
+; data [24 bytes]
+; a header contains up to 32 bytes of data
+; the data can be used as pointers to other data
+
+; 0 	data  ..  8 
+; 8  	name  ..  16
+; 16	name  ..  24
+; 24    run   ..  32
+; 32    comp  ..  40
+; 40    data  ..  48
+; 48    data  ..  56
+; 56    data  ..  64
+ 
+
+.macro makeword name:req, runtime=-1, comptime=-1, datavalue=1
+	.quad   \datavalue
 10:
 	.asciz	"\name"
 20:
 	.zero	16 - ( 20b-10b )
 	.quad	\runtime
 	.quad   \comptime
-	.quad   \datavalue
 	.quad   0
 	.quad   0
 	.quad   0
 .endm
 
 
-.macro makevarword name:req, v1=0, v2=0, v3=0
+; make a short text that is displayed
+.macro makedisplay name:req, text="hello world\n"
+	.quad   . + 32 ; self
+10:
+	.asciz	"\name"
+20:
+	.zero	16 - ( 20b-10b )
+	.quad	sayit
+	
+30: 
+	.asciz "\text"
+40:
+	.zero	32 - ( 40b-30b )
+.endm
+
+.macro makeshorttextconst name:req, text="hello world\n"
+	.quad   . + 32 ; self
+10:
+	.asciz	"\name"
+20:
+	.zero	16 - ( 20b-10b )
+	.quad  dvaraddz
+30: 
+	.asciz "\text"
+40:
+	.zero	32 - ( 40b-30b )
+.endm
+
+
+.macro makevarword name:req, v1=1, v2=0, v3=0
+	.quad   \v1
 10:
 	.asciz	"\name"
 20:
 	.zero	16 - ( 20b-10b )
 	.quad	dvaraddz
 	.quad   dvaraddc
-	.quad   . + 8 ; point 
-	.quad   \v1    ; data
 	.quad   \v2
 	.quad   \v3
+	.quad   0
 .endm
 
 
-
-.macro makebword name:req, runtime=-1, comptime=-1, datavalue=-1
-
+.macro makebword name:req, runtime=-1, comptime=-1, datavalue=1
+	.quad   \datavalue
 	.byte	\name
 	.zero   15
 	.quad	\runtime
 	.quad   \comptime
-	.quad   \datavalue
 	.quad   0
 	.quad   0
 	.quad   0
@@ -82,11 +129,11 @@
 .endm
 
  .macro makeqvword name:req
+ 	.quad   8 * \name + ivars	
 	.byte	\name
 	.zero   15
 	.quad	dvaraddz
 	.quad   dvaraddc
-	.quad   8 * \name + ivars	
 	.quad   0
 	.quad   0
 	.quad   0
@@ -96,10 +143,10 @@
 
 .macro makeemptywords n=32 
 	.rept  \n
-	.quad 	-1
-	.quad	0
-	.quad   -1
+	.quad 	0
+	.quad	-1
 	.quad   0
+	.quad   -1
 	.quad   0
 	.quad   0
 	.quad   0
@@ -215,13 +262,13 @@ dotwords:
 		ADD		X2, X2, dend@PAGEOFF
 
 20:		ADD		X2, X2, #64
-		LDR		X0, [X2]
+		LDR		X0, [X2, #8]
 		CMP     X0, #-1
 		B.eq    10f
 		CMP     X0, #0
 		B.eq    15f
 
-		MOV     X0, X2
+		ADD     X0, X2, #8
 		STP		X2, X1, [SP, #-16]!
 		save_registers
 		BL		_fputs	 
@@ -797,7 +844,7 @@ init:
 
 
    	    BL  announce
-
+		BL  dotwords
 input: 	BL  chkoverflow
 		BL  chkunderflow
 		BL  sayok
@@ -876,7 +923,8 @@ fw1:
 
 252: 
 		BL 		get_word
-		LDR		X21, [X28]
+		 
+		LDR		X21, [X28,#8] 
 		CMP     X21, #0        ; end of list?
 		B.eq    finish_list	
 		CMP     X21, #-1       ; undefined entry in list?
@@ -886,10 +934,11 @@ fw1:
 		B.ne	251b
 
 		; found word, exec function
-		LDR     X2,	[X28, #16]
+ 
+		LDR     X2,	[X28, #24]  
 		CMP		X2, #0 
 		B.eq	finish_list
-		LDR     X0,	[X28, #32] ; data
+		LDR     X0,	[X28] ; data
 		STP		X28, XZR, [SP, #-16]!
 		BLR		X2	 ;; call function
 		LDP		X28, XZR, [SP]
@@ -1270,6 +1319,14 @@ ddropz: ;
 
 ddropc: ;   
 		RET	
+
+
+ztypez:
+		LDR 	X0, [X16, #-8] 
+		B       sayit
+
+ztypec:
+
 
 ddupz: ;  
 		LDR 	X0, [X16, #-8] 
@@ -1846,12 +1903,12 @@ edict:
 
 fdict:		
 			makeemptywords 40
-
+			makeshorttextconst "GREET", "Hey how are you?"
 			makeqvword 103
 			makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
 gdict:
 			makeemptywords 38
-
+			makedisplay "HI", "Hello have a nice day\n"
 			makeqvword 104
 			makeword "H", dvaraddz, dvaraddc,  8 * 72 + ivars	
 hdict:
@@ -1948,8 +2005,10 @@ rdict:
 			makeword "S", dvaraddz, dvaraddc,  8 * 83 + ivars	
 
 sdict:
-
 			makeemptywords 30
+
+			makeword "TYPEZ", ztypez, ztypec, 0	
+		
 			makeqvword 116
 			makeword "T", dvaraddz, dvaraddc,  8 * 84 + ivars	
 
@@ -1960,8 +2019,11 @@ tdict:
 			makeword "U", dvaraddz, dvaraddc,  8 * 85 + ivars	
 
 udict:
+
+
+	
 			makeemptywords 28
-		
+			makeword "VERSION", announce , 0, 0
 			makeqvword 118
 			makeword "V", dvaraddz, dvaraddc,  8 * 86 + ivars	
  		
