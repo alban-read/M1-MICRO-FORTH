@@ -48,7 +48,7 @@
 ; a header contains up to 32 bytes of data
 ; the data can be used as pointers to other data
 
-; 0 	data  ..  8 
+; 0 	pointr ..  8 
 ; 8  	name  ..  16
 ; 16	name  ..  24
 ; 24    run   ..  32
@@ -74,7 +74,7 @@
 
 ; make a short text that is displayed
 .macro makedisplay name:req, text="hello world\n"
-	.quad   . + 32 ; self
+	.quad   30f
 10:
 	.asciz	"\name"
 20:
@@ -88,7 +88,7 @@
 .endm
 
 .macro makeshorttextconst name:req, text="hello world\n"
-	.quad   . + 32 ; self
+	.quad   30f
 10:
 	.asciz	"\name"
 20:
@@ -101,7 +101,7 @@
 .endm
 
 
-.macro makevarword name:req, v1=1, v2=0, v3=0
+.macro makevarword name:req, v1=1, v2=0, v3=0, v4=0
 	.quad   \v1
 10:
 	.asciz	"\name"
@@ -111,7 +111,7 @@
 	.quad   dvaraddc
 	.quad   \v2
 	.quad   \v3
-	.quad   0
+	.quad   \v4
 .endm
 
 
@@ -140,7 +140,7 @@
 
 .endm
 
-
+; the 0, -1 pattern  is free memory.
 .macro makeemptywords n=32 
 	.rept  \n
 	.quad 	0
@@ -148,8 +148,9 @@
 	.quad   0
 	.quad   -1
 	.quad   0
+	.quad   -1
 	.quad   0
-	.quad   0
+	.quad   -1
 	.quad   0
 	.endr
 .endm
@@ -1908,7 +1909,8 @@ fdict:
 			makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
 gdict:
 			makeemptywords 38
-			makedisplay "HI", "Hello have a nice day\n"
+						 	  ;012345678-012345678-012345678-12	
+			makedisplay "HI", "Hello please enjoy the session\n"
 			makeqvword 104
 			makeword "H", dvaraddz, dvaraddc,  8 * 72 + ivars	
 hdict:
