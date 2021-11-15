@@ -1,6 +1,7 @@
 ## dumb [as an especially dumb rock] interpeter
 
-Inspired by FORTH.
+Inspired by FORTH, but more primitive.
+
 
 ### purpose
 
@@ -37,31 +38,32 @@ Use bytes if bytes will do.
 
 Support integer and decimal maths
 
-Support Strings of Unicode Runes in a safe and sensible way
+
+Use ASCII
+
+Support Strings of Unicode Runes in a safe and sensible way (later)
 
 
 
 ### Dictionary
 
-The dictionary contains word headers, a pointer to the words functions (runtime and compile time), and an element of data for the word.
+A dictionary provides a way to name objects.
 
-There are two dictionaries.
+The dictionary contains word headers.
 
-1 Single byte word names.
+A headers has pointer to the words functions (runtime and compile time), and space for data belonging to the word.
 
-A single letter word can be located using the letter as an index into the dictionary that contains 256 words.
-
-The single letter name is essentially a byte code as far as the interpeter is contained.
-
-
-2 Multi byte word names (up to 15).
-
-The multi byte dictionary has 27 entry points, based on the starting letter A..Z, and all other.
-
-It is not sorted other than by the first letter of each word.
 
 The dictionary is 'full of holes' for user defined words, spread throughout it.
 
+
+' WORD     - ( -- word address)
+NTH        - ( word address -- pos )
+ADDR       - ( pos -- word address)    
+
+
+NTH and ADDR provide a way of representing the address of the 
+word in 16 bits (its position in the dictionary), rather than 64 (the full addres)
 
 
 
@@ -93,19 +95,75 @@ compile a new word
 : new-word 
   word word word ;
 
-### still thinking about how many levels of indirection are needed to run composed words.
+  
+### More primitive
 
-immediate mode
-find word, fetch code pointer (to primitive word), fetch word data, and call it.
-    if number push
+The concept is to write the application in assembler and script/test it
 
-compiling mode
-create new word, store docol, semi.
-    find word, store code pointer
-        if number store dolit, number
+the interpreter is a way to call words written in regular assembler, new words are added to the asm files in assembly.
 
-docol, pushes IP, sets IP to next cell, 
-calls every function in the word (which may modify IP); terminates at semi, pops IP.
+high level words are collections of word tokens, the tokens are converted to word addresses by the token interpreter, and the word at that address in the dictionary is then called.
+
+
+
+#### More primitive than FORTH
+
+High level words need to be short, they MAY not contain text literals.
+
+literals are stored in their own words and then used elsewhere.
+
+A high level word starts with : and ends with ;
+
+e.g. 
+
+: PRINTSQUARE DUP * . ;
+
+In the interpreter you can type
+
+20345 PRINTSQUARE 
+=> 413919025
+ 
+The compiled high level words do not contain literals.
+ 
+Instead other words must be defined to contain the literals
+
+e.g. Literal text
+
+Literal text is displayed by defining a test display word for each text item.
+
+e.g.  :." WELL?  Well hello how are you feeling today ?\n ";
+          -----  -----------------------------------------
+          Word   Text, up to 96 chars.
+
+:."  - means display string 
+- stores text until "; when called prints it.
+
+Literal text may be stored with 
+
+:" HEYJUDE Hey Jude! ";
+
+This word returns the address of the text when invoked.
+
+HEYJUDE TYPEZ would print 'Hey Jude!'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
