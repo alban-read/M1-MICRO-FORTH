@@ -17,7 +17,7 @@
 ; X15 is the interpreter pointer
 ; X14 is the return stack
 ; X13 is the dictionary pointer
-; X12 
+; X12 is the tertiary pointer
 
 
 ;; X28 dictionary
@@ -1374,12 +1374,12 @@ runintz:	; interpret the code at X0
 		LDR     X0, [X1]		; words data
 		LDR     X1, [X1, #24]	; words code
 
-		STP		X12, X15, [SP, #-16]!
-		STP		LR,  XZR, [SP, #-16]!
+	 
+		STP		LR,  X12, [SP, #-16]!
 		BLR     X1 		
  
-		LDP		LR, XZR, [SP], #16	
-		LDP		X12, X15, [SP], #16	
+		LDP		LR, X12, [SP], #16	
+	 
 
 		B		10b
 90:
@@ -1761,6 +1761,31 @@ dvaraddz: ; address of variable
 dvaraddc: ; compile address of variable
 		RET
 
+
+
+dlitz: ; next cell has address of short (half word) inline literal
+	
+ 
+		LDRH	W0, [X15], #2
+		B		stackit 
+
+dlitc: ; compile address of variable
+		RET
+
+
+dlitlz: ; next cell has address of quad literal, held in pool
+		LDRH	W0, [X15], #2
+		ADRP   X1, quadlits@PAGE	
+		ADD	   X1, X1, quadlits@PAGEOFF
+		LDR	   X0, [X1,X0, LSL #3]
+		B		stackit 
+
+dlitlc: ; compile address of variable
+		RET
+
+
+
+
 dconstz: ; value of constant
 		STR		X0, [X16], #8
 		RET
@@ -1996,8 +2021,34 @@ rsp:	.quad rp1
 ivars:	.zero 256*16	
 
 
+
+; variables
+.align 16
+latest:	.quad 	-1		; latest word being updated.
+
+.align 16 
+
+; if the compiler sees a long lit > 16000 it makes a long lit
+; which means it has to find a free lit (-1) in the litpool, and use its index.
+; as a short word in the high level threads.
+;  
+
+quadbase: .quad quadlits
+
+quadlits:	
+; long literal values referenced by words.
+		.quad  4
+		.quad  8
+		.quad  16
+		.quad  32
+		.quad  64 
+		.quad  128 
+		.rept  640
+		.quad -1
+		.endr
+
 ; used for line input
-.align 8
+.align 16
 zpad:    .ascii "ZPAD STARTS HERE"
 		 .zero 1024
 
@@ -2019,13 +2070,15 @@ zword: .zero 64
 			; gaps for capacity are stacked up towards 'a'  
 			;  
 
-			; the end of the list - also the beginning of same.
+			; the end of the list - also the beginning of the same.
+
 			.quad 0
 			.quad 0
 			.quad 0
 			.quad 0
 
-dend:		.quad -1 ; cdata - class data 
+dend:		
+			.quad -1 ; cdata - class data 
  			.quad -1 ; name
 			.quad 0	; name
 			.quad 0	; zptr - run time action
@@ -2091,9 +2144,10 @@ edict:
 		 	
 			makeqvword 102
 			makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
+			makeword "FINDLIT", dfindlitz, dfindlitc,  0
 
 fdict:		
-			makeemptywords 40
+			makeemptywords 39
 			makeshorttextconst "GREET", "Hey how are you, hope you are keeping well in these strange times?"
 			makeqvword 103
 			makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
@@ -2103,10 +2157,13 @@ gdict:
 			makeword "HW!", dhstorez, dhstorec,  0
 
 			makeword "HW@", dhatz, dhatc, 0
+
 			                  ; 32 char limit.
 						 	  ;012345678-012345678-012345678-12	
 			makedisplay "HI", "Hello please enjoy the session\n"
+
 			makeqvword 104
+
 			makeword "H", dvaraddz, dvaraddc,  8 * 72 + ivars	
 hdict:
 
@@ -2125,10 +2182,14 @@ jdict:
 kdict:
 			makeemptywords 34
 			
+			makeword "LATEST", dvaraddz, dvaraddc,  latest
 			makeqvword 108
 			makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
+			makeword "LITS", dlitz, dlitc,  0
+			makeword "LITL", dlitlz, dlitlc,  0
+			makeword "LITBASE", dvaraddz, dvaraddc,  quadlits
 ldict:
-			makeemptywords 34
+			makeemptywords 31
 
 			makeword "MOD", dmodz, dmodc, 0	
 
@@ -2189,7 +2250,7 @@ rdict:
 			makeemptywords 30
 
 
-			; use assembnler to build a high level word
+			; use asm to build a high level 'demo' word
 
 			.quad   30f	; address of halfword token code.
 			10:
@@ -2197,14 +2258,26 @@ rdict:
 			20:
 				.zero	16 - ( 20b-10b )
 				.quad	runintz   ; interpret
-			30:
+			30:  ; halfword token list
+				.hword  507     ; LIT
+				.hword  2       ; lit index
+				.hword  507     ; LIT
+				.hword  3       ; lit index
+				.hword	1096	; +
 				.hword	182		; DUP
-				.hword  1094    ; *
-				.hword  1098    ; .
+				.hword  1095    ; *
+				.hword  1099    ; .
 				.hword  0       ; END OF WORD
 			40:
 				.zero	128 - ( 40b-30b ) - 32		
 
+			; to get the tokens 
+			; ' DUP NTH .
+			; ' * NTH .
+			; ' . NTH .
+			; The tokens change if a new word is added 
+			; using the assmbler, WITHOUT reducing the empty
+			; word count above it.
 
 
 			makeword "SWAP", dswapz , dswapc, 0 

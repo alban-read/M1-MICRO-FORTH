@@ -1,6 +1,8 @@
 ## dumb [as an especially dumb rock] interpeter
 
-Inspired by FORTH, but more primitive.
+Inspired by FORTH, but more primitive and trying to be compact.
+But .. tradeoffs..
+
 
 
 ### purpose
@@ -95,7 +97,35 @@ compile a new word
 : new-word 
   word word word ;
 
-  
+
+
+#### Compiled word
+
+A 'compiled' word is a list of tokens 
+The token interpeter expands tokens and calls words.
+X15 is the IP pointing at the next token, which can be modified by words.
+
+
+0     [pointer to tokens]
+8     [word name ]
+
+tokens:
+
+24    [runint]  --> code that runs the interpreter for tokens
+32    [token]   <-- small half word sized tokens (16 bits)
+34    [token]
+36    [token]
+..
+124   [token]
+126   [0]  <-- end token interpreter.
+
+The tokens compress the high level forth code, we do not want to use 64 bits for each word.
+
+The cost is the token lookup see NTH and the token expansion see ADDR.
+
+The token lookup is simplified by the dictionary being a fixed size.
+
+
 ### More primitive
 
 The concept is to write the application in assembler and script/test it
@@ -107,47 +137,25 @@ high level words are collections of word tokens, the tokens are converted to wor
 
 
 #### More primitive than FORTH
-
-High level words need to be short, they MAY not contain text literals.
-
-literals are stored in their own words and then used elsewhere.
-
-A high level word starts with : and ends with ;
-
-e.g. 
-
-: PRINTSQUARE DUP * . ;
-
-In the interpreter you can type
-
-20345 PRINTSQUARE 
-=> 413919025
  
-The compiled high level words do not contain literals.
- 
-Instead other words must be defined to contain the literals
 
-e.g. Literal text
+Literals
 
-Literal text is displayed by defining a test display word for each text item.
+literals are stored inline for small values, and as an index into literal pools for long values.
 
-e.g.  :." WELL?  Well hello how are you feeling today ?\n ";
-          -----  -----------------------------------------
-          Word   Text, up to 96 chars.
+numeric literals small 
+[lits][short literal]
 
-:."  - means display string 
-- stores text until "; when called prints it.
-
-Literal text may be stored with 
-
-:" HEYJUDE Hey Jude! ";
-
-This word returns the address of the text when invoked.
-
-HEYJUDE TYPEZ would print 'Hey Jude!'
+numeric literals large 
+[litl][index] --------->  literal pool
 
 
 
+ARRAY lookup
+
+Look up literal N in LITBASE
+
+LITBASE n 8* + @ .
 
 
 
