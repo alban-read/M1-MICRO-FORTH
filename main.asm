@@ -39,6 +39,20 @@
 		LDP		X12, X13, [SP], #16	
 .endm
 
+.macro save_registers_not_stack  
+		STP		X12, X13, [SP, #-16]!
+		STP		X14, X15, [SP, #-16]!
+		STP		LR,  XZR, [SP, #-16]!
+.endm
+
+.macro restore_registers_not_stack  
+	 	LDP     LR, XZR, [SP], #16
+		LDP		X14, X15, [SP], #16	
+		LDP		X12, X13, [SP], #16	
+.endm
+
+
+
 
 
 ; dictionary headers
@@ -1246,6 +1260,230 @@ dandc: ; &
 		RET
 
 
+
+;; CREATION WORDS
+;; add words to dictionary.
+;; create, variable, constant
+
+; create, creates a standard word header.
+
+dcreatz:
+
+		save_registers
+
+		BL		advancespaces
+		BL		collectword
+		BL      get_word
+		BL 		empty_wordQ
+		B.eq	300f
+
+
+		BL		start_point
+
+100:	; find free word and start building it
+
+
+		LDR		X1, [X28, #8] ; name field
+
+		CMP     X1, #0        ; end of list?
+		B.eq    280f		   ; not found 
+		CMP     X1, #-1       ; undefined entry in list?
+		b.ne    260f
+
+		; undefined so build the word here
+
+		; this is now the latest word being built.
+		ADRP	X1, latest@PAGE	   
+	    ADD		X1, X1, latest@PAGEOFF
+		STR		X28, [X1]
+
+		; copy text over
+		LDR     X0, [X22]
+		STR		X0, [X28, #8]
+		ADD		X22, X22, #8
+		LDR     X0, [X22]
+		STR		X0, [X28, #16]
+
+		ADRP	X1, runintz@PAGE	; high level word.   
+	    ADD		X1, X1, runintz@PAGEOFF
+		STR		X1, [X28, #24]
+
+		ADD		X1,	X28, #32
+		STR		X1, [X28]
+
+		B		300f
+
+
+260:	; try next word in dictionary
+		SUB		X28, X28, #128
+		B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+		restore_registers
+		RET
+
+
+dcreatc:
+		RET
+
+
+
+;; CONSTANT
+;; e.g. 198 CONSTANT test198
+
+; create constant, creates a standard word header.
+
+dcreatcz:
+
+		save_registers_not_stack
+
+		BL		advancespaces
+		BL		collectword
+		BL      get_word
+		BL 		empty_wordQ
+		B.eq	300f
+
+
+		BL		start_point
+
+100:	; find free word and start building it
+
+
+		LDR		X1, [X28, #8] ; name field
+
+		CMP     X1, #0        ; end of list?
+		B.eq    280f		   ; not found 
+		CMP     X1, #-1       ; undefined entry in list?
+		b.ne    260f
+
+		; undefined so build the word here
+
+		; this is now the latest word being built.
+		ADRP	X1, latest@PAGE	   
+	    ADD		X1, X1, latest@PAGEOFF
+		STR		X28, [X1]
+
+		; copy text for name over
+		LDR     X0, [X22]
+		STR		X0, [X28, #8]
+		ADD		X22, X22, #8
+		LDR     X0, [X22]
+		STR		X0, [X28, #16]
+
+		; variable code
+		ADRP	X1, dconstz@PAGE	 
+	    ADD		X1, X1, dconstz@PAGEOFF
+		STR		X1, [X28, #24]
+
+		;ADD		X1,	X28, #32
+		;STR		X1, [X28]
+
+		; set constant from tos.
+		LDR 	X1, [X16, #-8] 	 
+		SUB		X16, X16, #8
+		STR		X1, [X28]
+
+		B		300f
+
+
+260:	; try next word in dictionary
+		SUB		X28, X28, #128
+		B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+		restore_registers_not_stack
+		RET
+
+
+dcreatcc:
+		RET
+
+
+
+;; VARIABLE
+;; e.g. 198 VARIABLE test198
+
+; create variable, creates a standard word header.
+
+dcreatvz:
+
+		save_registers_not_stack
+
+		BL		advancespaces
+		BL		collectword
+		BL      get_word
+		BL 		empty_wordQ
+		B.eq	300f
+
+
+		BL		start_point
+
+100:	; find free word and start building it
+
+
+		LDR		X1, [X28, #8] ; name field
+
+		CMP     X1, #0        ; end of list?
+		B.eq    280f		   ; not found 
+		CMP     X1, #-1       ; undefined entry in list?
+		b.ne    260f
+
+		; undefined so build the word here
+
+		; this is now the latest word being built.
+		ADRP	X1, latest@PAGE	   
+	    ADD		X1, X1, latest@PAGEOFF
+		STR		X28, [X1]
+
+		; copy text for name over
+		LDR     X0, [X22]
+		STR		X0, [X28, #8]
+		ADD		X22, X22, #8
+		LDR     X0, [X22]
+		STR		X0, [X28, #16]
+
+		; variable code
+		ADRP	X1, dvaraddz@PAGE	; high level word.   
+	    ADD		X1, X1, dvaraddz@PAGEOFF
+		STR		X1, [X28, #24]
+
+		ADD		X1,	X28, #32
+		STR		X1, [X28]
+
+		; set variable from tos.
+		LDR 	X1, [X16, #-8] 	 
+		SUB		X16, X16, #8
+		STR		X1, [X28, #32]
+
+		B		300f
+
+
+260:	; try next word in dictionary
+		SUB		X28, X28, #128
+		B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+		restore_registers_not_stack
+		RET
+
+
+dcreatvc:
+		RET
+
+
+
+
+
+
 dtickz: ; ' - get address of NEXT words data field
 
 100:	
@@ -2102,13 +2340,15 @@ latest:	.quad 	-1		; latest word being updated.
 quadbase: .quad quadlits
 
 quadlits:	
-; long literal values referenced by words.
-		.quad  4
-		.quad  8
+; long literal values for all words in dictionary
+
 		.quad  16
 		.quad  32
-		.quad  64 
 		.quad  128 
+		.quad  256 
+		.quad  512
+		.quad  1024
+
 		.rept  512   ; <-- increase if literal pool full error arises.
 		.quad -1
 		.endr
@@ -2182,14 +2422,17 @@ adict:
 bdict:
 			makeemptywords 40
 
-			makeword "CALL", dcallz, dcallc, 0
-			makeword "CR", saycr, 0, 0
+			makeword "CONSTANT", dcreatcz , dcreatcc, 0
+			makeword "CREATE", 	dcreatz, dcreatc, 0
+			makeword "CALL", 	dcallz, dcallc, 0
+			makeword "CR", 		saycr, 0, 0
 			makeqvword 99
-			makeword "C", dvaraddz, dvaraddc,  8 * 67 + ivars	
+			makeword "C", 		dvaraddz, dvaraddc,  8 * 67 + ivars	
 
 cdict:
 			makeemptywords 40
 
+	 
 			makevarword "DP"
 			makeword "DUP", ddupz , ddupc, 0 
 			makeword "DROP", ddropz , ddropc, 0 
@@ -2331,10 +2574,10 @@ rdict:
 				.hword  2       ; lit index
 				.hword  507     ; LIT
 				.hword  3       ; lit index
-				.hword	1096	; +
-				.hword	182		; DUP
-				.hword  1095    ; *
-				.hword  1099    ; .
+				.hword	1097	; +
+				.hword	183		; DUP
+				.hword  1096    ; *
+				.hword  1100    ; .
 				.hword  0       ; END OF WORD
 			40:
 				.zero	128 - ( 40b-30b ) - 32		
@@ -2381,6 +2624,10 @@ udict:
 	
 			makeemptywords 28
 			makeword "VERSION", announce , 0, 0
+
+
+			makeword "VARIABLE", dcreatvz , dcreatvc, 0
+
 			makeqvword 118
 			makeword "V", dvaraddz, dvaraddc,  8 * 86 + ivars	
  		
@@ -2414,10 +2661,10 @@ ydict:
 		 	makeqvword 122
 			makeword "Z", dvaraddz, dvaraddc,  8 * 90 + ivars	
 
-			makeemptywords 22
-
-
 zdict:
+
+			makeemptywords 20
+
 			makeword "-1", dconstz, dconstc,  -1
 			makeword "-2", dconstz, dconstc,  -2
 			makeword "1+", dnplusz , 0, 1 
@@ -2440,6 +2687,9 @@ zdict:
 			makeword "16+", dnplusz , 0, 4 
 			makeword "16*", dnmulz , 0, 4
 			makeword "16/", dndivz , 0, 4
+
+			makeword "24+", dnplusz , 0, 24
+			makeword "24-", dnsubz , 0, 24
 			
 			makeword "/MOD", dsmodz , dsmodc, 0
 
