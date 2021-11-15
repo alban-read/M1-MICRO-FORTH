@@ -24,6 +24,9 @@
 ;; X22 word 
 
 
+ 
+
+
 .macro save_registers  
 		STP		X12, X13, [SP, #-16]!
 		STP		X14, X15, [SP, #-16]!
@@ -39,13 +42,19 @@
 
 
 ; dictionary headers
+;
+; fixed size so we can use word indexes for execution tokens.
+; contain data; so we can make some use of registers.
+; must be short, e.g. can call about 50 words or less.
+;
 ; a pointer which is passed to the word in X0
 ; a 16 byte (including zero) terminated ascii name
 ; a function pointer for run time action that is called.
 ; optional compile time function OR data
 ; data [24 bytes]
-; a header contains up to 32 bytes of data
+; a header contains up to 96 bytes of data
 ; the data can be used as pointers to other data
+; or as literals for the word.
 
 ; 0 	pointr ..  8 
 ; 8  	name  ..  16
@@ -55,6 +64,9 @@
 ; 40    data  ..  48
 ; 48    data  ..  56
 ; 56    data  ..  64
+; ..    64 bytes  128;
+
+
  
 
 .macro makeword name:req, runtime=-1, comptime=-1, datavalue=1
@@ -68,6 +80,8 @@
 	.quad   0
 	.quad   0
 	.quad   0
+	.zero	64
+ 
 .endm
 
 
@@ -83,7 +97,7 @@
 30: 
 	.asciz "\text"
 40:
-	.zero	32 - ( 40b-30b )
+	.zero	64+32 - ( 40b-30b )
 .endm
 
 .macro makeshorttextconst name:req, text="hello world\n"
@@ -96,7 +110,7 @@
 30: 
 	.asciz "\text"
 40:
-	.zero	32 - ( 40b-30b )
+	.zero	64+32 - ( 40b-30b )
 .endm
 
 
@@ -111,6 +125,7 @@
 	.quad   \v2
 	.quad   \v3
 	.quad   \v4
+	.zero	64
 .endm
 
 
@@ -123,6 +138,7 @@
 	.quad   0
 	.quad   0
 	.quad   0
+	.zero	64
 .endm
 
  .macro makeqvword name:req
@@ -134,6 +150,8 @@
 	.quad   0
 	.quad   0
 	.quad   0
+	.zero	64
+
 
 .endm
 
@@ -142,7 +160,7 @@
 	.rept  \n
 	.quad  -1
  	.quad  -1
-	.zero 48
+	.zero  128-16 
 	.endr
 .endm
 
@@ -253,7 +271,7 @@ dotwords:
 	 	ADRP	X2, dend@PAGE	
 		ADD		X2, X2, dend@PAGEOFF
 
-20:		ADD		X2, X2, #64
+20:		ADD		X2, X2, #128
 		LDR		X0, [X2,#8]
 		CMP     X0, #-1
 		B.eq    10f
@@ -821,7 +839,7 @@ searchall:
 		ADRP	X28, startdict@PAGE	   
 	    ADD		X28, X28, startdict@PAGEOFF
 251:	
-		SUB		X28, X28, #64
+		SUB		X28, X28, #128
 
 		RET
 
@@ -1088,6 +1106,8 @@ enter_compiler:
 
 
 
+
+
 create_word: 
 
 
@@ -1174,6 +1194,15 @@ dstorez:	; ( addr value -- )
 
 dstorec:	; ( addr value -- )
 		RET
+
+dhstorez:	; ( addr value -- )
+		B		hwstorz
+		RET
+
+dhstorec:	; ( addr value -- )
+		RET
+
+
 
 
 dquotz:	; " 
@@ -1265,7 +1294,7 @@ dtickz: ; ' - get address of NEXT words data field
 	 	B		stackit
 
 170:	; next word in dictionary
-		SUB		X28, X28, #64
+		SUB		X28, X28, #128
 		B		120b
 
 190:	; error out 
@@ -1280,6 +1309,37 @@ dtickc: ; '
 		RET
 
 
+
+
+dnthz: ; from address, what is our position.
+ 	 	ADRP	X2, dend@PAGE	
+		ADD		X2, X2, dend@PAGEOFF
+		LDR 	X1, [X16, #-8] 	 
+		SUB		X1, X1, X2
+		LSR		X1, X1, #7	 ; / 128
+		STR 	X1, [X16, #-8] 	 
+		RET
+
+dnthc: ; '
+		RET
+
+
+
+
+daddrz: ; from our position, address
+ 	 	ADRP	X2, dend@PAGE	
+		ADD		X2, X2, dend@PAGEOFF
+		LDR 	X1, [X16, #-8] 	
+		LSL		X1, X1, #7	 ; / 128 
+		ADD		X1, X1, X2
+		STR 	X1, [X16, #-8] 	 
+		RET
+
+daddrc: ; '
+		RET
+
+
+
 dcallz:	;  code field (from ' WORD on stack)
 
 		LDR 	X1, [X16, #-8] 	 
@@ -1290,6 +1350,41 @@ dcallz:	;  code field (from ' WORD on stack)
 
 
 dcallc:	; CALL code field (on stack)
+
+
+
+
+runintz:	; interpret the code at X0
+			; as halfword tokens.
+			; until 0.
+
+		MOV    X15, X0
+
+		ADRP   X12, dend@PAGE	
+		ADD	   X12, X12, dend@PAGEOFF
+
+10:		; next token
+		LDRH	W1,  [X15]
+		ADD		X15, X15, #2
+		CBZ     W1, 90f
+
+		LSL		W1, W1, #7	 ;  *128 
+		ADD		X1, X1, X12  ; + dend
+
+		LDR     X0, [X1]		; words data
+		LDR     X1, [X1, #24]	; words code
+
+		STP		X12, X15, [SP, #-16]!
+		STP		LR,  XZR, [SP, #-16]!
+		BLR     X1 		
+ 
+		LDP		LR, XZR, [SP], #16	
+		LDP		X12, X15, [SP], #16	
+
+		B		10b
+90:
+
+		RET
 
 
 
@@ -1553,8 +1648,19 @@ datz: ; "@" at - fetch
 		B 		atz
  
 
+dhatc: ;  "@"  
+		RET		
+
+dhatz: ; "@" at - fetch 
+		B 		hwatz
+ 
+
 datc: ;  "@"  
 		RET		
+
+
+		
+
 
 
 atz: ;  ( address -- n ) fetch var.
@@ -1570,6 +1676,19 @@ storz:  ; ( n address -- )
 		SUB		X16, X16, #16
 		RET
 
+
+hwatz: ;  ( address -- n ) fetch var.
+		LDR		X0, [X16, #-8] 
+		LDRH    W0, [X0]
+		STR		X0, [X16, #-8]
+		RET
+
+hwstorz:  ; ( n address -- )
+		LDR		X0, [X16, #-8] 
+		LDR		X1, [X16, #-16]
+		STRH 	W1, [X0]
+		SUB		X16, X16, #16
+		RET
 
 
 nsubz:	;
@@ -1900,13 +2019,14 @@ zword: .zero 64
 			; gaps for capacity are stacked up towards 'a'  
 			;  
 
-			; the end of the list
+			; the end of the list - also the beginning of same.
 			.quad 0
 			.quad 0
 			.quad 0
 			.quad 0
+
 dend:		.quad -1 ; cdata - class data 
- 			.quad -1	; name
+ 			.quad -1 ; name
 			.quad 0	; name
 			.quad 0	; zptr - run time action
 			.quad 0 ; cptr - compile time action
@@ -1914,10 +2034,13 @@ dend:		.quad -1 ; cdata - class data
 			.quad 0
 			.quad 0
 			.quad 0
+			.zero 64
 			; primitive code word headings.
 
 		
 		    makeemptywords 44
+
+			makeword "ADDR" , daddrz, daddrc, 0
 
 			makeword "ABS" , dabsz, dabsc, 0
 
@@ -1971,11 +2094,15 @@ edict:
 
 fdict:		
 			makeemptywords 40
-			makeshorttextconst "GREET", "Hey how are you?"
+			makeshorttextconst "GREET", "Hey how are you, hope you are keeping well in these strange times?"
 			makeqvword 103
 			makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
 gdict:
 			makeemptywords 38
+
+			makeword "HW!", dhstorez, dhstorec,  0
+
+			makeword "HW@", dhatz, dhatc, 0
 			                  ; 32 char limit.
 						 	  ;012345678-012345678-012345678-12	
 			makedisplay "HI", "Hello please enjoy the session\n"
@@ -2013,7 +2140,7 @@ mdict:
 			makeemptywords 34
 
 
-		
+			makeword "NTH", dnthz, dnthc, 0	
 
 			makeword "NIP", dnipz, dnipc, 0	
 
@@ -2060,6 +2187,25 @@ qdict:
 rdict:
 
 			makeemptywords 30
+
+
+			; use assembnler to build a high level word
+
+			.quad   30f	; address of halfword token code.
+			10:
+				.asciz	"SQUARE"
+			20:
+				.zero	16 - ( 20b-10b )
+				.quad	runintz   ; interpret
+			30:
+				.hword	182		; DUP
+				.hword  1094    ; *
+				.hword  1098    ; .
+				.hword  0       ; END OF WORD
+			40:
+				.zero	128 - ( 40b-30b ) - 32		
+
+
 
 			makeword "SWAP", dswapz , dswapc, 0 
 	
