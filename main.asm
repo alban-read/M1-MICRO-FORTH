@@ -3,7 +3,6 @@
 ;; ARM64 November 2021
 
 
-
 ;; reserved registers.
 ;; X18 reserved
 ;; X29 frame ptr
@@ -124,8 +123,6 @@
 	.quad   0
 	.quad   0
 	.quad   0
-
-
 .endm
 
  .macro makeqvword name:req
@@ -140,18 +137,12 @@
 
 .endm
 
-; the 0, -1 pattern  is free memory.
+;  
 .macro makeemptywords n=32 
 	.rept  \n
-	.quad 	0
-	.quad	-1
-	.quad   0
-	.quad   -1
-	.quad   0
-	.quad   -1
-	.quad   0
-	.quad   -1
-	.quad   0
+	.quad  -1
+ 	.quad  -1
+	.zero 48
 	.endr
 .endm
 
@@ -263,16 +254,17 @@ dotwords:
 		ADD		X2, X2, dend@PAGEOFF
 
 20:		ADD		X2, X2, #64
-		LDR		X0, [X2, #8]
+		LDR		X0, [X2,#8]
 		CMP     X0, #-1
 		B.eq    10f
 		CMP     X0, #0
 		B.eq    15f
-
+		LDR		X0, [X2,#8]
 		ADD     X0, X2, #8
 		STP		X2, X1, [SP, #-16]!
 		save_registers
 		BL		_fputs	 
+ 
 		MOV     X0, #32
 		BL      _putchar
 		restore_registers
@@ -281,7 +273,6 @@ dotwords:
 
 10:		; skip non word
 		B		20b  
-		RET
 
  
 15:
@@ -648,6 +639,9 @@ empty_wordQ: ; is word empty?
 
 start_point: ; dictionary entry points are based on first letters in words
 	
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
+		
 		LDRB 	W0,	[X22]	; first letter
 		
 		; lower case and check for a..z
@@ -925,7 +919,7 @@ fw1:
 252: 
 		BL 		get_word
 		 
-		LDR		X21, [X28,#8] 
+		LDR		X21, [X28, #8]  ; name field
 		CMP     X21, #0        ; end of list?
 		B.eq    finish_list	
 		CMP     X21, #-1       ; undefined entry in list?
@@ -941,7 +935,9 @@ fw1:
 		B.eq	finish_list
 		LDR     X0,	[X28] ; data
 		STP		X28, XZR, [SP, #-16]!
+
 		BLR		X2	 ;; call function
+
 		LDP		X28, XZR, [SP]
 		B       advance_word
 
@@ -1221,15 +1217,81 @@ dandc: ; &
 		RET
 
 
-dtickz: ; ' - get address of word data field
+dtickz: ; ' - get address of NEXT words data field
 
+100:	
+		save_registers
+	
+		BL		advancespaces
+		BL		collectword
 
+	; display word to find
+	;	BL		saycr
+	;	BL		saylb
+	;	BL		sayword
+	;	BL		sayrb
+ 
+		BL 		empty_wordQ
+		B.eq	190f
+
+		BL		start_point
+
+120:
+		LDR		X21, [X28, #8] ; name field
+
+		CMP     X21, #0        ; end of list?
+		B.eq    190f		   ; not found 
+		CMP     X21, #-1       ; undefined entry in list?
+		b.eq    170f
+
+		; check word
+
+		; display word seen
+		;BL		saycr
+		;ADD		X0, X28, #8
+		;BL      sayit 
+
+		BL      get_word
+		LDR		X21, [X28, #8] ; name field
+		CMP		X21, X22       ; is this our word?
+		B.ne	170f
+
+		; found word, stack address of word
+ 	
+
+		MOV     X0,	X28  
+		restore_registers
+
+	 	B		stackit
+
+170:	; next word in dictionary
+		SUB		X28, X28, #64
+		B		120b
+
+190:	; error out 
+		MOV	X0, #0
+		restore_registers
+		B   stackit
 
 
 		RET
 
 dtickc: ; '
 		RET
+
+
+dcallz:	;  code field (from ' WORD on stack)
+
+		LDR 	X1, [X16, #-8] 	 
+		SUB		X16, X16, #8
+		LDR     X0, [X1]
+		LDR     X1, [X1, #24]
+		BR      X1 		
+
+
+dcallc:	; CALL code field (on stack)
+
+
 
 dlrbz: ; (
 		RET
@@ -1843,23 +1905,25 @@ zword: .zero 64
 			.quad 0
 			.quad 0
 			.quad 0
- dend:		.quad 0	; name
+dend:		.quad -1 ; cdata - class data 
+ 			.quad -1	; name
 			.quad 0	; name
 			.quad 0	; zptr - run time action
 			.quad 0 ; cptr - compile time action
-			.quad 0 ; cdata - class data 
+	
 			.quad 0
 			.quad 0
 			.quad 0
 			; primitive code word headings.
 
-			makeemptywords 44
-
+		
+		    makeemptywords 44
 
 			makeword "ABS" , dabsz, dabsc, 0
 
 			makeqvword 97
 			makeword "A", dvaraddz, dvaraddc,  8 * 65 + ivars	 
+	
 		 
 adict:
 
@@ -1872,6 +1936,9 @@ adict:
 			makeword "B", dvaraddz, dvaraddc,  8 * 66 + ivars	
 
 bdict:
+			makeemptywords 40
+
+			makeword "CALL", dcallz, dcallc, 0
 			makeword "CR", saycr, 0, 0
 			makeqvword 99
 			makeword "C", dvaraddz, dvaraddc,  8 * 67 + ivars	
@@ -1909,6 +1976,7 @@ fdict:
 			makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
 gdict:
 			makeemptywords 38
+			                  ; 32 char limit.
 						 	  ;012345678-012345678-012345678-12	
 			makedisplay "HI", "Hello please enjoy the session\n"
 			makeqvword 104
@@ -2071,21 +2139,21 @@ zdict:
 			makeword "2-", dnsubz , 0, 2
 			makeword "2*", dnmulz , 0, 2
 			makeword "2/", dndivz , 0, 2
-			makeword "4*", dnmulz , 0, 4
-			makeword "4/", dndivz , 0, 4
+			makeword "4*", dnmulz , 0, 2
+			makeword "4/", dndivz , 0, 2
 
 			makeword "8-", dnsubz , 0, 8
 			makeword "8+", dnplusz , 0, 8 
-			makeword "8*", dnmulz , 0, 8
-			makeword "8/", dndivz , 0, 8
+			makeword "8*", dnmulz , 0, 3
+			makeword "8/", dndivz , 0, 3
 
 
-			makeword "16-", dnsubz , 0, 16
-			makeword "16+", dnplusz , 0, 16 
-			makeword "16*", dnmulz , 0, 16
-			makeword "16/", dndivz , 0, 16
+			makeword "16-", dnsubz , 0, 4
+			makeword "16+", dnplusz , 0, 4 
+			makeword "16*", dnmulz , 0, 4
+			makeword "16/", dndivz , 0, 4
 			
-			makeword "/MOD", dsmodz , dsmodc, 16
+			makeword "/MOD", dsmodz , dsmodc, 0
 
 			makeword ".VERSION", announce , 0, 0
 
