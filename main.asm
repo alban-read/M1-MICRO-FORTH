@@ -24,7 +24,15 @@
 ;; X22 word 
 
 
- 
+ .macro reset_data_stack
+		ADRP	X1, sp1@PAGE	   
+	    ADD		X1, X1, sp1@PAGEOFF
+		ADRP	X0, dsp@PAGE	   
+	    ADD		X0, X0, dsp@PAGEOFF
+		STR		X1, [X0]
+		MOV		X16, X1 
+.endm
+
 
 
 .macro save_registers  
@@ -221,6 +229,22 @@ sayok:
 saycr: 	
         ADRP	X0, tcr@PAGE	
 		ADD		X0, X0, tcr@PAGEOFF
+		B		sayit
+
+
+saycompfin: 	
+        ADRP	X0, tcomer6@PAGE	
+		ADD		X0, X0, tcomer6@PAGEOFF
+		B		sayit
+
+saywordexists: 	
+        ADRP	X0, texists@PAGE	
+		ADD		X0, X0, texists@PAGEOFF
+		B		sayit
+
+saycreatedword: 	
+        ADRP	X0, tcomer7@PAGE	
+		ADD		X0, X0, tcomer7@PAGEOFF
 		B		sayit
 
 saylb:
@@ -545,8 +569,6 @@ word2number:	; converts ascii at word to 32bit number
 		RET
 
 
-
-
 chkunderflow: ; check for stack underflow
 		ADRP	X0, spu@PAGE	   
 	    ADD		X0, X0, spu@PAGEOFF
@@ -554,14 +576,8 @@ chkunderflow: ; check for stack underflow
 		b.gt	12f	
 
 		; reset stack
-		ADRP	X27, sp1@PAGE	   
-	    ADD		X27, X27, sp1@PAGEOFF
-		ADRP	X0, dsp@PAGE	   
-	    ADD		X0, X0, dsp@PAGEOFF
-		STR		X27, [X0]
-		MOV		X16, X27 
-		; report underflow
-	 
+	  	reset_data_stack
+	
 		B		sayunderflow
 
 12:
@@ -575,12 +591,7 @@ chkoverflow:; check for stack overflow
 		b.lt	95f
 
 		; reset stack
-		ADRP	X27, sp1@PAGE	   
-	    ADD		X27, X27, sp1@PAGEOFF
-		ADRP	X0, dsp@PAGE	   
-	    ADD		X0, X0, dsp@PAGEOFF
-		STR		X27, [X0]
-		MOV		X16, X27 
+		reset_data_stack
 		; report overfow
 	
 		B		sayoverflow
@@ -1021,12 +1032,7 @@ ivset:	; from stack set variable
 		b.gt	ivset2	
 
 		; reset stack
-		ADRP	X26, sp1@PAGE	   
-	    ADD		X26, X26, sp1@PAGEOFF
-		ADRP	X2, dsp@PAGE	   
-	    ADD		X2, X2, dsp@PAGEOFF
-		STR		X26, [X2]
-		MOV		X16, X26 
+		reset_data_stack
 		; report underflow
 		BL		sayunderflow
 		B		10b
@@ -1081,12 +1087,8 @@ ivset2:
 decimal_number:
 		; TODO: decimals
 
-
-
-
-
 		; from here we are no longer interpreting the line.
-		; we are compiling input until we get see a ';'
+		; we are compiling input from ':' until we see a ';'
 
 compiler:
 
@@ -1104,48 +1106,153 @@ enter_compiler:
 		; look for the name of the new word we are compiling.
 		BL  	advancespaces
 		BL  	collectword
-		 
+		BL      get_word
 		BL 		empty_wordQ
-		B.ne	create_word 
+		B.eq	exit_compiler_word_empty 
 
+create_word: 
+
+		BL		start_point
+
+    	; find free word and start building it
+
+scan_words:
+
+		LDR		X1, [X28, #8] ; name field
+		LDR     X0, [X22]
+		CMP		X1, X0
+		B.eq	exit_compiler_word_exists; word exists
+
+		CMP     X1, #0        ; end of list?
+		B.eq    exit_compiler ; no room in dictionary
+
+		CMP     X1, #-1       ; undefined entry in list?
+		b.ne    try_next_word
+
+		; undefined word found so build the word here
+
+		; this is now the latest word being built.
+		ADRP	X1, latest@PAGE	   
+	    ADD		X1, X1, latest@PAGEOFF
+		STR		X28, [X1]
+
+
+		; copy words name text over
+		LDR     X0, [X22]
+		STR		X0, [X28, #8]
+		ADD		X22, X22, #8
+		LDR     X0, [X22]
+		STR		X0, [X28, #16]
+
+		ADRP	X1, runintz@PAGE	; high level word.   
+	    ADD		X1, X1, runintz@PAGEOFF
+		STR		X1, [X28, #24]
+
+		ADD		X1,	X28, #32
+		MOV		X15, X1			; <-- we are compiling into here
+		STR		X1, [X28]		; set start point
+
+		BL      saycreatedword
+		B		compile_words
+
+	 
+try_next_word:	; try next word in dictionary
+		SUB		X28, X28, #128
+		B		scan_words
+ 	 
+		
+; we created a word header and stored it in latest word
+
+
+compile_words:
+
+
+
+compile_next_word:
+
+		BL  	advancespaces
+		BL  	collectword
+		BL      get_word
+		BL 		empty_wordQ
+		B.eq	exit_compiler 
+
+
+
+
+
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
+		LDRB	W0, [X22]
+		CMP 	W0, #';' 	; do we exit the compiler ?
+		B.eq	exit_compiler
+
+		BL		start_point
+
+find_word_token:
+
+		BL      get_word
+		LDR		X21, [X28, #8] ; name field
+		CMP     X21, #0     
+		B.eq    try_compiling_literal		   
+		CMP     X21, #-1      
+		b.eq    170f
+
+
+		LDR		X21, [X28, #8] ; name field
+		CMP		X21, X22       ; is this our word?
+		B.ne	170f
+
+	 
+
+
+
+		; found word (X28), get token.
+		MOV     X1, X28
+		ADRP	X2, dend@PAGE	
+		ADD		X2, X2, dend@PAGEOFF	
+		SUB		X1, X1, X2
+		LSR		X1, X1, #7	 ; / 128
+
+		; X1 is token store halfword in [x15]
+		STRH	W1, [X15]
+		ADD		X15, X15, #2
+
+170:	; next word in dictionary
+		SUB		X28, X28, #128
+		B		find_word_token
+
+
+
+finished_compiling_token:
+	    B		compile_next_word
+
+
+try_compiling_literal:
+
+
+
+
+
+		B		exit_compiler
+
+exit_compiler_word_empty:
 		; : was followed by nothing which is an error.
 		ADRP	X0,	 tcomer1@PAGE	
 		ADD		X0, X0,	tcomer1@PAGEOFF
         BL		sayit
-		B		input ; back to immediate mode.
+		B		input ; back to immediate mode
+		 
 
-		; to create a new word :-
-		; 1. find first free word in the list. 
-		; 2. set the words name.
-		; 4. find the next code space address.
-		; 5. set the function to the code space addres
-		; 6. set the first code space element to DOCOL 
-		; 7. set the next code space elemement to SEMI
-		; - [DOCOL, SEMI] is essentially a NOOP. 
-
-
-
-
-
-
-create_word: 
-
-
-
-		; we need to repeat all of the parsing functions here in the compiling loop.
-		; in this loop we compile each word rather than just executing it.
-		; all words have a compile action, so they essentially compile themselves..
-
-compile_word:
-
-
+exit_compiler_word_exists:
+		BL		err_word_exists
+		B		input ;  
 
 exit_compiler:
 
 
-		; BL sayok
+		BL 		saycompfin
 
-		B	advance_word ; back to main loop
+		B		advance_word ; back to main loop
 
 
 
@@ -1171,36 +1278,7 @@ exit_program:
 		;brk #0xF000
 
 
-; The inner interpreter - interprets 'compiled' code threads.
-; a compiled word is a list of entries in the dictionary
 
-; X16 is the data stack
-; X15 is the interpreter pointer
-; X14 is the return stack
-; X13 is the dictionary pointer
-
-
-; IP --> [WORD HEADER: data word]  
-;		 etc
-
-inner_interpreter:
-
-exec_word:
-
-		; X0 is address of word header
-		MOV  	X15, X0 
- 
-next:	LDR		X1, [X15, #8]!
-		LDR     X0,	[X1] ; data
-		LDR		X1, [X1, #-16] ; run time function
-		BLR		X1
-		B		next
-
-
-
-
-;; these functions are all single letter words.
-;; z is run time, c is the optional compile time behaviour.
 
 dstorez:	; ( addr value -- )
 		B		storz
@@ -1264,6 +1342,22 @@ dandc: ; &
 ;; CREATION WORDS
 ;; add words to dictionary.
 ;; create, variable, constant
+ 
+
+err_word_exists:
+   		
+		; reset stack
+		reset_data_stack
+		save_registers_not_stack
+		BL 		saycr
+		BL		saylb
+		BL		sayword
+		BL		sayrb
+		ADRP	X0, texists@PAGE	
+		ADD		X0, X0, texists@PAGEOFF
+		restore_registers_not_stack
+		B		sayit
+		
 
 ; create, creates a standard word header.
 
@@ -1284,6 +1378,9 @@ dcreatz:
 
 
 		LDR		X1, [X28, #8] ; name field
+		LDR     X0, [X22]
+		CMP		X1, X0
+		B.eq	290f
 
 		CMP     X1, #0        ; end of list?
 		B.eq    280f		   ; not found 
@@ -1353,11 +1450,15 @@ dcreatcz:
 
 
 		LDR		X1, [X28, #8] ; name field
-
+		LDR     X0, [X22]
+		CMP		X1, X0
+		B.eq	290f
 		CMP     X1, #0        ; end of list?
 		B.eq    280f		   ; not found 
 		CMP     X1, #-1       ; undefined entry in list?
 		b.ne    260f
+		
+	
 
 		; undefined so build the word here
 
@@ -1373,13 +1474,11 @@ dcreatcz:
 		LDR     X0, [X22]
 		STR		X0, [X28, #16]
 
-		; variable code
+		; constant code
 		ADRP	X1, dconstz@PAGE	 
 	    ADD		X1, X1, dconstz@PAGEOFF
 		STR		X1, [X28, #24]
 
-		;ADD		X1,	X28, #32
-		;STR		X1, [X28]
 
 		; set constant from tos.
 		LDR 	X1, [X16, #-8] 	 
@@ -1395,6 +1494,9 @@ dcreatcz:
 
 280:	; error dictionary FULL
 
+290:	; error word exist
+		restore_registers_not_stack
+		B err_word_exists
 
 300:
 		restore_registers_not_stack
@@ -1428,6 +1530,9 @@ dcreatvz:
 
 
 		LDR		X1, [X28, #8] ; name field
+		LDR     X0, [X22]
+		CMP		X1, X0
+		B.eq	290b
 
 		CMP     X1, #0        ; end of list?
 		B.eq    280f		   ; not found 
@@ -2069,12 +2174,7 @@ dfindlitz:
 85:		; error pool full
 
 		; reset stack
-		ADRP	X27, sp1@PAGE	   
-	    ADD		X27, X27, sp1@PAGEOFF
-		ADRP	X0, dsp@PAGE	   
-	    ADD		X0, X0, dsp@PAGEOFF
-		STR		X27, [X0]
-		MOV		X16, X27 
+		reset_data_stack
 		; report error
 		B		sayerrpoolfullquad
 
@@ -2268,6 +2368,13 @@ tovflr:	.ascii "\nstack over-flow"
 tunder:	.ascii "\nstack under-flow"
 		.zero 16
 
+
+
+.align 	8
+texists:	.ascii " <-- Word Exists"
+		.zero 16
+
+
 .align 	8
 tcomer1: .ascii "\nCompiler error ':' expects a word to define."
 		.zero 16
@@ -2284,6 +2391,15 @@ tcomer4: .ascii "<-- Word was not recognized. "
 tcomer5: .ascii "Compiler error  "
 		.zero 16
 
+
+.align 	8
+tcomer6: .ascii "\nCompiler Finished  "
+		.zero 16
+
+
+.align 	8
+tcomer7: .ascii "\nCreated Word  "
+		.zero 16
 
 .align 	8
 spaces:	.ascii "                              "
