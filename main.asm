@@ -236,6 +236,12 @@ sayerrlength:
 	 	ADRP	X0, tlong@PAGE	
 		ADD		X0, X0, tlong@PAGEOFF
         B		sayit
+
+sayerrpoolfullquad:
+	 	ADRP	X0, poolfullerr@PAGE	
+		ADD		X0, X0, poolfullerr@PAGEOFF
+        B		sayit
+
 				
 sayword:
 	 	ADRP	X0, zword@PAGE	
@@ -1129,12 +1135,6 @@ exit_compiler:
 
 
 
-
-
-
-
-
-
 not_compiling:
 
 ; at this point we have not found this word
@@ -1762,6 +1762,16 @@ dvaraddc: ; compile address of variable
 		RET
 
 
+dconsz: ; value of constant
+		STR		X0, [X16], #8
+		RET
+
+dconsc: ; compile address of variable
+		RET
+
+
+
+
 
 dlitz: ; next cell has address of short (half word) inline literal
 	
@@ -1784,6 +1794,57 @@ dlitlc: ; compile address of variable
 		RET
 
 
+		; literal pool lookup
+		; literal on stack, find or add it to LITERAL pool.
+
+dfindlitz:
+
+		LDR	   X0, [X16, #-8] 
+ 		ADRP   X1, quadlits@PAGE	
+		ADD	   X1, X1, quadlits@PAGEOFF
+		MOV    X3, XZR
+
+10:
+		LDR	   	X2, [X1]
+		CMP	   	X2, X0
+		B.eq   	80f
+		CMP    	X2, #-1  
+		B.eq   	70f
+		CMP    	X2, #-2 ; end of pool ERROR  
+		B.eq   	85f
+		ADD	   	X3, X3, #1
+		ADD	   	X1, X1, #8
+		B		10b	
+70:
+		; literal not present 
+		; free slot found, store lit and return value
+		STR		X0, [X1]
+		MOV		X0, X3
+		B		stackit
+
+80:
+		; found the literal
+		MOV		X0, X3
+		B		stackit
+
+
+85:		; error pool full
+
+		; reset stack
+		ADRP	X27, sp1@PAGE	   
+	    ADD		X27, X27, sp1@PAGEOFF
+		ADRP	X0, dsp@PAGE	   
+	    ADD		X0, X0, dsp@PAGEOFF
+		STR		X27, [X0]
+		MOV		X16, X27 
+		; report error
+		B		sayerrpoolfullquad
+
+90:	
+		RET
+
+dfindlitc:
+		RET
 
 
 dconstz: ; value of constant
@@ -1940,6 +2001,11 @@ texit:	.ascii "Exit no more input.."
 tlong:	.ascii "Word too long.."
 		.zero 16
 
+.align 8
+poolfullerr:
+		.ascii "Error pool full."
+		.zero 16
+
 .align 	8
 tcr:	.ascii "\r\n"
 		.zero 16
@@ -2043,9 +2109,11 @@ quadlits:
 		.quad  32
 		.quad  64 
 		.quad  128 
-		.rept  640
+		.rept  512   ; <-- increase if literal pool full error arises.
 		.quad -1
 		.endr
+		.quad  -2 ; end of literal pool. 
+		.quad  -2 
 
 ; used for line input
 .align 16
@@ -2062,7 +2130,7 @@ zword: .zero 64
 			.quad 0
 			.quad 0
 
-			; WORDS in the large word list have a 40 byte header.
+			; WORD headers
  		    ; each word name is 16 bytes of zero terminated ascii	
 			; a pointer to the adress of the run time machine code function to call.
 			; a pointer to the adress of the compile time machine code function to call.
@@ -2346,11 +2414,12 @@ ydict:
 		 	makeqvword 122
 			makeword "Z", dvaraddz, dvaraddc,  8 * 90 + ivars	
 
-			makeemptywords 24
+			makeemptywords 22
 
 
 zdict:
-		
+			makeword "-1", dconstz, dconstc,  -1
+			makeword "-2", dconstz, dconstc,  -2
 			makeword "1+", dnplusz , 0, 1 
 			makeword "2+", dnplusz , 0, 2
 			makeword "4+", dnplusz , 0, 4
