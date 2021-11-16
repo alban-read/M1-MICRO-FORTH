@@ -1248,16 +1248,140 @@ try_compiling_literal:
 
 
 
+20:
+		; look for an integer number made of decimal digits.
+		; If found  store a literal in our word.
+
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
+		; tolerate a negative number
+		LDRB	W0, [X22]
+		CMP		W0, #'-'
+		B.ne	22f 
+		ADD		X22, X22, #1
+		LDRB	W0, [X22]
+
+22:
+		CMP 	W0, #'9'
+		B.gt    30f
+		CMP     W0, #'0'
+		B.lt    30f
+
+23:		ADD		X22, X22, #1
+		LDRB	W0, [X22]
+		CMP		W0, #0
+		B.eq	24f
+		CMP 	W0, #'.'
+		B.eq	30f
+		CMP 	W0, #'9'
+		B.gt    30f
+		CMP     W0, #'0'
+		B.lt    30f
+		
+		B		23b
+24:
+		; we have a valid number, so translate it
+		ADRP	X0, zword@PAGE	   
+	    ADD		X0, X0, zword@PAGEOFF
+
+		save_registers
+		BL		_atoi
+		restore_registers  
+
+		; halfword numbers ~32k
+		MOV     X3, #4000
+		LSL 	X3, X3, #3  
+		MOV 	X1, x0
+		CMP		X0, X3 
+		B.gt	25f  ; too big to be
+
+		MOV		X0, #1 ; #LITS
+		STRH	W0, [X15]
+		ADD		X15, X15, #2
+		STRH	W1, [X15]	; value
+		ADD		X15, X15, #2
+
+		ADD		X4, X4, #2
+		CMP     X4, #((128-32 / 2) -2)
+		B.gt    exit_compiler_word_full 
+
+		B		compile_next_word
 
 
 
+25:		; long word
+		; we need to find or create this in the literal pool.
+
+		; X0 is our literal 
+		ADRP   X1, quadlits@PAGE	
+		ADD	   X1, X1, quadlits@PAGEOFF
+		MOV    X3, XZR
 
 
+10:
+		LDR	   	X2, [X1]
+		CMP	   	X2, X0
+		B.eq   	80f
+		CMP    	X2, #-1  
+		B.eq   	70f
+		CMP    	X2, #-2 ; end of pool ERROR  
+		B.eq   	exit_compiler_pool_full
+		ADD	   	X3, X3, #1
+		ADD	   	X1, X1, #8
+		B		10b	
+70:
+		; literal not present 
+		; free slot found, store lit and return value
+		STR		X0, [X1]
+		 
+	 
+		MOV		X0, #2 ; #LITL
+		STRH	W0, [X15]
+		ADD		X15, X15, #2
+		STRH	W3, [X15]	; value
+		ADD		X15, X15, #2
+
+		ADD		X4, X4, #2
+		CMP     X4, #((128-32 / 2) -2)
+		B.gt    exit_compiler_word_full 
+
+		B		compile_next_word
+
+80:
+		; found the literal
+		MOV		X1, X3
+		MOV		X0, #2 ; #LITL
+		STRH	W0, [X15]
+		ADD		X15, X15, #2
+		STRH	W1, [X15]	; value
+		ADD		X15, X15, #2
+
+		ADD		X4, X4, #2
+		CMP     X4, #((128-32 / 2) -2)
+		B.gt    exit_compiler_word_full 
+
+    	B		compile_next_word
+
+
+
+30:		; exit number
 
 
 
 
 		B		exit_compiler
+
+
+; literal pool  is full.
+exit_compiler_pool_full:
+
+		reset_data_stack
+
+		ADRP	X0, poolfullerr@PAGE	
+		ADD		X0, X0, poolfullerr@PAGEOFF
+        BL		sayit
+
+		B		input ; back to immediate mode
 
 exit_compiler_word_empty:
 
@@ -2554,7 +2678,17 @@ dend:
 			.zero 64
 			; primitive code word headings.
 
-		
+hashdict:	; these hash words are inline compile only
+			; they are in this order fixed forever 
+			; otherwise adding words breaks things in the compiler.
+
+			makeword "#LITS", dlitz, dlitc,  0       ; 1
+			makeword "#LITL", dlitlz, dlitlc,  0     ; 2
+
+
+
+			; end of inline compiled words, relax
+
 		    makeemptywords 44
 
 			makeword "ADDR" , daddrz, daddrc, 0
@@ -2652,8 +2786,7 @@ kdict:
 			makeword "LATEST", dvaraddz, dvaraddc,  latest
 			makeqvword 108
 			makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
-			makeword "LITS", dlitz, dlitc,  0
-			makeword "LITL", dlitlz, dlitlc,  0
+		
 			makeword "LITBASE", dvaraddz, dvaraddc,  quadlits
 ldict:
 			makeemptywords 31
