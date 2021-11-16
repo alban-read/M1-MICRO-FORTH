@@ -1,10 +1,20 @@
 ## dumb [as an especially dumb rock] interpeter
 
-Inspired by FORTH, but more primitive and trying to be compact.
+Inspired by FORTH, not a new invention, since only idiots invent new languages.
 
 With .. tradeoffs..
 
-This is written from scratch, starting with a blank editor page.
+This was written from scratch, starting with a blank editor page in VS code.
+
+
+### Incomprehension about Documentation
+
+I am stunned by the projects in GITHUB that have complex software and no documentation at all.
+
+Mine are simple projects, but with documentation, I guess you can't have everything.
+
+
+
 
 ### purpose
 
@@ -32,7 +42,34 @@ Later may migrate to only use system calls and internal system functions.
 
 ASCII text is used for function names and vaiables, not Unicode
 
-Unicode will be supported only in strings when they are added
+Unicode may be supported only for Unicode strings if they are added
+
+
+#### Memory management
+
+None.
+
+Memory management is Static.
+
+People sometimes forget that static memory allocation was always there.
+
+The program contains a few tables of fixed sizes.
+
+If you blow past a limit you will get an error message.
+
+If your program exceeds a limit, just change that limit and recompile.
+
+This does waste some memory, although you can also decrease the fixed sizes. right?
+
+The machine stack can grow since the operating system does that.
+
+Otherwise the dictionary size and the literal pools are fixed size.
+
+The fixed sizes are reasonable for what I want to do, the machine I am using has 
+
+eight gigabytes of ram, it is a low cost entry model...
+
+
 
 
 ### goals
@@ -41,7 +78,7 @@ Do not use 64 bit values all over the place just because it is a 64bit processor
 
 Use 32bit values when 32 bit values will do.
 
-Use bytes if bytes will do.
+Use words or bytes where words or bytes will do.
 
 Support integer and decimal maths
 
@@ -71,6 +108,8 @@ For runintz the data is the address of the tokens.
 The functions are all 'called', rather than jumping through next.
 
 I feel this might make it easier to change the compiler to use subroutine threading later.
+
+
 
 
 ### Dictionary
@@ -138,12 +177,14 @@ X15 is the IP pointing at the next token, which can be modified by words.
 0     [pointer to tokens]
 8     [word name ]
 
-tokens:
+tokens: (example)
 
 24    [runint]  --> code that runs the interpreter for tokens
 32    [token]   <-- small half word sized tokens (16 bits)
 34    [token]
 36    [token]
+38    [#LITS]  <-- LITS is the small literal follows token 
+39    [small number]
 ..
 124   [token]
 126   [0]  <-- end token interpreter.
@@ -173,19 +214,22 @@ Literals
 literals are stored inline for small values, and as an index into literal pools for long values.
 
 numeric literals small 
-[lits][short literal]
+[#lits][short literal]
 
 numeric literals large 
-[litl][index] --------->  literal pool
+[#litl][index] --------->  literal pool
 
 
 
-ARRAY lookup
+Long literals are held in the LITBASE
 
-Look up literal N in LITBASE
+A compiled dictionary word just refers to the LITBASE using a halfword index
+
+Look up literal N in the LITBASE
 
 LITBASE n 8* + @ .
 
+The litbase
 
 
 
