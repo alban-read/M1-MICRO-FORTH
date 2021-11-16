@@ -60,9 +60,6 @@
 .endm
 
 
-
-
-
 ; dictionary headers
 ;
 ; fixed size so we can use word indexes for execution tokens.
@@ -1224,7 +1221,7 @@ find_word_token:
 		STRH	W1, [X15]
 		ADD		X15, X15, #2
 
-		; limited number of halfword slots 
+		; limited number of halfword slots in a dictionary word
 		ADD		X4, X4, #1
 		CMP     X4, #((128-32 / 2) -2)
 		B.gt    exit_compiler_word_full 
@@ -1248,6 +1245,17 @@ finished_compiling_token:
 
 
 try_compiling_literal:
+
+
+
+
+
+
+
+
+
+
+
 
 		B		exit_compiler
 
@@ -1710,10 +1718,19 @@ dcallc:	; CALL code field (on stack)
 
 
 
+; runintz is the inner interpreter of 'compiled' words.
+; X15 IP is our instruction pointer.
 
-runintz:	; interpret the code at X0
-			; as halfword tokens.
-			; until 0.
+; A high level word is a list of tokens
+; tokens are expanded to word addresses
+; each word is then executed.
+
+
+runintz:; interpret the list of tokens at X0
+		; until 0.
+
+		; SAVE IP 
+		STP	   LR,  X15, [SP, #-16]!
 
 		MOV    X15, X0
 
@@ -1725,14 +1742,15 @@ runintz:	; interpret the code at X0
 		ADD		X15, X15, #2
 		CBZ     W1, 90f
 
-		LSL		W1, W1, #7	 ;  *128 
-		ADD		X1, X1, X12  ; + dend
+		LSL		W1, W1, #7	    ;  *128 
+		ADD		X1, X1, X12     ; + dend
 
 		LDR     X0, [X1]		; words data
 		LDR     X1, [X1, #24]	; words code
 
 	 
 		STP		LR,  X12, [SP, #-16]!
+
 		BLR     X1 		
  
 		LDP		LR, X12, [SP], #16	
@@ -1740,7 +1758,10 @@ runintz:	; interpret the code at X0
 
 		B		10b
 90:
-
+		; restore IP
+		 
+		LDP		LR, X15, [SP], #16	
+	 
 		RET
 
 

@@ -3,7 +3,7 @@
 Inspired by FORTH, but more primitive and trying to be compact.
 But .. tradeoffs..
 
-
+This is written from scratch, starting with a blank screen.
 
 ### purpose
 
@@ -18,10 +18,12 @@ create small machine code primitive words
 
  .. allow new words to be composed, mainly by concatenation.
 
+Get an interactive interpreter running from Day 1, and then build it out.
+
 
 ### expedience
 
-It is ok to start by using the standard C library to get up and running.
+It is ok to start by using some functions from the standard C library to get up and running.
 
 Later may migrate to only use system calls.
 
@@ -46,6 +48,25 @@ Use ASCII
 Support Strings of Unicode Runes in a safe and sensible way (later)
 
 
+### Milestones
+
+Tuesday 16th November 2021
+
+First 'compiled' word. (token compiled)
+
+: test DUP * . ;
+
+5 test => 25 
+
+The compiler is compiling into a token list, they are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
+
+This inner interpreter is only a few instructions long, in runintz.
+It is more complicated than typical FORTH because of the token expansion, and due to the words data being passed over in X0.  
+
+For runintz the data is the address of the tokens.
+
+
+
 
 ### Dictionary
 
@@ -65,7 +86,10 @@ ADDR       - ( pos -- word address)
 
 
 NTH and ADDR provide a way of representing the address of the 
-word in 16 bits (its position in the dictionary), rather than 64 (the full addres)
+word in 16 bits (its position in the dictionary), rather than 64 bits (the full addres)
+
+To make token expansion simple, the dictionary contains fixed size words.
+
 
 
 
