@@ -1,9 +1,10 @@
 ## dumb [as an especially dumb rock] interpeter
 
 Inspired by FORTH, but more primitive and trying to be compact.
-But .. tradeoffs..
 
-This is written from scratch, starting with a blank screen.
+With .. tradeoffs..
+
+This is written from scratch, starting with a blank editor page.
 
 ### purpose
 
@@ -20,12 +21,14 @@ create small machine code primitive words
 
 Get an interactive interpreter running from Day 1, and then build it out.
 
+The process is incremental, and interactive from the start, as soon as the outer text interpreter works, it is used to test the next features added.
+
 
 ### expedience
 
 It is ok to start by using some functions from the standard C library to get up and running.
 
-Later may migrate to only use system calls.
+Later may migrate to only use system calls and internal system functions.
 
 ASCII text is used for function names and vaiables, not Unicode
 
@@ -36,7 +39,7 @@ Unicode will be supported only in strings when they are added
 
 Do not use 64 bit values all over the place just because it is a 64bit processor
 
-Use 32bit values 32 bit values will do.
+Use 32bit values when 32 bit values will do.
 
 Use bytes if bytes will do.
 
@@ -58,14 +61,16 @@ First 'compiled' word. (token compiled)
 
 5 test => 25 
 
-The compiler is compiling into a token list, they are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
+The compiler is compiling into a token list, tokens are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
 
 This inner interpreter is only a few instructions long, in runintz.
-It is more complicated than typical FORTH because of the token expansion, and due to the words data being passed over in X0.  
+It is more complicated than typical threaded FORTH because of the token expansion, and due to the words data being passed over in X0.  
 
 For runintz the data is the address of the tokens.
 
+The functions are all 'called', rather than jumping through next.
 
+I feel this might make it easier to change the compiler to use subroutine threading later.
 
 
 ### Dictionary
@@ -81,8 +86,8 @@ The dictionary is 'full of holes' for user defined words, spread throughout it.
 
 
 ' WORD     - ( -- word address)
-NTH        - ( word address -- pos )
-ADDR       - ( pos -- word address)    
+NTH        - ( word address -- token )
+ADDR       - ( token -- word address)    
 
 
 NTH and ADDR provide a way of representing the address of the 
