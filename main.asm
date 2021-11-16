@@ -275,6 +275,11 @@ sayerrlength:
 		ADD		X0, X0, tlong@PAGEOFF
         B		sayit
 
+sayerrwordlong:
+	 	ADRP	X0, tcomer8@PAGE	
+		ADD		X0, X0, tcomer8@PAGEOFF
+        B		sayit
+
 sayerrpoolfullquad:
 	 	ADRP	X0, poolfullerr@PAGE	
 		ADD		X0, X0, poolfullerr@PAGEOFF
@@ -1061,20 +1066,20 @@ ivset2:
 
 22:
 		CMP 	W0, #'9'
-		B.gt    compiler
+		B.gt    30f
 		CMP     W0, #'0'
-		B.lt    compiler
+		B.lt    30f
 
 23:		ADD		X22, X22, #1
 		LDRB	W0, [X22]
 		CMP		W0, #0
 		B.eq	24f
 		CMP 	W0, #'.'
-		B.eq	decimal_number
+		B.eq	30f
 		CMP 	W0, #'9'
-		B.gt    compiler
+		B.gt    30f
 		CMP     W0, #'0'
-		B.lt    compiler
+		B.lt    30f
 		
 		B		23b
 24:
@@ -1083,6 +1088,9 @@ ivset2:
 		B       advance_word
 
 		; OR the word may be a decimal number
+
+30:		; exit number
+
 
 decimal_number:
 		; TODO: decimals
@@ -1152,7 +1160,7 @@ scan_words:
 		MOV		X15, X1			; <-- we are compiling into here
 		STR		X1, [X28]		; set start point
 
-		BL      saycreatedword
+ 
 		B		compile_words
 
 	 
@@ -1166,82 +1174,97 @@ try_next_word:	; try next word in dictionary
 
 compile_words:
 
-
+		MOV		X4, #0
 
 compile_next_word:
 
+		
+
+		; get next word from line
 		BL  	advancespaces
 		BL  	collectword
 		BL      get_word
 		BL 		empty_wordQ
 		B.eq	exit_compiler 
 
-
-
-
-
-		ADRP	X22, zword@PAGE	   
-	    ADD		X22, X22, zword@PAGEOFF
-		LDRB	W0, [X22]
-		CMP 	W0, #';' 	; do we exit the compiler ?
+		BL		start_point
+		CMP 	W0, #';' 	; do we exit the compiler now ?
 		B.eq	exit_compiler
 
-		BL		start_point
 
 find_word_token:
 
-		BL      get_word
 		LDR		X21, [X28, #8] ; name field
+		ADD		X0, X28, #8
+	 
 		CMP     X21, #0     
-		B.eq    try_compiling_literal		   
+		B.eq    try_compiling_literal	
+
 		CMP     X21, #-1      
-		b.eq    170f
+		b.eq    keep_finding_tokens
 
-
-		LDR		X21, [X28, #8] ; name field
+		ADRP	X22, zword@PAGE	   
+	    ADD		X22, X22, zword@PAGEOFF
+		LDR		X22, [X22]
 		CMP		X21, X22       ; is this our word?
-		B.ne	170f
+		B.ne	keep_finding_tokens
 
 	 
+		; yes we have found our word
 
 
-
-		; found word (X28), get token.
+		; found word (at X28), get token.
 		MOV     X1, X28
 		ADRP	X2, dend@PAGE	
 		ADD		X2, X2, dend@PAGEOFF	
 		SUB		X1, X1, X2
-		LSR		X1, X1, #7	 ; / 128
+		LSR		X1, X1, #7	 ; * 128
 
 		; X1 is token store halfword in [x15]
 		STRH	W1, [X15]
 		ADD		X15, X15, #2
 
-170:	; next word in dictionary
+		; limited number of halfword slots 
+		ADD		X4, X4, #1
+		CMP     X4, #((128-32 / 2) -2)
+		B.gt    exit_compiler_word_full 
+
+		; we finished compiling tokens, fetch next word.
+		B		finished_compiling_token
+
+
+keep_finding_tokens:	
+		
+		; next word in dictionary
 		SUB		X28, X28, #128
 		B		find_word_token
 
 
 
 finished_compiling_token:
+
 	    B		compile_next_word
+
 
 
 try_compiling_literal:
 
-
-
-
-
 		B		exit_compiler
 
 exit_compiler_word_empty:
+
 		; : was followed by nothing which is an error.
 		ADRP	X0,	 tcomer1@PAGE	
 		ADD		X0, X0,	tcomer1@PAGEOFF
         BL		sayit
 		B		input ; back to immediate mode
 		 
+
+exit_compiler_word_full:
+		; TODO reset new  word, and stack
+		BL		sayerrlength
+		B		input ; 
+
 
 exit_compiler_word_exists:
 		BL		err_word_exists
@@ -1251,7 +1274,6 @@ exit_compiler:
 
 
 		BL 		saycompfin
-
 		B		advance_word ; back to main loop
 
 
@@ -1276,8 +1298,6 @@ exit_program:
         BL		_exit
 		
 		;brk #0xF000
-
-
 
 
 dstorez:	; ( addr value -- )
@@ -1585,10 +1605,6 @@ dcreatvc:
 		RET
 
 
-
-
-
-
 dtickz: ; ' - get address of NEXT words data field
 
 100:	
@@ -1665,8 +1681,6 @@ dnthz: ; from address, what is our position.
 
 dnthc: ; '
 		RET
-
-
 
 
 daddrz: ; from our position, address
@@ -2400,6 +2414,11 @@ tcomer6: .ascii "\nCompiler Finished  "
 .align 	8
 tcomer7: .ascii "\nCreated Word  "
 		.zero 16
+
+
+tcomer8: .ascii "\nWord is too long (words must be short.)"
+		.zero 16
+
 
 .align 	8
 spaces:	.ascii "                              "
