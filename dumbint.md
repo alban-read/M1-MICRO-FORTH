@@ -130,7 +130,7 @@ ADDR       - ( token -- word address)
 
 
 NTH and ADDR provide a way of representing the address of the 
-word in 16 bits (its position in the dictionary), rather than 64 bits (the full addres)
+word in less than 16 bits (its position in the dictionary), rather than 64 bits (the full address)
 
 To make token expansion simple, the dictionary contains fixed size words.
 
@@ -141,9 +141,9 @@ To make token expansion simple, the dictionary contains fixed size words.
 
 nnn      convert text to integer number and push it
 
-nn.nn    convert text to decimal number and push it
+nn.nn    convert text to decimal number and push it TODO
 
-a-Z      fetch address of global variable
+a-Z      fetch address of fixed global variable
 
 @        fetch value from stacked address
 !        store 2nd into tos
@@ -163,14 +163,14 @@ primitive words
 compile a new word
 
 : new-word 
-  word word word ;
+  word number word number .. ;
 
 
 
 #### Compiled word
 
-A 'compiled' word is a list of tokens 
-The token interpeter expands tokens and calls words.
+A 'compiled' word is just a list of tokens 
+The token interpeter expands tokens and calls the words machine code.
 X15 is the IP pointing at the next token, which can be modified by words.
 
 
