@@ -125,12 +125,13 @@ The dictionary is 'full of holes' for user defined words, spread throughout it.
 
 
 ' WORD     - ( -- word address)
+
 NTH        - ( word address -- token )
+
 ADDR       - ( token -- word address)    
 
 
-NTH and ADDR provide a way of representing the address of the 
-word in less than 16 bits (its position in the dictionary), rather than 64 bits (the full address)
+NTH and ADDR provide a way of representing the address of the word in less than 16 bits (its position in the dictionary), rather than 64 bits (the full address)
 
 To make token expansion simple, the dictionary contains fixed size words.
 
@@ -145,8 +146,9 @@ nn.nn    convert text to decimal number and push it TODO
 
 a-Z      fetch address of fixed global variable
 
-@        fetch value from stacked address
-!        store 2nd into tos
+@        fetch value from stacked address see below.
+
+!        store value into variable see below.
 
 e.g. set variable
 
@@ -163,15 +165,31 @@ primitive words
 compile a new word
 
 : new-word 
-  word number word number .. ;
+
+  word number word number ..    ;
+
+
+The words and numbers between : and ; are compiled into tokens and stored in new-word.
+
+e.g. 
+
+: square 
+  dup *  ;
+
+6 square => 30
+
+
 
 
 
 #### Compiled word
 
 A 'compiled' word is just a list of tokens 
+
 The token interpeter expands tokens and calls the words machine code.
+
 X15 is the IP pointing at the next token, which can be modified by words.
+
 
 
 0     [pointer to tokens]
@@ -180,9 +198,13 @@ X15 is the IP pointing at the next token, which can be modified by words.
 tokens: (example)
 
 24    [runint]  --> code that runs the interpreter for tokens
+
 32    [token]   <-- small half word sized tokens (16 bits)
+
 34    [token]
+
 36    [token]
+
 38    [#LITS]  <-- LITS is the small literal follows token 
 39    [small number]
 ..
