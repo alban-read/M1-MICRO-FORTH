@@ -2416,8 +2416,6 @@ dendifc:
 		LDP		X3, X4, [SP], #16	
 		LDP		X22, X28, [SP], #16	
 
-	
-
 
 		RET			
 
