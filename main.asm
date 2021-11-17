@@ -189,7 +189,7 @@
 
 .align 8
 
-ver:    .double 0.35
+ver:    .double 0.411
 tver:   .ascii  "Version %2.2f\n"
         .zero   4
 
@@ -990,6 +990,11 @@ fw1:
 		BLR		X2	 ;; call function
 
 		LDP		X28, XZR, [SP]
+
+		CMP		X0, #-1 ; fail compile time call.
+		B.eq	exit_compiler_word_empty
+
+
 		B       advance_word
 
 finish_list: ; we did not find a defined word.
@@ -1226,6 +1231,34 @@ find_word_token:
 		CMP     X4, #((128-32 / 2) -2)
 		B.gt    exit_compiler_word_full 
 
+		; if the word has a compile time action, call it.
+
+		ADRP	X1, runintz@PAGE	; high level word.   
+	    ADD		X1, X1, runintz@PAGEOFF
+		LDR		X0, [X28, #24]
+		CMP		X0, X1
+		B.eq	skip_compile_time
+
+		ADRP	X1, daddrz@PAGE	; high level word.   
+	    ADD		X1, X1, daddrz@PAGEOFF
+		CMP		X0, X1
+		B.eq	skip_compile_time
+
+		; invoke compile time function
+		LDR		X2, [X28, #32]
+		CBZ		X2, skip_compile_time
+
+		STP		X28, XZR, [SP, #-16]!
+		BLR		X2	 ;; call function
+		LDP		X28, XZR, [SP]
+ 
+
+skip_compile_time:
+		; a number of words have no compile time action 
+
+
+
+
 		; we finished compiling tokens, fetch next word.
 		B		finished_compiling_token
 
@@ -1404,7 +1437,10 @@ exit_compiler_word_exists:
 
 exit_compiler:
 
-
+		; always end word with 0.
+		MOV		X0, #0
+		STRH	W0, [X15]	
+		reset_data_stack
 		BL 		saycompfin
 		B		advance_word ; back to main loop
 
@@ -1796,7 +1832,247 @@ dtickz: ; ' - get address of NEXT words data field
 
 		RET
 
-dtickc: ; '
+
+; control flow
+; condition IF .. ENDIF 
+
+
+
+difz:
+		RET
+
+
+difc:
+
+
+100:	
+		STP		X22, X28, [SP, #-16]!
+		STP		X3,  X4, [SP, #-16]!
+		STP		LR,  X16, [SP, #-16]!
+
+
+
+	; back out our token, we want to do something else.
+
+		SUB		X15, X15, #2
+
+	;  push zbran and dummy offset
+
+		MOV		X0, #3 ; #ZBRAN
+		STRH	W0, [X15]
+		ADD		X15, X15, #2
+		MOV		X0, #4000 
+		STRH	W0, [X15] ; dummy offset
+		ADD		X15, X15, #2
+		B		200f
+
+190:	; error out 
+		MOV	X0, #-1
+
+		B		200f
+200:
+		; restore registers for compiler loop
+		LDP     LR, X16, [SP], #16
+		LDP		X3, X4, [SP], #16	
+		LDP		X22, X28, [SP], #16	
+
+		RET			
+
+
+dendifz:
+		RET
+
+; endif seeks backwards for zbran=3
+
+dendifc:
+
+100:	
+		STP		X22, X28, [SP, #-16]!
+		STP		X3,  X4, [SP, #-16]!
+		STP		LR,  X16, [SP, #-16]!
+
+		MOV		X3, X15
+	 
+
+110:	; seek 3 as halfword.
+
+		LDRH	W0, [X3]
+		CMP		W0, #3; ZBRAN
+		B.eq	140f
+
+		SUB		X3, X3, #2
+		CMP		X3, X28  ; did we escape the whole word?
+		B.lt	190f ; error out no IF for ENDIF
+		B 		110b
+
+140:	; found zbran
+
+		SUB     X4, X15, X3 ; dif between zbran and endif.
+		ADD		X3, X3, #2  ; branch data follows zbran
+		STRH	W4, [X3]	; store that
+		MOV		X0, #0
+
+		; do not compile ENDIF it is a NOOP
+	
+		SUB		X15, X15, #2
+		STRH	W0, [X15]	
+		B		200f
+
+190:	; error out - no IF for our ENDIF.
+		
+		ADRP	X0, tcomer9@PAGE	
+		ADD		X0, X0, tcomer9@PAGEOFF
+        BL		sayit	
+		 	
+		MOV	X0, #-1
+		B		200f
+200:
+		; restore registers for compiler loop
+		LDP     LR, X16, [SP], #16
+		LDP		X3, X4, [SP], #16	
+		LDP		X22, X28, [SP], #16	
+
+	
+
+
+		RET			
+
+
+; if top of stack is zero branch
+
+dzbranchz:
+
+		LDR		X1, [X16, #-8]
+		SUB		X16, X16, #8	
+		CMP		X1, #0
+		B.ne	90f
+
+; it is zero, branch forwards n tokens		
+80:
+		LDRH	W0, [X15] 		; offset to endif
+		SUB		W0, W0, #4      ; we already advanced 4 (zbranch, offset.)
+		ADD		X15, X15, X0	; change IP
+		RET
+
+; it is not zero just continue
+90:		ADD		X15, X15, #2	; skip offset
+		RET  
+
+
+dzbranchc:
+	
+
+		RET
+
+
+; branch 
+dbranchz:
+		B		80b ; just branch
+
+
+dbranchc:
+		RET
+
+
+
+
+
+
+dtickc: ; ' at compile time, turn address of word into literal
+
+
+100:	
+		STP		X22, X28, [SP, #-16]!
+		STP		X3,  X4, [SP, #-16]!
+		STP		LR,  X16, [SP, #-16]!
+
+		BL		advancespaces
+		BL		collectword
+
+ 
+		BL 		empty_wordQ
+		B.eq	190f
+
+		BL		start_point
+
+120:
+		LDR		X21, [X28, #8] ; name field
+
+		CMP     X21, #0        ; end of list?
+		B.eq    190f		   ; not found 
+		CMP     X21, #-1       ; undefined entry in list?
+		b.eq    170f
+
+
+		BL      get_word
+		LDR		X21, [X28, #8] ; name field
+		CMP		X21, X22       ; is this our word?
+		B.ne	170f
+
+	; back out our token, we want to do something else.
+
+		SUB		X15, X15, #2
+
+	; found word, push litl and create literal address of word
+
+		MOV		X0, #2 ; #LITL
+		STRH	W0, [X15]
+		ADD		X15, X15, #2
+
+		; find or create literal
+		MOV	   X0, X28	
+ 		ADRP   X1, quadlits@PAGE	
+		ADD	   X1, X1, quadlits@PAGEOFF
+		MOV    X3, XZR
+
+10:
+		LDR	   	X2, [X1]
+		CMP	   	X2, X0
+		B.eq   	80f
+		CMP    	X2, #-1  
+		B.eq   	70f
+		CMP    	X2, #-2 ; end of pool ERROR  
+		B.eq   	190f ; error out
+		ADD	   	X3, X3, #1
+		ADD	   	X1, X1, #8
+		B		10b	
+70:
+		; literal not present 
+		; free slot found, store lit and return value
+		STR		X0, [X1]
+		MOV		X0, X3
+		B		85f
+
+80:
+		; found the literal
+		MOV		X0, X3
+		B		85f
+
+
+85:
+		STRH	W0, [X15]	; value
+		ADD		X15, X15, #2
+
+		MOV	X0, #0		; no error
+		B		200f
+
+
+170:	; next word in dictionary
+		SUB		X28, X28, #128
+		B		120b
+
+190:	; error out 
+		MOV	X0, #-1
+
+		B		200f
+
+
+200:
+		; restore registers for compiler loop
+		LDP     LR, X16, [SP], #16
+		LDP		X3, X4, [SP], #16	
+		LDP		X22, X28, [SP], #16	
+
 		RET
 
 
@@ -2302,6 +2578,7 @@ dlitlc: ; compile address of variable
 dfindlitz:
 
 		LDR	   X0, [X16, #-8] 
+
  		ADRP   X1, quadlits@PAGE	
 		ADD	   X1, X1, quadlits@PAGEOFF
 		MOV    X3, XZR
@@ -2560,10 +2837,31 @@ tcomer6: .ascii "\nCompiler Finished  "
 tcomer7: .ascii "\nCreated Word  "
 		.zero 16
 
-
+.align 	8
 tcomer8: .ascii "\nWord is too long (words must be short.)"
 		.zero 16
 
+.align 	8
+tcomer9: .ascii "\nENDIF could not find IF.."
+		.zero 16
+
+.align 	8
+tcomer10: .ascii "\nENDIF could not find IF.."
+		.zero 16
+
+.align 	8
+tcomer11: .ascii "\nENDIF could not find IF.."
+		.zero 16
+
+
+.align 	8
+tcomer12: .ascii "\nENDIF could not find IF.."
+		.zero 16
+
+
+.align 	8
+tcomer13: .ascii "\nENDIF could not find IF.."
+		.zero 16
 
 .align 	8
 spaces:	.ascii "                              "
@@ -2682,10 +2980,10 @@ hashdict:	; these hash words are inline compile only
 			; they are in this order fixed forever 
 			; otherwise adding words breaks things in the compiler.
 
-			makeword "#LITS", dlitz, dlitc,  0       ; 1
-			makeword "#LITL", dlitlz, dlitlc,  0     ; 2
-
-
+			makeword "#LITS", dlitz, dlitc,  0       		; 1
+			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
+			makeword "#ZBRANCH", dzbranchz, dzbranchc,  0   ; 3
+			makeword "#BRANCH", dbranchz, dbranchc,  0   	; 4
 
 			; end of inline compiled words, relax
 
@@ -2735,6 +3033,7 @@ cdict:
 ddict:
 			makeemptywords 40
 
+			makeword "ENDIF", 0 , dendifc, 0 
 			makeword "EMIT", emitz , 0, 0 
 		 	
 			makeqvword 101
@@ -2771,6 +3070,7 @@ hdict:
 			makeemptywords 36
 			makeqvword 105
 			makeword "I", diloopz, diloopc,  0
+			makeword "IF", difz, difc,  0
 
 idict:
 			makeemptywords 36
