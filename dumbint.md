@@ -110,6 +110,69 @@ The functions are all 'called', rather than jumping through next.
 I feel this might make it easier to change the compiler to use subroutine threading later.
 
 
+Wednesday Morning
+
+Implemented IF and ENDIF allowing conditional logic.
+
+If the stack is 0 IF skips to ENDIF
+
+: TEST IF CR 65 EMIT ENDIF 66 EMIT ;
+
+At compile time IF compiles zbranch and and undefinded offset
+
+At compile time ENDIF compiles the offset into the closest zbranch or branch.
+
+e.g. 
+
+1 TEST => 
+AB 
+     
+0 TEST => B
+
+In memory the layout of Test looks like 
+
++
+
+0   Point to tokens at +32
+
+8   Name of word .....
+
+16  runintz address 
+
+24  0
+
+32  token for zbranch         <= TOKENS fed to runintz
+
+34  offset value
+
+36  token for CR
+
+38  token for small literal
+
+40  value 65 
+
+42  token for EMIT
+
+44  token for small literal
+
+46  value 66
+
+48  token for EMIT
+
+50  token for end of word 0
+
+
+
+Note ENDIF is a no-op at run time so uses no token space.
+
+At runtime zbranch adds the offset to the IP or not, depending on the value on the stack.
+
+
+
+
+
+
+
 
 
 ### Dictionary
