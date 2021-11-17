@@ -1272,7 +1272,7 @@ compile_next_word:
 		BL  	collectword
 		BL      get_word
 		BL 		empty_wordQ
-		B.eq	exit_compiler 
+		B.eq	exit_compiler_no_words
 
 		BL		start_point
 		CMP 	W0, #';' 	; do we exit the compiler now ?
@@ -1519,6 +1519,15 @@ exit_compiler_word_full:
 exit_compiler_word_exists:
 		BL		err_word_exists
 		B		input ;  
+
+exit_compiler_no_words:
+	; we ran out of words in this line.
+		BL  resetword
+		BL  resetline
+		BL  getline
+		B	compile_next_word
+
+
 
 exit_compiler:
 
@@ -2383,6 +2392,10 @@ delsec: ;  at compile time inlines the ELSE branch
 
 		SUB     X4, X5, X3  ; dif between zbran and else.
 		ADD		X3, X3, #2  ; branch data follows zbran
+
+		ADD		X4, X4, #4
+
+
 		STRH	W4, [X3]	; store that
 		MOV		X0, #0
 

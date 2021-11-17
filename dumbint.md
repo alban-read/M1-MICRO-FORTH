@@ -168,49 +168,24 @@ Note ENDIF is a no-op at run time so uses no token space.
 At runtime zbranch adds the offset to the IP or not, depending on the value on the stack.
 
 
+
+Added ELSE as in 
+
 IF ... ELSE  ... ENDIF 
 
 
 : TEST IF CR 65 EMIT ELSE CR 66 EMIT ENDIF 67 EMIT ;
 
+e.g. 
 
-8   Name of word .....
+1 TEST => AC
+0 TEST => BC 
 
-16  runintz address 
+Added SEE to help add ELSE.
 
-24  0
-
-32  token for zbranch         IF
-
-34  offset value
-
-36  token for CR
-
-38  token for small literal
-
-40  value 65 
-
-42  token for EMIT
-
-44  token for small literal   ELSE
-
-46  value 66
-
-48  token for EMIT
-
-50  token for branch
-
-52  offset 
-
-54  token for small literal
-
-56  value 67
-
-58  token for EMIT
-
-60  token for end of word 0
-
-
+At compile time :-
+ELSE looks for IF
+ENDIF looks for ELSE or IF.
 
 
 ### Dictionary
