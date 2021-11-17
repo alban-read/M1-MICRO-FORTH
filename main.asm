@@ -780,6 +780,14 @@ start_point: ; dictionary entry points are based on first letters in words
 		
 		LDRB 	W0,	[X22]	; first letter
 		
+		CMP		W0, #'#'	
+		B.ne	200f
+
+		ADRP	X28, hashdict@PAGE	   
+	    ADD		X28, X28, hashdict@PAGEOFF	
+		B		251f
+
+200:
 		; lower case and check for a..z
 		ORR		W0, W0, 0x20
 
@@ -3533,7 +3541,7 @@ dend:
 			.zero 64
 			; primitive code word headings.
 
-hashdict:	; these hash words are inline compile only
+			; these hash words are inline compile only
 			; they are in this order fixed forever 
 			; otherwise adding words breaks things in the compiler.
 
@@ -3541,18 +3549,22 @@ hashdict:	; these hash words are inline compile only
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
 			makeword "#ZBRANCH", dzbranchz, dzbranchc,  0   ; 3
 			makeword "#BRANCH", dbranchz, dbranchc,  0   	; 4
-			makeword "#5", 0, 0,  0       		; 5
-			makeword "#6", 0, 0,  0     		; 6
-			makeword "#7", 0, 0,  0     ; 7
-			makeword "#8", 0, 0,  0   	; 8
-			makeword "#9", 0, 0,  0       		; 9
-			makeword "#10", 0, 0,  0     		; 10
-			makeword "#11", 0, 0,  0     ; 11
-			makeword "#12", 0, 0,  0   	; 12
-			makeword "#13", 0, 0,  0       		; 13
-			makeword "#14", 0, 0,  0     		; 14
-			makeword "#15", 0, 0,  0     ; 15
-			makeword "#16", 0, 0,  0   	; 16
+			makeword "#5", 0, 0,  0       					; 5
+			makeword "#6", 0, 0,  0     					; 6
+			makeword "#7", 0, 0,  0     					; 7
+			makeword "#8", 0, 0,  0   						; 8
+			makeword "#9", 0, 0,  0       					; 9
+			makeword "#10", 0, 0,  0     					; 10
+			makeword "#11", 0, 0,  0     					; 11
+			makeword "#12", 0, 0,  0   						; 12
+			makeword "#13", 0, 0,  0       					; 13
+			makeword "#14", 0, 0,  0     					; 14
+			makeword "#15", 0, 0,  0     					; 15
+			makeword "#16", 0, 0,  0   			    	 	; 16
+
+			makeemptywords 44
+
+hashdict:	
 
 			; end of inline compiled words, relax
 
