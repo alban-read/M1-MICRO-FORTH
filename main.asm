@@ -85,7 +85,6 @@
 ; 56    data  ..  64
 ; ..    64 bytes  128;
 
-
  
 
 .macro makeword name:req, runtime=-1, comptime=-1, datavalue=1
@@ -226,6 +225,11 @@ sayok:
 saycr: 	
         ADRP	X0, tcr@PAGE	
 		ADD		X0, X0, tcr@PAGEOFF
+		B		sayit
+
+sayforgetting: 	
+        ADRP	X0, tforget@PAGE	
+		ADD		X0, X0, tforget@PAGEOFF
 		B		sayit
 
 
@@ -1234,9 +1238,9 @@ scan_words:
 
 		; undefined word found so build the word here
 
-		; this is now the latest word being built.
-		ADRP	X1, latest@PAGE	   
-	    ADD		X1, X1, latest@PAGEOFF
+		; this is now the last_word word being built.
+		ADRP	X1, last_word@PAGE	   
+	    ADD		X1, X1, last_word@PAGEOFF
 		STR		X28, [X1]
 
 
@@ -1264,7 +1268,7 @@ try_next_word:	; try next word in dictionary
 		B		scan_words
  	 
 		
-; we created a word header and stored it in latest word
+; we created a word header and stored it in last_word word
 
 
 compile_words:
@@ -1274,6 +1278,14 @@ compile_words:
 compile_next_word:
 
 		
+		; is the dictonary word full
+
+		ADRP	X1, last_word@PAGE	   
+	    ADD		X1, X1, last_word@PAGEOFF
+		LDR		X1, [X1]
+		SUB		X0, X15, X1
+		CMP		X0, #124
+		B.gt	exit_compiler_word_full
 
 		; get next word from line
 		BL  	advancespaces
@@ -1341,10 +1353,16 @@ find_word_token:
 		LDR		X2, [X28, #32]
 		CBZ		X2, skip_compile_time
 
+
+
+		; a reason the compiler is small is 
+		; that words compile themselves which happens here
+
+		STP		X3, X4, [SP, #-16]!
 		STP		X28, XZR, [SP, #-16]!
 		BLR		X2	 ;; call function
 		LDP		X28, XZR, [SP]
- 
+ 		LDP		X3, X4, [SP]
 
 skip_compile_time:
 		; a number of words have no compile time action 
@@ -1427,9 +1445,10 @@ try_compiling_literal:
 		STRH	W1, [X15]	; value
 		ADD		X15, X15, #2
 
-		ADD		X4, X4, #2
-		CMP     X4, #((128-32 / 2) -2)
-		B.gt    exit_compiler_word_full 
+
+ 
+		 
+
 
 		B		compile_next_word
 
@@ -1467,9 +1486,8 @@ try_compiling_literal:
 		STRH	W3, [X15]	; value
 		ADD		X15, X15, #2
 
-		ADD		X4, X4, #2
-		CMP     X4, #((128-32 / 2) -2)
-		B.gt    exit_compiler_word_full 
+ 
+
 
 		B		compile_next_word
 
@@ -1482,9 +1500,7 @@ try_compiling_literal:
 		STRH	W1, [X15]	; value
 		ADD		X15, X15, #2
 
-		ADD		X4, X4, #2
-		CMP     X4, #((128-32 / 2) -2)
-		B.gt    exit_compiler_word_full 
+   
 
     	B		compile_next_word
 
@@ -1502,7 +1518,7 @@ try_compiling_literal:
 exit_compiler_pool_full:
 
 		reset_data_stack
-
+		BL		clean_last_word
 		ADRP	X0, poolfullerr@PAGE	
 		ADD		X0, X0, poolfullerr@PAGEOFF
         BL		sayit
@@ -1520,11 +1536,14 @@ exit_compiler_word_empty:
 
 exit_compiler_word_full:
 		; TODO reset new  word, and stack
+ 
+ 		BL		clean_last_word
 		BL		sayerrlength
 		B		input ; 
 
 
 exit_compiler_word_exists:
+ 
 		BL		err_word_exists
 		B		input ;  
 
@@ -1539,9 +1558,18 @@ exit_compiler_no_words:
 
 exit_compiler:
 
-		; always end word with 0.
+
+	
 		MOV		X0, #0
 		STRH	W0, [X15]	
+
+		ADRP	X1, last_word@PAGE	   
+	    ADD		X1, X1, last_word@PAGEOFF
+		LDR		X1, [X1]
+		SUB		X0, X15, X1
+		BL		X0print
+
+
 		reset_data_stack
 		BL 		saycompfin
 		B		advance_word ; back to main loop
@@ -1568,6 +1596,16 @@ exit_program:
         BL		_exit
 		
 		;brk #0xF000
+
+
+
+
+	 
+		 
+190:		
+		RET
+
+
 
 
 dstorez:	; ( addr value -- )
@@ -1627,7 +1665,43 @@ dandz: ; &
 dandc: ; & 
 		RET
 
+get_last_word:
+		STP		X0, X1, [SP, #-16]!
+		ADRP	X1, last_word@PAGE	   
+	    ADD		X1, X1, last_word@PAGEOFF
+		LDR		X0, [X1]
+		STR		X0, [X16], #8
+ 		LDP		X0, X1, [SP], #16	
+		RET
+ 
 
+clean_last_word:
+
+		STP		X0, X1, [SP, #-16]!
+		ADRP	X1, last_word@PAGE	   
+	    ADD		X1, X1, last_word@PAGEOFF
+		LDR		X0, [X1]
+		CMP		X0, #-1
+		B.eq	100f 
+
+		MOV		X1, #-1
+		STP		X1, X1, [X0], #16
+		MOV		X1, #0
+ 		STP		X1, X1, [X0], #16
+		STP		X1, X1, [X0], #16
+		STP		X1, X1, [X0], #16
+		STP		X1, X1, [X0], #16
+		STP		X1, X1, [X0], #16
+		STP		X1, X1, [X0], #16
+		STP		X1, X1, [X0], #16
+
+ 
+100: 
+ 		LDP		X0, X1, [SP], #16	
+		RET
+
+
+	 
 
 ;; Introseption and inspection
 ; good to see what our compiler is doing.
@@ -1738,7 +1812,6 @@ dseez:
 		B		12095f
 
 
-
 12090:	; not a variable constant or high level word
 		; so must be a primitive..
 		ADRP	X0, word_desc10@PAGE	   
@@ -1748,8 +1821,6 @@ dseez:
 
 
 12095:
-
-
 
 		BL		saycr		
 
@@ -1825,9 +1896,6 @@ dseez:
 		B		160f
 
 
-
-
-
 12010:	; CONSTANT
 		ADRP	X0, word_desc1@PAGE	   
 	    ADD		X0, X0, word_desc1@PAGEOFF
@@ -1848,11 +1916,6 @@ dseez:
 	    ADD		X0, X0, word_desc4@PAGEOFF
 		BL		sayit
 		BL		saycr
-
-	 
-
-	 
-
 		MOV		X12, #32
 	 
 
@@ -1893,9 +1956,20 @@ see_tokens:
 
 		LDRH	W0, [X28,X12]
 		BL		X0halfpr
+		
 
 		MOV		X0, #'*'
 		BL		X0emit
+
+		CMP		W14, #2 ; LITL
+		B.ne	literal_skip
+
+		; Look up the LITLs value 
+		LDRH	W0, [X28,X12]
+		ADRP   X1, quadlits@PAGE	
+		ADD	   X1, X1, quadlits@PAGEOFF
+		LDR	   X0, [X1, X0, LSL #3]
+		BL	   X0halfpr
 
 
 literal_skip:
@@ -1983,9 +2057,9 @@ dcreatz:
 
 		; undefined so build the word here
 
-		; this is now the latest word being built.
-		ADRP	X1, latest@PAGE	   
-	    ADD		X1, X1, latest@PAGEOFF
+		; this is now the last_word word being built.
+		ADRP	X1, last_word@PAGE	   
+	    ADD		X1, X1, last_word@PAGEOFF
 		STR		X28, [X1]
 
 		; copy text over
@@ -2056,9 +2130,9 @@ dcreatcz:
 
 		; undefined so build the word here
 
-		; this is now the latest word being built.
-		ADRP	X1, latest@PAGE	   
-	    ADD		X1, X1, latest@PAGEOFF
+		; this is now the last_word word being built.
+		ADRP	X1, last_word@PAGE	   
+	    ADD		X1, X1, last_word@PAGEOFF
 		STR		X28, [X1]
 
 		; copy text for name over
@@ -2135,9 +2209,9 @@ dcreatvz:
 
 		; undefined so build the word here
 
-		; this is now the latest word being built.
-		ADRP	X1, latest@PAGE	   
-	    ADD		X1, X1, latest@PAGEOFF
+		; this is now the last_word word being built.
+		ADRP	X1, last_word@PAGE	   
+	    ADD		X1, X1, last_word@PAGEOFF
 		STR		X28, [X1]
 
 		; copy text for name over
@@ -3228,6 +3302,17 @@ ddelc:	; del (127)
 		RET
 
 
+
+.data 
+
+; variables
+.align 8 
+last_word:	
+		.quad 	-1		; last_word word being updated.
+		.quad 	0
+		.quad   0
+
+
 .data
 
 .align 8
@@ -3336,7 +3421,7 @@ tcomer5: .ascii "Compiler error  "
 
 
 .align 	8
-tcomer6: .ascii "\nCompiler Finished  "
+tcomer6: .ascii " half word cells uses, compiler Finished\n  "
 		.zero 16
 
 
@@ -3362,7 +3447,7 @@ tcomer11: .ascii "\nENDIF could not find IF.."
 
 
 .align 	8
-tcomer12: .ascii "\nENDIF could not find IF.."
+tforget: .ascii "\nForgeting last_word word: "
 		.zero 16
 
 
@@ -3467,11 +3552,9 @@ rsp:	.quad rp1
 .align 16
 ivars:	.zero 256*16	
 
+		.zero 	512
 
 
-; variables
-.align 16
-latest:	.quad 	-1		; latest word being updated.
 
 .align 16 
 
@@ -3505,6 +3588,10 @@ zpad:    .ascii "ZPAD STARTS HERE"
 
 .align 8
 zword: .zero 64
+
+
+
+
 
  .align 8
  dbye:		.ascii "BYE" 
@@ -3624,6 +3711,7 @@ edict:
 			makeemptywords 40
 		 	
 			makeqvword 102
+			makeword "FORGET", clean_last_word , 0, 0 
 			makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
 			makeword "FINDLIT", dfindlitz, dfindlitc,  0
 
@@ -3659,16 +3747,20 @@ idict:
 			makeword "J", djloopz, djloopc,  0
 jdict:
 			makeemptywords 34
+			makeword "KLAST", get_last_word, 0,  0
 			makeqvword 107
 			makeword "K", dkloopz, dkloopc,  0
+	
 kdict:
 			makeemptywords 34
 			
-			makeword "LATEST", dvaraddz, dvaraddc,  latest
+		
 			makeqvword 108
+
 			makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
 		
 			makeword "LITBASE", dvaraddz, dvaraddc,  quadlits
+		
 ldict:
 			makeemptywords 31
 
