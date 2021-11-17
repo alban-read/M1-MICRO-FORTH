@@ -11,7 +11,7 @@ This was written from scratch, starting with a blank editor page in VS code.
 
 I am stunned by the projects in GITHUB that have complex software and no documentation at all.
 
-Mine are simple projects, but with documentation, I guess you can't have everything.
+Mine are simple projects,  with documentation, I guess you can't have everything.
 
 
 
@@ -90,7 +90,7 @@ Support Strings of Unicode Runes in a safe and sensible way (later)
 
 ### Milestones
 
-Tuesday 16th November 2021
+#### Tuesday 16th November 2021
 
 First 'compiled' word. (token compiled)
 
@@ -110,7 +110,7 @@ The functions are all 'called', rather than jumping through next.
 I feel this might make it easier to change the compiler to use subroutine threading later.
 
 
-Wednesday Morning
+#### Wednesday Morning
 
 Implemented IF and ENDIF allowing conditional logic.
 
@@ -168,9 +168,47 @@ Note ENDIF is a no-op at run time so uses no token space.
 At runtime zbranch adds the offset to the IP or not, depending on the value on the stack.
 
 
+IF ... ELSE  ... ENDIF 
 
 
+: TEST IF CR 65 EMIT ELSE CR 66 EMIT ENDIF 67 EMIT ;
 
+
+8   Name of word .....
+
+16  runintz address 
+
+24  0
+
+32  token for zbranch         IF
+
+34  offset value
+
+36  token for CR
+
+38  token for small literal
+
+40  value 65 
+
+42  token for EMIT
+
+44  token for small literal   ELSE
+
+46  value 66
+
+48  token for EMIT
+
+50  token for branch
+
+52  offset 
+
+54  token for small literal
+
+56  value 67
+
+58  token for EMIT
+
+60  token for end of word 0
 
 
 
@@ -279,6 +317,71 @@ The tokens compress the high level forth code, we do not want to use 64 bits for
 The cost is the token lookup see NTH and the token expansion see ADDR.
 
 The token lookup is simplified by the dictionary being a fixed size.
+
+
+
+#### Decompiler
+
+If you are writing a compiler, it helps to see what is going on.
+
+For visibility it is good to have a decompiler.
+
+In FORTH the decompiler is traditionally called SEE.
+
+
+
+: TEST IF 65 EMIT ELSE 66 EMIT ENDIF 67 EMIT ;
+
+Compiler Finished
+
+Ok
+
+SEE TEST
+
+WORD AT :4330433600
+
+       0:4330433632             ^TOKENS 
+
+       8:TEST                   NAME
+
+      24:4329880276             TOKEN COMPILED
+
+      32:[     3]#ZBRANCH    
+
+      34:[    12]*
+
+      36:[     1]#LITS       
+
+      38:[    65]*
+
+      40:[   246]EMIT        
+
+      42:[     4]#BRANCH     
+
+      44:[    12]*
+
+      46:[     1]#LITS       
+
+      48:[    66]*
+
+      50:[   246]EMIT        
+
+      52:[     1]#LITS       
+
+      54:[    67]*
+
+      56:[   246]EMIT        
+
+      58:
+
+This shows the word and word type.
+
+A literal is marked with a *
+
+A token is displayed in brackets.
+
+The name of the word the token represents is displayed.
+
 
 
 ### More primitive

@@ -463,9 +463,9 @@ emitz:	; output tos as char
 		LDR		X1, [X16, #-8]
 		SUB		X16, X16, #8
 
-		
+	
 12:		MOV		X0, X1 
-		save_registers
+X0emit:	save_registers
  		STP		X0, X0, [SP, #-16]!
 		BL		_putchar	 
 		ADD     SP, SP, #16 
@@ -538,10 +538,95 @@ spacesc:
 		RET
 
 
+
+
+X0prname:
+		MOV 	X1, X0
+		B		12f	
+			
+12:
+
+	 	ADRP	X0, tprname@PAGE	   
+		ADD		X0, X0,tprname@PAGEOFF
+		save_registers
+		STP		X1, X0, [SP, #-16]!
+		BL		_printf		 
+		ADD     SP, SP, #16 
+		restore_registers  
+		RET
+
+
+
+X0halfpr:
+		MOV 	X1, X0
+		B		12f	
+			
+12:
+
+	 	ADRP	X0, thalfpr@PAGE	   
+		ADD		X0, X0,thalfpr@PAGEOFF
+		save_registers
+		STP		X1, X0, [SP, #-16]!
+		BL		_printf		 
+		ADD     SP, SP, #16 
+		restore_registers  
+		RET
+
+
+
+X0addrpr:
+		MOV 	X1, X0
+		B		12f
+
+addrpr: ; prints int on top of stack in hex	
+	
+		LDR		X1, [X16, #-8]
+		SUB		X16, X16, #8	
+			
+12:
+
+	 	ADRP	X0, tpradd@PAGE	   
+		ADD		X0, X0,tpradd@PAGEOFF
+		save_registers
+		STP		X1, X0, [SP, #-16]!
+		BL		_printf		 
+		ADD     SP, SP, #16 
+		restore_registers  
+		RET
+
+
+
+X0hexprint:
+		MOV 	X1, X0
+		B		12f
+
+hexprint: ; prints int on top of stack in hex	
+	
+		LDR		X1, [X16, #-8]
+		SUB		X16, X16, #8	
+			
+12:
+
+	 	ADRP	X0, thex@PAGE	   
+		ADD		X0, X0,thex@PAGEOFF
+		save_registers
+		STP		X1, X0, [SP, #-16]!
+		BL		_printf		 
+		ADD     SP, SP, #16 
+		restore_registers  
+		RET
+
+
+
+X0print:
+		MOV 	X1, X0
+		B		12f
+
 print: ; prints int on top of stack		
 	
 		LDR		X1, [X16, #-8]
 		SUB		X16, X16, #8	
+			
 12:
 
 	 	ADRP	X0, tdec@PAGE	   
@@ -1527,6 +1612,310 @@ dandc: ; &
 
 
 
+;; Introseption and inspection
+; good to see what our compiler is doing.
+; displays a word in readable form
+
+
+dseez:
+
+
+100:	
+		save_registers
+	
+		BL		advancespaces
+		BL		collectword
+
+		BL 		empty_wordQ
+		B.eq	190f
+
+		BL		start_point
+
+
+120:
+		
+		LDR		X21, [X28, #8] ; name field
+
+		CMP     X21, #0        ; end of list?
+		B.eq    190f		   ; not found 
+		CMP     X21, #-1       ; undefined entry in list?
+		b.eq    170f
+
+		; check word
+
+		BL      get_word
+		LDR		X21, [X28, #8] ; name field
+		CMP		X21, X22       ; is this our word?
+		B.ne	170f
+
+
+		; see word
+
+		ADRP	X0, word_desc11@PAGE	   
+	    ADD		X0, X0, word_desc11@PAGEOFF
+		BL		sayit
+
+		MOV     X0, X28
+		BL		X0addrpr
+
+		BL		saycr	
+		
+		; display the data word
+		MOV		X0, #0
+		BL		X0addrpr
+
+		MOV		X0, #':'
+		BL		X0emit
+
+		LDR 	X0, [X28]	
+		BL		X0addrpr
+
+
+		; anotate the data word
+
+		ADRP	X2, dconstz@PAGE	   
+	    ADD		X2, X2, dconstz@PAGEOFF
+		LDR		X0, [X28, #24]
+		CMP		X0, X2
+		B.ne	12070f
+
+		ADRP	X0, word_desc7@PAGE	   
+	    ADD		X0, X0, word_desc7@PAGEOFF
+		BL		sayit
+		B		12095f
+
+12070:
+
+		ADRP	X2, dvaraddz@PAGE	   
+	    ADD		X2, X2, dvaraddz@PAGEOFF
+		LDR		X0, [X28, #24]
+		CMP		X0, X2
+		B.ne	12080f
+
+		ADRP	X0, word_desc8@PAGE	   
+	    ADD		X0, X0, word_desc8@PAGEOFF
+		BL		sayit
+
+		BL		saylb
+		
+		LDR		X0, [X28]
+		LDR		X0, [X0]
+
+		BL		X0addrpr
+		BL		sayrb
+
+
+		B		12095f
+
+12080:
+
+		ADRP	X2, runintz@PAGE	   
+	    ADD		X2, X2, runintz@PAGEOFF
+		LDR		X0, [X28, #24]
+		CMP		X0, X2
+		B.ne	12090f
+
+		ADRP	X0, word_desc9@PAGE	   
+	    ADD		X0, X0, word_desc9@PAGEOFF
+		BL		sayit
+		B		12095f
+
+
+
+12090:	; not a variable constant or high level word
+		; so must be a primitive..
+		ADRP	X0, word_desc10@PAGE	   
+	    ADD		X0, X0, word_desc10@PAGEOFF
+		BL		sayit
+		B		12095f
+
+
+12095:
+
+
+
+		BL		saycr		
+
+		; display this words name
+		MOV		X0, #8
+		BL		X0addrpr
+		
+		MOV		X0, #':'
+		BL		X0emit
+
+ 
+		ADD	 	X0, X28, #8
+		BL      X0prname 
+	 
+
+		ADRP	X0, word_desc5@PAGE	   
+	    ADD		X0, X0, word_desc5@PAGEOFF
+		BL		sayit
+
+
+		BL		saycr
+
+		; display this words runtime
+		MOV		X0, #24
+		BL		X0addrpr
+		
+		MOV		X0, #':'
+		BL		X0emit
+
+		LDR		X0, [X28, #24]
+		BL      X0addrpr 
+
+		ADRP	X2, dconstz@PAGE	   
+	    ADD		X2, X2, dconstz@PAGEOFF
+		LDR		X0, [X28, #24]
+		CMP		X0, X2
+		B.eq	12010f
+
+
+		ADRP	X2, dvaraddz@PAGE	   
+	    ADD		X2, X2, dvaraddz@PAGEOFF
+		LDR		X0, [X28, #24]
+		CMP		X0, X2
+		B.eq	12020f
+
+		ADRP	X2, runintz@PAGE	   
+	    ADD		X2, X2, runintz@PAGEOFF
+		LDR		X0, [X28, #24]
+		CMP		X0, X2
+		B.eq	12030f
+
+; must be a primitive word 
+
+		ADRP	X0, word_desc3@PAGE	   
+	    ADD		X0, X0, word_desc3@PAGEOFF
+		BL		sayit
+		BL		saycr
+		; display this words compile time
+		MOV		X0, #32
+		BL		X0addrpr
+		
+		MOV		X0, #':'
+		BL		X0emit
+
+		LDR		X0, [X28, #32]
+		BL      X0addrpr 
+
+
+		ADRP	X0, word_desc12@PAGE	   
+	    ADD		X0, X0, word_desc12@PAGEOFF
+		BL		sayit
+
+		B		160f
+
+
+
+
+
+12010:	; CONSTANT
+		ADRP	X0, word_desc1@PAGE	   
+	    ADD		X0, X0, word_desc1@PAGEOFF
+		BL		sayit
+		B		160f
+
+
+12020:	; VARIABLE
+		ADRP	X0, word_desc2@PAGE	   
+	    ADD		X0, X0, word_desc2@PAGEOFF
+		BL		sayit
+		B		160f
+
+
+12030:	; HIGH LEVEL WORD
+
+		ADRP	X0, word_desc4@PAGE	   
+	    ADD		X0, X0, word_desc4@PAGEOFF
+		BL		sayit
+		BL		saycr
+
+	 
+
+	 
+
+		MOV		X12, #32
+	 
+
+see_tokens:	
+
+		MOV		X0, X12
+		BL		X0addrpr
+
+		MOV		X0, #':'
+		BL		X0emit
+
+		LDRH	W0, [X28,X12]
+		CBZ		W0, 160f
+		BL		X0halfpr
+
+	
+		ADRP	X2, dend@PAGE	
+		ADD		X2, X2, dend@PAGEOFF
+		LDRH	W1, [X28,X12]
+		MOV		W14, W1
+		LSL		X1, X1, #7	 ; / 128 
+		ADD		X1, X1, X2 
+		ADD		X0, X1, #8  ; name field
+		BL		X0prname
+
+		CMP		W14, #16 ; do we have an inline argument?
+		B.gt	literal_skip
+
+		; we are a word with a literal inline
+		BL		saycr
+		ADD 	X12, X12, #2
+
+		MOV		X0, X12
+		BL		X0addrpr
+
+		MOV		X0, #':'
+		BL		X0emit
+
+		LDRH	W0, [X28,X12]
+		BL		X0halfpr
+
+		MOV		X0, #'*'
+		BL		X0emit
+
+
+literal_skip:
+
+		BL		saycr
+
+		ADD 	X12, X12, #2
+		B		see_tokens
+
+	 
+
+		
+160:		
+		BL		saycr
+		restore_registers
+		MOV		X0, #0
+		RET
+
+
+170:	; next word in dictionary
+		SUB		X28, X28, #128
+		B		120b
+
+190:	; error out 
+		MOV	X0, #-1
+		restore_registers
+		RET
+
+
+
+dseec:
+		RET
+
+
+
+
+
 ;; CREATION WORDS
 ;; add words to dictionary.
 ;; create, variable, constant
@@ -1882,7 +2271,9 @@ difc:
 dendifz:
 		RET
 
-; endif seeks backwards for zbran=3
+; ENDIF   
+; We are part of IF ..  ENDIF or IF .. ELSE  .. ENDIF
+; We look for closest ELSE or IF by seeking the branch.
 
 dendifc:
 
@@ -1899,20 +2290,22 @@ dendifc:
 		LDRH	W0, [X3]
 		CMP		W0, #3; ZBRAN
 		B.eq	140f
+		CMP		W0, #4; BRAN
+		B.eq	140f
 
 		SUB		X3, X3, #2
 		CMP		X3, X28  ; did we escape the whole word?
 		B.lt	190f ; error out no IF for ENDIF
 		B 		110b
 
-140:	; found zbran
+140:	; found zbran or bran
 
 		SUB     X4, X15, X3 ; dif between zbran and endif.
 		ADD		X3, X3, #2  ; branch data follows zbran
 		STRH	W4, [X3]	; store that
 		MOV		X0, #0
 
-		; do not compile ENDIF it is a NOOP
+		; do not compile an ENDIF it is a NOOP
 	
 		SUB		X15, X15, #2
 		STRH	W0, [X15]	
@@ -1936,6 +2329,77 @@ dendifc:
 
 
 		RET			
+
+
+delsez:
+		RET
+
+
+; ELSE
+
+delsec: ;  at compile time inlines the ELSE branch
+
+100:	
+		STP		X22, X28, [SP, #-16]!
+		STP		X3,  X4, [SP, #-16]!
+		STP		LR,  X16, [SP, #-16]!
+
+		MOV		X5, X15 	; keep X15 safe
+
+		; back out our token
+		; we will compile a branch instead
+
+		SUB		X15, X15, #2
+
+		;  push zbran and dummy offset
+
+		MOV		X0, #4 ; #BRANCH
+		STRH	W0, [X15]
+		ADD		X15, X15, #2
+		MOV		X0, #4000 
+		STRH	W0, [X15] ; dummy offset
+		ADD		X15, X15, #2
+
+
+		; we are part of IF .. ELSE .. ENDIF 
+		; so we look for IF now.
+
+
+	 	MOV		X3, X5
+	
+110:	; seek 3 as halfword.
+
+		LDRH	W0, [X3]
+		CMP		W0, #3; ZBRAN
+		B.eq	140f
+
+		SUB		X3, X3, #2
+		CMP		X3, X28  ; did we escape the whole word?
+		B.lt	190f ; error out no IF for ENDIF
+		B 		110b
+
+
+140:	; found zbran
+
+		SUB     X4, X5, X3  ; dif between zbran and else.
+		ADD		X3, X3, #2  ; branch data follows zbran
+		STRH	W4, [X3]	; store that
+		MOV		X0, #0
+
+		B		200f
+
+190:	; error out 
+		MOV	X0, #-1
+
+		B		200f
+
+200:
+		; restore registers for compiler loop
+		LDP     LR, X16, [SP], #16
+		LDP		X3, X4, [SP], #16	
+		LDP		X22, X28, [SP], #16	
+
+		RET		
 
 
 ; if top of stack is zero branch
@@ -2797,6 +3261,28 @@ tdec:	.ascii "%3ld"
 		.zero 16
 
 .align 	8
+thex:	.ascii "%8X"
+		.zero 16
+
+.align 	8
+tpradd:	.ascii "%8ld"
+		.zero 16
+
+
+.align 	8
+thalfpr:	.ascii "[%6ld]"
+		.zero 16
+
+
+.align 	8
+tprname:	.ascii "%-12s"
+		.zero 16
+
+
+
+
+
+.align 	8
 tovflr:	.ascii "\nstack over-flow"
 		.zero 16
 
@@ -2862,6 +3348,64 @@ tcomer12: .ascii "\nENDIF could not find IF.."
 .align 	8
 tcomer13: .ascii "\nENDIF could not find IF.."
 		.zero 16
+
+
+
+.align 	8
+word_desc1: .ascii "\t\tCONSTANT "
+		.zero 16
+
+
+.align 	8
+word_desc2: .ascii "\t\tVARIABLE "
+		.zero 16
+
+
+
+.align 	8
+word_desc3: .ascii "\t\tPRIM RUN"
+		.zero 16
+
+.align 	8
+word_desc4: .ascii "\t\tTOKEN COMPILED"
+		.zero 16
+
+.align 	8
+word_desc5: .ascii "\t\tNAME"
+		.zero 16
+
+
+.align 	8
+word_desc6: .ascii "\t\tTOKENS"
+		.zero 16
+
+.align 	8
+word_desc7: .ascii "\t\tVALUE "
+		.zero 16
+
+.align 	8
+word_desc8: .ascii "\t\t^VALUE "
+		.zero 16
+
+
+.align 	8
+word_desc9: .ascii "\t\t^TOKENS "
+		.zero 16
+
+
+.align 	8
+word_desc10: .ascii "\t\tARGUMENT "
+		.zero 16
+
+.align 	8
+word_desc11: .ascii "WORD AT :"
+		.zero 16
+
+
+.align 	8
+word_desc12: .ascii "\t\tPRIM COMP"
+		.zero 16
+
 
 .align 	8
 spaces:	.ascii "                              "
@@ -2984,6 +3528,18 @@ hashdict:	; these hash words are inline compile only
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
 			makeword "#ZBRANCH", dzbranchz, dzbranchc,  0   ; 3
 			makeword "#BRANCH", dbranchz, dbranchc,  0   	; 4
+			makeword "#5", 0, 0,  0       		; 5
+			makeword "#6", 0, 0,  0     		; 6
+			makeword "#7", 0, 0,  0     ; 7
+			makeword "#8", 0, 0,  0   	; 8
+			makeword "#9", 0, 0,  0       		; 9
+			makeword "#10", 0, 0,  0     		; 10
+			makeword "#11", 0, 0,  0     ; 11
+			makeword "#12", 0, 0,  0   	; 12
+			makeword "#13", 0, 0,  0       		; 13
+			makeword "#14", 0, 0,  0     		; 14
+			makeword "#15", 0, 0,  0     ; 15
+			makeword "#16", 0, 0,  0   	; 16
 
 			; end of inline compiled words, relax
 
@@ -3032,7 +3588,7 @@ cdict:
 
 ddict:
 			makeemptywords 40
-
+			makeword "ELSE", 0 , delsec, 0 
 			makeword "ENDIF", 0 , dendifc, 0 
 			makeword "EMIT", emitz , 0, 0 
 		 	
@@ -3152,24 +3708,24 @@ rdict:
 
 			; use asm to build a high level 'demo' word
 
-			.quad   30f	; address of halfword token code.
-			10:
-				.asciz	"SQUARE"
-			20:
-				.zero	16 - ( 20b-10b )
-				.quad	runintz   ; interpret
-			30:  ; halfword token list
-				.hword  507     ; LIT
-				.hword  2       ; lit index
-				.hword  507     ; LIT
-				.hword  3       ; lit index
-				.hword	1097	; +
-				.hword	183		; DUP
-				.hword  1096    ; *
-				.hword  1100    ; .
-				.hword  0       ; END OF WORD
-			40:
-				.zero	128 - ( 40b-30b ) - 32		
+		;	.quad   30f	; address of halfword token code.
+		;	10:
+		;		.asciz	"SQUARE"
+		;	20:
+		;		.zero	16 - ( 20b-10b )
+		;		.quad	runintz   ; interpret
+		;	30:  ; halfword token list
+		;		.hword  507     ; LIT
+		;		.hword  2       ; lit index
+		;		.hword  507     ; LIT
+		;		.hword  3       ; lit index
+		;		.hword	1097	; +
+		;		.hword	183		; DUP
+		;		.hword  1096    ; *
+		;		.hword  1100    ; .
+		;		.hword  0       ; END OF WORD
+		;	40:
+		;		.zero	128 - ( 40b-30b ) - 32		
 
 			; to get the tokens 
 			; ' DUP NTH .
@@ -3190,6 +3746,8 @@ rdict:
 
 			makevarword "SP", dsp
 
+			makeword "SEE", dseez , 0, 0 
+
 			makeqvword 115 
 			makeword "S", dvaraddz, dvaraddc,  8 * 83 + ivars	
 
@@ -3197,7 +3755,7 @@ sdict:
 			makeemptywords 30
 
 			makeword "TYPEZ", ztypez, ztypec, 0	
-		
+			makeword "THEN", 0 , dendifc, 0 
 			makeqvword 116
 			makeword "T", dvaraddz, dvaraddc,  8 * 84 + ivars	
 
