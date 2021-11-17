@@ -318,8 +318,8 @@ dotwords:
 		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 		LDR		X1, [X8]
 
-	 	ADRP	X2, dend@PAGE	
-		ADD		X2, X2, dend@PAGEOFF
+	 	ADRP	X2, hashdict@PAGE	
+		ADD		X2, X2, hashdict@PAGEOFF
 
 20:		ADD		X2, X2, #128
 		LDR		X0, [X2,#8]
@@ -1331,10 +1331,6 @@ find_word_token:
 		STRH	W1, [X15]
 		ADD		X15, X15, #2
 
-		; limited number of halfword slots in a dictionary word
-		ADD		X4, X4, #1
-		CMP     X4, #((128-32 / 2) -2)
-		B.gt    exit_compiler_word_full 
 
 		; if the word has a compile time action, call it.
 
@@ -3647,13 +3643,13 @@ dend:
 			makeword "#15", 0, 0,  0     					; 15
 			makeword "#16", 0, 0,  0   			    	 	; 16
 
-			makeemptywords 44
+			makeemptywords 84
 
 hashdict:	
 
 			; end of inline compiled words, relax
 
-		    makeemptywords 44
+		    makeemptywords 84
 
 			makeword "ADDR" , daddrz, daddrc, 0
 
@@ -3665,7 +3661,7 @@ hashdict:
 		 
 adict:
 
-			makeemptywords 44
+			makeemptywords 84
 
 			makeword "BREAK",  dbreakz, dbreakc, 0
 	  		makeword "BL",  dconstz, dconstz, 32
@@ -3674,7 +3670,7 @@ adict:
 			makeword "B", dvaraddz, dvaraddc,  8 * 66 + ivars	
 
 bdict:
-			makeemptywords 40
+			makeemptywords 80
 
 			makeword "CONSTANT", dcreatcz , dcreatcc, 0
 			makeword "CREATE", 	dcreatz, dcreatc, 0
@@ -3684,7 +3680,7 @@ bdict:
 			makeword "C", 		dvaraddz, dvaraddc,  8 * 67 + ivars	
 
 cdict:
-			makeemptywords 40
+			makeemptywords 80
 
 	 
 			makevarword "DP"
@@ -3697,7 +3693,7 @@ cdict:
 			makeword "D", dvaraddz, dvaraddc,  8 * 68 + ivars	
 
 ddict:
-			makeemptywords 40
+			makeemptywords 80
 			makeword "ELSE", 0 , delsec, 0 
 			makeword "ENDIF", 0 , dendifc, 0 
 			makeword "EMIT", emitz , 0, 0 
@@ -3706,7 +3702,7 @@ ddict:
 			makeword "E", dvaraddz, dvaraddc,  8 * 69 + ivars	
 
 edict:
-			makeemptywords 40
+			makeemptywords 48
 		 	
 			makeqvword 102
 			makeword "FORGET", clean_last_word , 0, 0 
@@ -3714,12 +3710,12 @@ edict:
 			makeword "FINDLIT", dfindlitz, dfindlitc,  0
 
 fdict:		
-			makeemptywords 39
+			makeemptywords 79
 			makeshorttextconst "GREET", "Hey how are you, hope you are keeping well in these strange times?"
 			makeqvword 103
 			makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
 gdict:
-			makeemptywords 38
+			makeemptywords 78
 
 			makeword "HW!", dhstorez, dhstorec,  0
 
@@ -3734,23 +3730,23 @@ gdict:
 			makeword "H", dvaraddz, dvaraddc,  8 * 72 + ivars	
 hdict:
 
-			makeemptywords 36
+			makeemptywords 66
 			makeqvword 105
 			makeword "I", diloopz, diloopc,  0
 			makeword "IF", difz, difc,  0
 
 idict:
-			makeemptywords 36
+			makeemptywords 66
 			makeqvword 106
 			makeword "J", djloopz, djloopc,  0
 jdict:
-			makeemptywords 34
+			makeemptywords 64
 			makeword "KLAST", get_last_word, 0,  0
 			makeqvword 107
 			makeword "K", dkloopz, dkloopc,  0
 	
 kdict:
-			makeemptywords 34
+			makeemptywords 64
 			
 		
 			makeqvword 108
@@ -3760,16 +3756,16 @@ kdict:
 			makeword "LITBASE", dvaraddz, dvaraddc,  quadlits
 		
 ldict:
-			makeemptywords 31
+			makeemptywords 61
 
 			makeword "MOD", dmodz, dmodc, 0	
 
-			makeemptywords 38
+			makeemptywords 68
 
 			makeqvword 109
 			makeword "M", dvaraddz, dvaraddc,  8 * 77 + ivars	
 mdict:
-			makeemptywords 34
+			makeemptywords 64
 
 
 			makeword "NTH", dnthz, dnthc, 0	
@@ -3780,7 +3776,7 @@ mdict:
 			makeword "N", dvaraddz, dvaraddc,  8 * 78 + ivars	
 
 ndict:		
-			makeemptywords 32
+			makeemptywords 62
 
 
 			makeword "OVER", doverz, doverc, 0
@@ -3788,7 +3784,7 @@ ndict:
 			makeword "O", dvaraddz, dvaraddc,  8 * 79 + ivars	
 		
 odict:
-			makeemptywords 32
+			makeemptywords 62
 
 			makevarword "PAD", zpad
 
@@ -3801,12 +3797,12 @@ odict:
 
 
 pdict:
-			makeemptywords 32
+			makeemptywords 62
 			makeqvword 113
 			makeword "Q", dvaraddz, dvaraddc,  8 * 81 + ivars	
 
 qdict:
-			makeemptywords 30
+			makeemptywords 50
 
 			makeword "REPRINT", reprintz , reprintc, 0 
 	 
@@ -3818,7 +3814,7 @@ qdict:
 
 rdict:
 
-			makeemptywords 30
+			makeemptywords 50
 
 
 			; use asm to build a high level 'demo' word
@@ -3867,7 +3863,7 @@ rdict:
 			makeword "S", dvaraddz, dvaraddc,  8 * 83 + ivars	
 
 sdict:
-			makeemptywords 30
+			makeemptywords 50
 
 			makeword "TYPEZ", ztypez, ztypec, 0	
 			makeword "THEN", 0 , dendifc, 0 
@@ -3876,7 +3872,7 @@ sdict:
 
 tdict:
 
-			makeemptywords 30
+			makeemptywords 50
 			makeqvword 117
 			makeword "U", dvaraddz, dvaraddc,  8 * 85 + ivars	
 
@@ -3884,7 +3880,7 @@ udict:
 
 
 	
-			makeemptywords 28
+			makeemptywords 48
 			makeword "VERSION", announce , 0, 0
 
 
@@ -3894,7 +3890,7 @@ udict:
 			makeword "V", dvaraddz, dvaraddc,  8 * 86 + ivars	
  		
 vdict:
-			makeemptywords 28
+			makeemptywords 48
 
 			makeword "WORDS", dotwords , 0, 0 
 		 
@@ -3905,12 +3901,12 @@ vdict:
 			
 wdict:
 
-			makeemptywords 28
+			makeemptywords 48
 			 
 			makeqvword 120
 			makeword "X", dvaraddz, dvaraddc,  8 * 88 + ivars	
 xdict:
-			makeemptywords 28
+			makeemptywords 48
 			
  
 			makeqvword 121
@@ -3918,14 +3914,14 @@ xdict:
 			
 
 ydict:
-			makeemptywords 24
+			makeemptywords 34
 
 		 	makeqvword 122
 			makeword "Z", dvaraddz, dvaraddc,  8 * 90 + ivars	
 
 zdict:
 
-			makeemptywords 20
+			makeemptywords 30
 
 			makeword "-1", dconstz, dconstc,  -1
 			makeword "-2", dconstz, dconstc,  -2
