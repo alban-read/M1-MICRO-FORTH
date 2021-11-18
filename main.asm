@@ -2391,10 +2391,20 @@ dendifc:
 		SUB		X3, X3, #2
 		CMP		X3, X28  ; did we escape the whole word?
 		B.lt	190f ; error out no IF for ENDIF
+
 		B 		110b
 
 140:	; found zbran or bran
 
+
+		LDRH	W0,	[X3, #2]
+		CMP		W0, #4000
+		B.eq	145f		; ours to change
+
+		SUB		X3, X3, #2
+		B		110b
+		
+145:
 		SUB     X4, X15, X3 ; dif between zbran and endif.
 		ADD		X3, X3, #2  ; branch data follows zbran
 		STRH	W4, [X3]	; store that
@@ -2471,8 +2481,19 @@ delsec: ;  at compile time inlines the ELSE branch
 		B.lt	190f ; error out no IF for ENDIF
 		B 		110b
 
+140:	; found zbran or bran
 
-140:	; found zbran
+
+		LDRH	W0,	[X3, #2]
+		CMP		W0, #4000
+		B.eq	145f		; ours to change
+
+		SUB		X3, X3, #2
+		B		110b
+
+
+
+145:	; found zbran
 
 		SUB     X4, X5, X3  ; dif between zbran and else.
 		ADD		X3, X3, #2  ; branch data follows zbran
@@ -2614,7 +2635,7 @@ dtickc: ; ' at compile time, turn address of word into literal
 		STRH	W0, [X15]	; value
 		ADD		X15, X15, #2
 
-		MOV	X0, #0		; no error
+		MOV		X0, #0		; no error
 		B		200f
 
 
@@ -3471,7 +3492,6 @@ tforget: .ascii "\nForgeting last_word word: "
 .align 	8
 tcomer13: .ascii "\nENDIF could not find IF.."
 		.zero 16
-
 
 
 .align 	8
