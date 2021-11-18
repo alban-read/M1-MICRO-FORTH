@@ -2990,19 +2990,32 @@ datc: ;  "@"
 		RET		
 
 
-		
-
-
-
+	
 atz: ;  ( address -- n ) fetch var.
 		LDR		X0, [X16, #-8] 
+		CBZ		X0, itsnull
 		LDR     X0, [X0]
 		STR		X0, [X16, #-8]
 		RET
 
+itsnull: ; error word_desc13
+		MOV		X0, #0
+		STR		X0, [X16, #-8]
+		ADRP	X0, word_desc13@PAGE	   
+	    ADD		X0, X0, word_desc13@PAGEOFF
+		B		sayit
+
+
+itsnull2: ; error word_desc13
+		SUB		X16, X16, #16
+		ADRP	X0, word_desc13@PAGE	   
+	    ADD		X0, X0, word_desc13@PAGEOFF
+		B		sayit
+
 storz:  ; ( n address -- )
 		LDR		X0, [X16, #-8] 
 		LDR		X1, [X16, #-16]
+		CBZ		X0, itsnull2
 		STR 	X1, [X0]
 		SUB		X16, X16, #16
 		RET
@@ -3010,6 +3023,7 @@ storz:  ; ( n address -- )
 
 hwatz: ;  ( address -- n ) fetch var.
 		LDR		X0, [X16, #-8] 
+		CBZ		X0, itsnull
 		LDRH    W0, [X0]
 		STR		X0, [X16, #-8]
 		RET
@@ -3017,6 +3031,7 @@ hwatz: ;  ( address -- n ) fetch var.
 hwstorz:  ; ( n address -- )
 		LDR		X0, [X16, #-8] 
 		LDR		X1, [X16, #-16]
+		CBZ		X0, itsnull2
 		STRH 	W1, [X0]
 		SUB		X16, X16, #16
 		RET
@@ -3507,6 +3522,14 @@ word_desc12: .ascii "\t\tPRIM COMP"
 		.zero 16
 
 
+
+
+.align 	8
+word_desc13: .ascii "\nError: Null access."
+		.zero 16
+
+
+
 .align 	8
 spaces:	.ascii "                              "
 		.zero 16
@@ -3514,7 +3537,7 @@ spaces:	.ascii "                              "
 
 ; this is the code pointer stack
 ; every address pushed here is a leaf subroutine address.
-; 
+;  
 .align 8
 cps:	.zero 8*16	
 cpu:	.zero 16
@@ -3574,6 +3597,28 @@ quadlits:
 		.endr
 		.quad  -2 ; end of literal pool. 
 		.quad  -2 
+
+
+
+
+; string lits ASCII counted strings
+; 256 x 256
+
+.stringlits64:
+.rept  512
+	.zero 	64
+.endr
+.stringlits128:
+.rept  512
+	.zero 	128
+.endr
+stringlits256:
+.rept  512
+	.zero 	256
+.endr
+
+
+
 
 ; used for line input
 .align 16
