@@ -34,6 +34,15 @@
 .endm
 
 
+ .macro reset_return_stack
+		ADRP	X1, rp1@PAGE	   
+	    ADD		X1, X1, rp1@PAGEOFF
+		ADRP	X0, rsp@PAGE	   
+	    ADD		X0, X0, rsp@PAGEOFF
+		STR		X1, [X0]
+		MOV		X14, X1 
+.endm
+
 
 .macro save_registers  
 		STP		X12, X13, [SP, #-16]!
@@ -985,6 +994,10 @@ init:
 	    ADD		X0, X0, dsp@PAGEOFF
 		LDR		X16, [X0]  ;; <-- data stack pointer to X16
 
+		ADRP	X0, rsp@PAGE	   
+	    ADD		X0, X0, rsp@PAGEOFF
+		LDR		X14, [X0]  ;; <-- return stack pointer to X14
+
 
    	    BL  announce
 		BL  dotwords
@@ -1609,6 +1622,32 @@ exit_program:
 190:		
 		RET
 
+
+
+; Return stack
+; The word execution uses the machine stack pointer
+; So the return stack is NOT actually used for return addresses
+; 
+
+dtorz:
+		LDR		X0, [X16, #-8]	
+		STR		X0, [X14], #8
+		SUB		X16, X16, #8
+		RET
+
+dtorc:
+		RET
+
+dfromrz:
+		LDR		X0, [X14, #-8]	
+		STR		X0, [X16], #8
+		SUB		X14, X14, #8
+		RET
+
+		RET
+
+dfromrc:
+		RET
 
 
 
@@ -2554,9 +2593,6 @@ dbranchz:
 
 dbranchc:
 		RET
-
-
-
 
 
 
@@ -3578,18 +3614,18 @@ csp:	.quad cp1
 ; this is the data stack
 .align  8
 sps:	.zero 8*8	
-spu:	.zero 4
-sp1:    .zero 256*4  
-spo:	.zero 4
+spu:	.zero 8
+sp1:    .zero 256*8
+spo:	.zero 8
 sp0:    .zero 8*8
 dsp:	.quad sp1
 
 ; this is the return stack
 .align  8
 rps:	.zero 8*8	
-rpu:	.zero 4
-rp1:    .zero 256*4  
-rpo:	.zero 4
+rpu:	.zero 8
+rp1:    .zero 256*8  
+rpo:	.zero 8
 rp0:    .zero 8*8
 rsp:	.quad rp1
 
@@ -3628,10 +3664,13 @@ quadlits:
 
 
 
-
+; strings ASCII
 ; string lits ASCII counted strings
-; 256 x 256
 
+.stringlits32:
+.rept  512
+	.zero 	64
+.endr
 .stringlits64:
 .rept  512
 	.zero 	64
@@ -3644,7 +3683,6 @@ stringlits256:
 .rept  512
 	.zero 	256
 .endr
-
 
 
 
@@ -3882,6 +3920,8 @@ qdict:
 
 			makeword "ROT", drotz , drotc, 0 
 
+			makeword "R>", dfromrz , dfromrc, 0 
+
 			makeqvword 114
 			makeword "R", dvaraddz, dvaraddc,  8 * 82 + ivars	
 
@@ -4027,6 +4067,7 @@ zdict:
 			makeword ".VERSION", announce , 0, 0
 
 			makeword "?DUP", dqdupz, dqdupc, 0
+			makeword ">R", dtorz , dtorc, 0 
 
  			
 
