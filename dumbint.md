@@ -9,7 +9,7 @@ This was written from scratch, starting with a blank editor page in VS code.
 
 ### Incomprehension about Documentation
 
-I am stunned by the projects in GITHUB that have complex software and no documentation at all.
+I am stunned by projects in GITHUB that have complex software and no documentation 
 
 Mine are simple projects,  with documentation, I guess you can't have everything.
 
@@ -186,6 +186,15 @@ Added SEE to help add ELSE.
 At compile time :-
 ELSE looks for IF
 ENDIF looks for ELSE or IF.
+
+
+#### Thursday morning
+
+Fixed a mysterious error.
+
+Added a little (not a lot of) safety to variable access.
+
+
 
 
 ### Dictionary
@@ -399,9 +408,18 @@ The litbase
 
 
 
+## TESTS 
 
+: TESTNEST IF 65 EMIT IF 66 EMIT ELSE 67 EMIT ENDIF ENDIF 68 EMIT ;
 
+Test nested IF ELSE ENDIF 
 
+expected 
+
+1 0 TESTNEST => D
+1 1 TESTNEST => ABD
+0 1 TESTNEST => ACD
+0 0 TESTNEST => D
 
 
 
