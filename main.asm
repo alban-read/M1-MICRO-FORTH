@@ -1088,10 +1088,6 @@ fw1:
 
 		LDP		X28, XZR, [SP]
 
-		CMP		X0, #-1 ; fail compile time call.
-		B.eq	exit_compiler_word_empty
-
-
 		B       advance_word
 
 finish_list: ; we did not find a defined word.
@@ -1352,7 +1348,7 @@ find_word_token:
 
 
 		; a reason the compiler is small is 
-		; that words compile themselves which happens here
+		; that words help compile themselves which happens here
 
 		STP		X3, X4, [SP, #-16]!
 		STP		X28, XZR, [SP, #-16]!
@@ -1360,11 +1356,14 @@ find_word_token:
 		LDP		X28, XZR, [SP]
  		LDP		X3, X4, [SP]
 
+		; words that assist the compiler must return X0 status
+
+		CMP		X0, #-1 ; fail compile time call.
+		B.eq	exit_compiler_compile_timer_err
+
+
 skip_compile_time:
-		; a number of words have no compile time action 
-
-
-
+		; most words have no compile time action 
 
 		; we finished compiling tokens, fetch next word.
 		B		finished_compiling_token
@@ -1520,6 +1519,15 @@ exit_compiler_pool_full:
         BL		sayit
 
 		B		input ; back to immediate mode
+
+exit_compiler_compile_timer_err:
+
+		; compile time function returned error
+		ADRP	X0,	tcomer9@PAGE	
+		ADD		X0, X0,	tcomer9@PAGEOFF
+        BL		sayit
+		B		input ; back to immediate mode
+
 
 exit_compiler_word_empty:
 
@@ -3068,8 +3076,8 @@ dnplusc:
 
 nmulz:	; perform shift left to multiply
 		LDR		X1, [X16, #-8]
-		LSL		X1, X1, X0
-		STR		X1, [X16, #-8]
+		LSL		X0, X1, X0
+		STR		X0, [X16, #-8]
 		RET
 
 dnmulz:
@@ -3443,7 +3451,7 @@ tcomer8: .ascii "\nWord is too long (words must be short.)"
 		.zero 16
 
 .align 	8
-tcomer9: .ascii "\nENDIF could not find IF.."
+tcomer9: .ascii "\nCompile time function failed"
 		.zero 16
 
 .align 	8
