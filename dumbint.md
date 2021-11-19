@@ -452,9 +452,11 @@ each word as it is executed.
 
 : TEST DUP * . ;
 
+TROFF
+
 5 TEST => 25
 
-1 TRACING !
+TRON
 
 5 TEST 
 
@@ -471,7 +473,6 @@ So you can disable it in RUNINTZ
 
 
 : TEST 10 1 DO CR 10 1 DO 35 EMIT LOOP LOOP ;
-L
 
 
 
