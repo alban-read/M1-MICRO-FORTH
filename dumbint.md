@@ -4,7 +4,7 @@ Inspired by FORTH, not a new invention, since only idiots invent new languages.
 
 With .. tradeoffs..
 
-This was written from scratch, starting with a blank editor page in VS code.
+This was written from scratch, starting with a blank editor page in VS code, CLANG Assembler is used.
 
 
 ### Incomprehension about Documentation
@@ -12,8 +12,6 @@ This was written from scratch, starting with a blank editor page in VS code.
 I am stunned by projects in GITHUB that have complex software and no documentation 
 
 Mine are simple projects,  with documentation, I guess you can't have everything.
-
-
 
 
 ### purpose
@@ -33,6 +31,9 @@ Get an interactive interpreter running from Day 1, and then build it out.
 
 The process is incremental, and interactive from the start, as soon as the outer text interpreter works, it is used to test the next features added.
 
+Use the computer as the tool for using the computer.
+
+
 
 ### expedience
 
@@ -43,6 +44,23 @@ Later may migrate to only use system calls and internal system functions.
 ASCII text is used for function names and vaiables, not Unicode
 
 Unicode may be supported only for Unicode strings if they are added
+
+
+### Origin
+
+Greenspans 10th rule
+
+Any sufficiently complicated C or Fortran program contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Common Lisp.
+
+Albans Nth rule
+
+Any sufficiently simple assembly language program contains a half-arsed implementation of FORTH.
+
+e.g. As soon as you start writing a program in Assembler, if you want to test it, and retain your sanity, you need to implement at least half of the things that FORTH provides.
+
+But no more that that, or it becomes FORTH, and that is not the end objective of working in Assembler.
+
+Just enough FORTH to test the assembler words and string them together is the trick.
 
 
 #### Memory management
@@ -101,6 +119,7 @@ First 'compiled' word. (token compiled)
 The compiler is compiling into a token list, tokens are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
 
 This inner interpreter is only a few instructions long, in runintz.
+
 It is more complicated than typical threaded FORTH because of the token expansion, and due to the words data being passed over in X0.  
 
 For runintz the data is the address of the tokens.
@@ -194,6 +213,11 @@ Fixed a mysterious error.
 
 Added a little (not a lot of) safety to variable access.
 
+Added some tests and fixed nested IF ..
+
+Fixed a spurious and annoying error.
+
+Start with the return stack, for loops.
 
 
 
@@ -406,8 +430,6 @@ The litbase
 
 
 
-
-
 ## TESTS 
 
 : TESTNEST IF 65 EMIT IF 66 EMIT ELSE 67 EMIT ENDIF ENDIF 68 EMIT ;
@@ -423,14 +445,33 @@ expected
 
 
 
+### TRACING
+
+If tracing is set to 1 then words will be traced, which means printing the name of
+each word as it is executed.
+
+: TEST DUP * . ;
+
+5 TEST => 25
+
+1 TRACING !
+
+5 TEST 
+
+5 TEST
+DUP         
+*           
+.           
+ 25
+
+Tracing does add overhead even if switched off.
+
+So you can disable it in RUNINTZ
 
 
 
-
-
-
-
-
+: TEST 10 1 DO CR 10 1 DO 35 EMIT LOOP LOOP ;
+L
 
 
 
