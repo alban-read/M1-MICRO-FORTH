@@ -49,9 +49,11 @@
 		STP		X14, X15, [SP, #-16]!
 		STP		LR,  X16, [SP, #-16]!
 		STP		X6,  X7,  [SP, #-16]!
+		STP		X4,  X5,  [SP, #-16]!
 .endm
 
 .macro restore_registers  
+		LDP     X4, X5, [SP], #16
 		LDP     X6, X7, [SP], #16
 	 	LDP     LR, X16, [SP], #16
 		LDP		X14, X15, [SP], #16	
@@ -320,8 +322,27 @@ sayeol:
 		B		finish
 
 
+sayliteral:
+		ADRP	X0, tliteral@PAGE	
+		ADD		X0, X0, tliteral@PAGEOFF
+		BL		sayit
+		B		finish
+
+
+
 ; first print all defined words in the long word dictionary
 ; then print all the words in the bytewords dictionary.
+
+
+alldotwords:
+		ADRP	X8, ___stdoutp@GOTPAGE
+		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+		LDR		X1, [X8]
+
+		ADRP	X2, dend@PAGE	
+		ADD		X2, X2, dend@PAGEOFF
+		B  		20f
+
 
 dotwords:
 	
@@ -589,6 +610,25 @@ X0halfpr:
 
 
 
+
+
+X0branchpr:
+
+		MOV 	X1, X0
+		B		12f	
+			
+12:
+
+	 	ADRP	X0, tbranchpr@PAGE	   
+		ADD		X0, X0,tbranchpr@PAGEOFF
+		save_registers
+		STP		X1, X0, [SP, #-16]!
+		BL		_printf		 
+		ADD     SP, SP, #16 
+		restore_registers  
+		RET
+
+
 X0addrpr:
 		MOV 	X1, X0
 		B		12f
@@ -609,6 +649,26 @@ addrpr: ; prints int on top of stack in hex
 		restore_registers  
 		RET
 
+
+X0addrprln:
+		MOV 	X1, X0
+		B		12f
+
+lnaddrpr: ; prints int on top of stack in hex	
+	
+		LDR		X1, [X16, #-8]
+		SUB		X16, X16, #8	
+			
+12:
+
+	 	ADRP	X0, tpraddln@PAGE	   
+		ADD		X0, X0,tpraddln@PAGEOFF
+		save_registers
+		STP		X1, X0, [SP, #-16]!
+		BL		_printf		 
+		ADD     SP, SP, #16 
+		restore_registers  
+		RET
 
 
 X0hexprint:
@@ -1342,7 +1402,6 @@ find_word_token:
 
 		; X1 is token store halfword in [x15]
 		STRH	W1, [X15]
-		ADD		X15, X15, #2
 
 
 		; if the word has a compile time action, call it.
@@ -1380,6 +1439,10 @@ find_word_token:
 
 
 skip_compile_time:
+		; increment X15 after the compile time function.
+
+		ADD		X15, X15, #2
+
 		; most words have no compile time action 
 
 		; we finished compiling tokens, fetch next word.
@@ -1506,9 +1569,6 @@ try_compiling_literal:
 80:
 		; found the literal
 		MOV		X1, X3
-		MOV		X0, #2 ; #LITL
-		STRH	W0, [X15]
-		ADD		X15, X15, #2
 		STRH	W1, [X15]	; value
 		ADD		X15, X15, #2
 
@@ -1583,6 +1643,10 @@ exit_compiler:
 	
 		MOV		X0, #0
 		STRH	W0, [X15]	
+		ADD		X15, X15, #2
+		MOV		X0, #0
+		STRH	W0, [X15]
+
 
 		ADRP	X1, last_word@PAGE	   
 	    ADD		X1, X1, last_word@PAGEOFF
@@ -1672,27 +1736,45 @@ dfromrc:
 
 
 
-; #DOER 
+; #21DOER 
 ; checks arguments
 
-doerz:
+stckdoargsz:
 
 	STP		LR,  X12, [SP, #-16]!
-	ADD		X15, X15, #2 ; to literal
-
 	MOV		X12, X15
+	; Get my arguments
+	LDP  	X0, X1,  [X16, #-16]  
+	SUB		X16, X16, #16
 
+	; Stack arguments 21, literal address, start, limit
+	
+	MOV		X2,  #21 ; DO
+	STP		X2,  X12, [X14], #16
+	STP		X0,  X1,  [X14], #16
+
+	LDP     LR, X12, [SP], #16
+
+	RET
+
+
+; as above but includes skip forwards
+
+ddoerz:
+
+	STP		LR,  X12, [SP, #-16]!
+	MOV		X12, X15
 
 	; Get my arguments
 	LDP  	X0, X1,  [X16, #-16]  
 	SUB		X16, X16, #16
 
-	; Stack arguments 5, literal address, start, limit
-	MOV		X2,  #5 ; DO
-	STP		X2,  X12, [X14, #-16]!
-	STP		X0,  X1, [X14, #-16]!
-	 	
+	; Stack arguments 21, literal address, start, limit
+	MOV		X2,  #21 ; DO
+	STP		X2,  X12, [X14], #16
+	STP		X0,  X1,  [X14], #16
 
+	
 
 	; Check my arguments
 	CMP		X0, X1
@@ -1700,9 +1782,38 @@ doerz:
 
 	B		200f
 
+
+
+ddowndoerz:
+
+	STP		LR,  X12, [SP, #-16]!
+	MOV		X12, X15
+
+	; Get my arguments
+	LDP  	X0, X1,  [X16, #-16]  
+	SUB		X16, X16, #16
+
+	; Stack arguments 21, literal address, start, limit
+	MOV		X2,  #22 ; DODOWN
+	STP		X2,  X12, [X14], #16
+	STP		X0,  X1,  [X14], #16
+
+	
+
+	; Check my arguments
+	CMP		X0, X1
+	B.gt	skip_do_loop
+
+	B		200f
+
+
+
+
+dochecker:
+
 skip_do_loop:
 	
-	ADD		X15, X15, #4
+	ADD		X15, X15, #2
 
 	MOV 	X2, #1  	; find at least one loop
 
@@ -1710,19 +1821,20 @@ skipper:
 
 	LDRH	W0, [X15]
 	
-	CMP		W0, #5 ; found DO
+	CMP		W0, #21 ; found DO
 	B.eq	count_up
 
-	CMP		W0, #7
+	CMP		W0, #17
 	B.eq	found_loop
 
-	CMP		W0, #9
+	CMP		W0, #18
 	B.eq	found_loop
 
+	CMP		W0, #19
+	B.eq	found_loop
 
 	ADD		X15, X15, #2
 	B		skipper
-
 
 count_up:	; we found a DO so we need to find more than one loop
 	ADD 	X2, X2, #1
@@ -1734,10 +1846,7 @@ found_loop:
 	B		skipper
 
  found_loops:
-	SUB		X0, X15, X12
-	ADD		X15, X15, #2
-	STRH	W0,  [X15]
-	ADD		X15, X15, #2	
+	SUB		X0, X15, X12	
 	B		200f
 
 
@@ -1749,7 +1858,6 @@ do_without_loop:
 
 
 200:
-
 	LDP     LR, X12, [SP], #16
 	RET
 
@@ -1758,50 +1866,84 @@ do_without_loop:
 ; : TEST2 10 1 DO I . SPACE 10 1 DO 35 EMIT LOOP SPACE LOOP ;
 ; : TEST3 10 1 DO I . SPACE 10 1 DO 35 EMIT LOOP LOOP ;
 ; : TEST4 10 1 DO I . SPACE 10 1 DO 35 EMIT LOOP LOOP 36 EMIT ;
-; : TEST5 10 1 DO I . 50 20 DO J . LOOP LOOP;
+; : TEST5 10 1 DO I . 5 2 DO  SPACE J . SPACE LOOP LOOP;
 ; : TEST6 10 1 DO I . SPACE LOOP ;
+; : TEST7 10 1 DO I . 50 20 DO  SPACE J . SPACE LOOP CR LOOP 65 EMIT ;
 
+
+.macro loop_vars
+	LDP		X0, X1,  [X14, #-16]
+	LDP		X2, X12, [X14, #-32]	
+	CMP		X2, #21 ; DOOER
+	B.ne	do_loop_err 
+.endm
+
+.macro loop_continues
+	STP		X0,  X1,  [X14, #-16]
+	STP		X2,  X12, [X14, #-32]
+.endm
 
 dplooperz:
 
+	loop_vars
+
+	LDR		X2, [X16, #-8]
+	SUB		X16, X16, #8	
+
+	ADD		X1, X1, X2
+
+	CMP		X0, X1
+	B.lt	loops_end
+
+	MOV		X2, #21 ; DOOER
+	loop_continues
+
+	MOV		X15, X12
 	RET
+
+
+; -LOOP is non standard
+
+dmlooperz:
+
+	LDP		X0, X1,  [X14, #-16]
+	LDP		X2, X12, [X14, #-32]	
+	CMP		X2, #22 ; DOWNDOER
+	B.ne	do_loop_err 
+
+	LDR		X2, [X16, #-8]
+	SUB		X16, X16, #8	
+
+	SUB		X1, X1, X2
+
+	CMP		X0, X1
+	B.gt	loops_end
+
+	MOV		X2, #22 ; DODOWNER
+	loop_continues
+	 	
+	MOV		X15, X12
+	RET	
+
 
 dlooperz:
 
- 	ADD		X15, X15, #2 ; advance to literal
-
-
-	
-	LDP		X0, X1, [X14], #16	
-	LDP		X2, X12, [X14], #16	
-
-	CMP		X2, #5 ; DOOER
-	B.ne	do_loop_err
+	loop_vars
 
 	ADD		X1, X1, #1
 	CMP		X0, X1
-	B.lt	100f ; loop end
+	B.lt	loops_end
 
-	; loop continues - restack
-	STP		X2,  X12, [X14, #-16]!
-	STP		X0,  X1, [X14, #-16]!
-	 	
+	loop_continues
+
 	MOV		X15, X12
 
 	RET
 
-100:	; loop end
 
-
-	LDRH	W0, [X15]
-	CMP		W0, #9 ; LOOP, LOOP back to BACK
-	B.eq	dlooperz
-
-	;ADD		X15, X15, #2
-
-	 	
+loops_end:  ; loop end
+	SUB 	X14, X14, #32 	
 	RET
-
 
 do_loop_err:
 		reset_return_stack
@@ -1815,116 +1957,33 @@ do_loop_err:
 ; compile in DO LOOP, +LOOP
 
 doerc:
-	
-		; back out our token, we want to do something else.
+		MOV	X0, #21 ; 
+		STRH W0, [X15] ; replace code
+		RET
+		
 
-		SUB		X15, X15, #2
-
-		MOV		X0, #5; #DOER
-		STRH	W0, [X15]
-		ADD		X15, X15, #2
-		MOV		X0, #2000 
-		STRH	W0, [X15] ; dummy offset
-		ADD		X15, X15, #2
-		B		200f
-
-200:
-		; restore registers
-		MOV		X0, #0
-
-		RET		
-
-
-
+ddownerc:
+		MOV	X0, #22 ; 
+		STRH W0, [X15] ; replace code
+		RET
 
 
 dloopc:
-		STP		LR,  X16, [SP, #-16]!
-; back out our token, we want to do something else.
-
-		SUB		X15, X15, #2
-
-		MOV		X0, #9; #LOOPER
-		STRH	W0, [X15]
-		ADD		X15, X15, #2
-		MOV		X0, #2000 
-		STRH	W0, [X15] ; dummy offset
-		 
-
-100:	; FIND DO
-		MOV		X12, X15
-
-110:	SUB		X12, X12, #2
-		MOV		X0, #'!'
-		BL		X0emit
-		LDRH	W0, [X12]
-		CMP		W0, #5; #DOER
-		B.eq	140f
-
-
-		ADRP	X1, last_word@PAGE	   
-	    ADD		X1, X1, last_word@PAGEOFF
-		LDR		X0, [X1]
-
-		CMP		X12, X0  ; did we escape the whole word?
-		B.lt	190f ; error out no IF for ENDIF
-
-		B		110b
-
-140:	; found DOER
-
-		LDRH	W0,	[X12, #2]
-		CMP		W0, #2000
-		B.eq	145f		; ours to change?
-
-		; no keep seeking matching DO
-		B		110b
-
-		; patch up DOER 
-
-145:	; this is ours to patch up		
-
-		SUB     X1, X15, X12  ; dif between 
-		ADD		X12, X12, #2  ; branch data follows DOER
-
-		SUB		X1, X1, #2
-		STRH	W1, [X12]	  ; store the offset for DOER
-		 
-		; patched DOER now patch backwards branch
- 
-		SUB		X1, X1, #4 ;  
-		STRH	W1, [X15]
-
-		ADD 	X15, X15, #2
-
-		; and exit ok
-		MOV		X0, #0
-		B		200f
-
-
-190:	; error out - no DO for our LOOP.
+		MOV	X0, #19
+		STRH W0, [X15] ; replace code
+		RET
+	
 		
-		
-		ADRP	X0, tcomer14@PAGE	
-		ADD		X0, X0, tcomer14@PAGEOFF
-        BL		sayit	
-		 	
-		MOV	X0, #-1
-		B		200f
-
-200:
-		LDP     LR, X16, [SP], #16
-		RET		
-
-
-
-dploopc:
-
+dploopc: 
+		MOV	X0, #17
+		STRH W0, [X15] ; replace code
 		RET
 
- 
-
-
+ 		
+dmloopc: 
+		MOV	X0, #18
+		STRH W0, [X15] ; replace code
+		RET
 
 
 dstorez:	; ( addr value -- )
@@ -2201,8 +2260,6 @@ dseez:
 		MOV		X0, #32
 		BL		X0addrpr
 		
-		MOV		X0, #':'
-		BL		X0emit
 
 		LDR		X0, [X28, #32]
 		BL      X0addrpr 
@@ -2240,11 +2297,10 @@ dseez:
 
 see_tokens:	
 
+		BL		saycr
+
 		MOV		X0, X12
 		BL		X0addrpr
-
-		MOV		X0, #':'
-		BL		X0emit
 
 		LDRH	W0, [X28,X12]
 		CBZ		W0, 160f
@@ -2270,8 +2326,6 @@ see_tokens:
 		MOV		X0, X12
 		BL		X0addrpr
 
-		MOV		X0, #':'
-		BL		X0emit
 
 		LDRH	W0, [X28,X12]
 		BL		X0halfpr
@@ -2293,7 +2347,6 @@ see_tokens:
 
 literal_skip:
 
-		BL		saycr
 
 		ADD 	X12, X12, #2
 		B		see_tokens
@@ -2648,13 +2701,7 @@ difc:
 		STP		X22, X28, [SP, #-16]!
 		STP		X3,  X4, [SP, #-16]!
 		STP		LR,  X16, [SP, #-16]!
-
-
-
-	; back out our token, we want to do something else.
-
-		SUB		X15, X15, #2
-
+	 
 	;  push zbran and dummy offset
 
 		MOV		X0, #3 ; #ZBRAN
@@ -2662,7 +2709,7 @@ difc:
 		ADD		X15, X15, #2
 		MOV		X0, #4000 
 		STRH	W0, [X15] ; dummy offset
-		ADD		X15, X15, #2
+	 
 		B		200f
 
 190:	; error out 
@@ -2693,7 +2740,7 @@ dendifc:
 		STP		LR,  X16, [SP, #-16]!
 
 		MOV		X3, X15
-	 
+	
 
 110:	; seek 3 as halfword.
 
@@ -2722,13 +2769,11 @@ dendifc:
 145:
 		SUB     X4, X15, X3 ; dif between zbran and endif.
 		ADD		X3, X3, #2  ; branch data follows zbran
+		SUB 	X4, X4, #2
 		STRH	W4, [X3]	; store that
 		MOV		X0, #0
 
-		; do not compile an ENDIF it is a NOOP
-	
-		SUB		X15, X15, #2
-		STRH	W0, [X15]	
+		
 		B		200f
 
 190:	; error out - no IF for our ENDIF.
@@ -2767,7 +2812,7 @@ delsec: ;  at compile time inlines the ELSE branch
 		; back out our token
 		; we will compile a branch instead
 
-		SUB		X15, X15, #2
+		 
 
 		;  push zbran and dummy offset
 
@@ -2834,7 +2879,6 @@ delsec: ;  at compile time inlines the ELSE branch
 
 		RET		
 
-
 ; if top of stack is zero branch
 
 dzbranchz:
@@ -2846,15 +2890,19 @@ dzbranchz:
 
 ; it is zero, branch forwards n tokens		
 80:
+		ADD		X15, X15, #2
 		LDRH	W0, [X15] 		; offset to endif
-		SUB		W0, W0, #4      ; we already advanced 4 (zbranch, offset.)
+		SUB		X0, X0, #2
 		ADD		X15, X15, X0	; change IP
 		RET
 
 ; it is not zero just continue
-90:		ADD		X15, X15, #2	; skip offset
+90:		ADD		X15, X15, #4	; skip offset
 		RET  
 
+ 
+ 
+ 
 
 dzbranchc:
 	
@@ -2903,9 +2951,7 @@ dtickc: ; ' at compile time, turn address of word into literal
 		CMP		X21, X22       ; is this our word?
 		B.ne	170f
 
-	; back out our token, we want to do something else.
-
-		SUB		X15, X15, #2
+ 
 
 	; found word, push litl and create literal address of word
 
@@ -3043,56 +3089,75 @@ runintz:; interpret the list of tokens at X0
 		STP	   LR,  X15, [SP, #-16]!
 
 		MOV    X15, X0
-
-	
-
-		; tracing ends
-
-		ADRP   X12, dend@PAGE	
+ 		ADRP   X12, dend@PAGE	
 		ADD	   X12, X12, dend@PAGEOFF
-
+		SUB	   X15, X15, #2
+		
 10:		; next token
-		LDRH	W1,  [X15]
 		ADD		X15, X15, #2
+		LDRH	W1,  [X15]
+
 		CBZ     W1, 90f
-
-		LSL		W1, W1, #7	    ;  *128 
+ 
+		LSL		W1, W1, #7	    ;  TOKEN*128 
 		ADD		X1, X1, X12     ; + dend
-
-		; comment below out to disable tracing
-		CBZ	    X6, not_tracing
-		; trace out words being executed.
-		ADD		X0, X1, #8  ; name field
-		STP		X0,  X1, [SP, #-16]!
-		STP		X6,  X15, [SP, #-16]!
-		BL		X0prname	
-		BL		saycr
-		LDP		X6, X15, [SP], #16	
-	 	LDP		X0, X1, [SP], #16	
-		; tracing ends
-
-
-not_tracing:
-
+	 
+		 
 		LDR     X0, [X1]		; words data
 		LDR     X1, [X1, #24]	; words code
 
 	 	CBZ		X1, dontcrash
+ 
 		STP		LR,  X12, [SP, #-16]!
 		BLR     X1 		
 		LDP		LR, X12, [SP], #16	
-	 
+ 
+
+		CBZ		X6, 10b
+
+tracer:	; trace words
+
+		MOV		X0, X15
+		BL		X0addrprln
+		LDRH	W0, [X15]
+		BL		X0halfpr
+		LDRH	W0, [X15]
+ 		LSL		W0, W0, #7	    ;  TOKEN*128 
+		ADD		X0, X0, X12     ; + dend
+		ADD		X0, X0, #8
+
+		ADRP	X2, startdict@PAGE	
+		ADD		X2, X2, startdict@PAGEOFF	
+		CMP		X0, X2
+		B.gt	skip_name
+
+		LDR		X2, [X0]
+		CMP		X2, #-1
+		B.eq	skip_name
+		CMP		X2, #0
+		B.eq 	skip_name
+		BL		X0prname
+
+skip_name:
+		 
+
+
 dontcrash: ; treat 0 as no-op
 
 		B		10b
 90:
 		; restore IP
-		 
+dexitz:		 
 		LDP		LR, X15, [SP], #16	
 	 
 		RET
 
 
+
+	
+
+
+	 
 
 dlrbz: ; (
 		RET
@@ -3491,13 +3556,9 @@ dconsc: ; compile address of variable
 		RET
 
 
-
-
-
 dlitz: ; next cell has address of short (half word) inline literal
-	
- 
-		LDRH	W0, [X15], #2
+		ADD		X15, X15, #2		
+		LDRH	W0, [X15]
 		B		stackit 
 
 dlitc: ; compile address of variable
@@ -3574,39 +3635,37 @@ dconstc: ; value of constant
 		RET
 
 
-
 diloopz: ; special I loop variable
-
-		LDP		X0, X1, [X14], #16	
-		LDP		X2, X12, [X14], #16	
-		STP		X2,  X12, [X14, #-16]!
-		STP		X0,  X1, [X14, #-16]!
-
-		CMP		X2, #5 ; DOOER
-		B.ne	loop_index_err
-
-		MOV		X0, X1
-		B		stackit
+		LDP		X0, X1,  [X14, #-16]
+		LDP		X2, XZR, [X14, #-32]	
+		B		loop_var_check	
 
 djloopz: ; special J loop variable
 
-	 
+		LDP		X0, X1,  [X14, #-48]
+		LDP		X2, XZR, [X14, #-64]	
+		B		loop_var_check	
 
-		LDP		X0, X1,  [X14, #32]
-		LDP		X2, X12, [X14, #48]	
-	
-		CMP		X2, #5 ; DOOER
-		B.ne	loop_index_err
-
-		MOV		X0, X1
-		B		stackit
-
-
-
-
-		RET
 
 dkloopz: ; special K loop variable
+
+		LDP		X0, X1,  [X14, #-80]
+		LDP		X2, XZR, [X14, #-96]	
+		B		loop_var_check	
+
+loop_var_check:	
+	
+		CMP		X2, #21 ; DOOER
+		B.eq	stack_loop_var
+		CMP		X2, #22 ; DOWNDOER
+		B.eq	stack_loop_var
+
+		B.ne	loop_index_err
+ 
+
+stack_loop_var:		
+		MOV		X0, X1
+		B		stackit
 		RET
 
  
@@ -3620,7 +3679,6 @@ loop_index_err:
 		RET
 
 
-
 diloopc: ; special I loop variable
 		RET
 
@@ -3629,6 +3687,52 @@ djloopc: ; special J loop variable
 
 dkloopc: ; special K loop variable
 		RET
+
+
+; stack display
+
+ddotrz:
+		STP	    LR,  X15, [SP, #-16]!
+		MOV		X15, X14
+
+
+		MOV		X0, #'R'
+		BL		X0emit
+		MOV		X0, #' '
+		BL		X0emit
+
+ddotdisp:
+ 
+		LDR		X0, [X15, #-8]
+		BL		X0halfpr
+
+ 
+		LDR		X0, [X15, #-16]
+		BL		X0halfpr
+
+ 
+		LDR		X0, [X15, #-24]
+		BL		X0halfpr
+
+ 
+		
+		LDR		X0, [X15, #-32]
+		BL		X0halfpr
+
+		LDP		LR, X15, [SP], #16	
+		RET
+
+
+ddotsz:
+		STP	    LR,  X15, [SP, #-16]!
+		MOV		X15, X16
+		MOV		X0, #'S'
+		BL		X0emit
+		MOV		X0, #' '
+		BL		X0emit
+		B  		ddotdisp
+
+
 
 dlsbz:  ; [ 
 		RET
@@ -3797,8 +3901,20 @@ tpradd:	.ascii "%8ld"
 
 
 .align 	8
-thalfpr:	.ascii "[%6ld]"
+tpraddln:	.ascii "\n%8ld"
 		.zero 16
+
+
+.align 	8
+thalfpr:	.ascii ": [%6ld] "
+		.zero 16
+
+
+.align 	8
+tbranchpr:	.ascii "={%4ld}"
+		.zero 16
+
+
 
 
 .align 	8
@@ -3896,6 +4012,13 @@ tcomer17: .ascii "\nLOOP index error.."
 		.align 	8
 tcomer18: .ascii "\nDO .. LOOP error.."
 		.zero 16
+
+
+
+		.align 	8
+tliteral: .ascii " Literal Value"
+		.zero 16
+
 
 
 .align 	8
@@ -4070,10 +4193,6 @@ zpad:    .ascii "ZPAD STARTS HERE"
 zword: .zero 64
 
 
-.align	9
-tracing: 	.quad	0
-
-
  .align 8
  dbye:		.ascii "BYE" 
 			.zero 5
@@ -4109,19 +4228,24 @@ dend:
 			.zero 64
 			; primitive code word headings.
 
-			; these hash words are inline compile only
-			; they are in this order fixed forever 
-			; otherwise adding words breaks things in the compiler.
+			; hash words 
+			; these are placed in this order fixed forever 
+			; otherwise adding words breaks the compiler.
+			; the compiler references these token numbers.
 
+			; these hash words are inline compile only
+		
+
+			; inline literals < 16
 			makeword "#LITS", dlitz, dlitc,  0       		; 1
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
 			makeword "#ZBRANCH", dzbranchz, dzbranchc,  0   ; 3
 			makeword "#BRANCH", dbranchz, dbranchc,  0   	; 4
-			makeword "#DOER", doerz, 0,  0       			; 5
+			makeword "#5", 0, 0,  0       					; 5
 			makeword "#6", 0, 0,  0   						; 6
-			makeword "#+LOOPER", dplooperz, 0,  0     	    ; 7
-			makeword "#8", 0, 0,  0   						; 8
-			makeword "#LOOPER", dlooperz, 0,  0     		; 9
+			makeword "#7", 0, 0,  0     	  				; 7
+			makeword "#8", 0, 0,  0   					 	; 8
+			makeword "#9", 0, 0,  0     					; 9
 			makeword "#10", 0, 0,  0     					; 10
 			makeword "#11", 0, 0,  0     					; 11
 			makeword "#12", 0, 0,  0   						; 12
@@ -4130,13 +4254,25 @@ dend:
 			makeword "#15", 0, 0,  0     					; 15
 			makeword "#16", 0, 0,  0   			    	 	; 16
 
+			; other fixed position tokens
+			makeword "(+LOOP)", 	dplooperz, 	0,  0       ; 17
+			makeword "(-LOOP)", 	dmlooperz, 	0,  0       ; 18
+			makeword "(LOOP)", 		dlooperz, 	0,  0       ; 19
+			makeword "EXIT", 		dexitz, 	0,  0       ; 20
+			makeword "(DOER)", 		ddoerz, 	0,  0       ; 21
+			makeword "(DOWNDOER)", 	ddowndoerz, 0 , 0		; 22
+			makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
+
 			makeemptywords 84
+
 
 hashdict:	
 
 			; end of inline compiled words, relax
 
 		    makeemptywords 84
+
+			makeword "ALLWORDS", alldotwords , 0, 0 
 
 			makeword "ADDR" , daddrz, daddrc, 0
 
@@ -4172,6 +4308,7 @@ cdict:
 	 
 			makevarword "DP"
 			makeword "DO", 0 , doerc, 0 
+			makeword "DOWNDO", 0 , ddownerc, 0 
 			makeword "DUP", ddupz , ddupc, 0 
 			makeword "DROP", ddropz , ddropc, 0 
 		 	 	
@@ -4227,6 +4364,7 @@ idict:
 			makeemptywords 66
 			makeqvword 106
 			makeword "J", djloopz, djloopc,  0
+
 jdict:
 			makeemptywords 64
 			makeword "KLAST", get_last_word, 0,  0
@@ -4416,7 +4554,23 @@ ydict:
 zdict:
 
 			makeemptywords 30
+			
 			makeword "10", dconstz, dconstc,  10
+			makeword "11", dconstz, dconstc,  11
+			makeword "12", dconstz, dconstc,  12
+			makeword "13", dconstz, dconstc,  13
+			makeword "14", dconstz, dconstc,  14
+			makeword "15", dconstz, dconstc,  15
+			makeword "16", dconstz, dconstc,  16
+			makeword "17", dconstz, dconstc,  17
+			makeword "18", dconstz, dconstc,  18
+			makeword "19", dconstz, dconstc,  19
+			makeword "20", dconstz, dconstc,  20
+			makeword "21", dconstz, dconstc,  21
+			makeword "22", dconstz, dconstc,  22
+			makeword "23", dconstz, dconstc,  23
+			makeword "24", dconstz, dconstc,  24
+			makeword "25", dconstz, dconstc,  25
 			makeword "-1", dconstz, dconstc,  -1
 			makeword "-2", dconstz, dconstc,  -2
 			makeword "1+", dnplusz , 0, 1 
@@ -4450,6 +4604,10 @@ zdict:
 			makeword "?DUP", dqdupz, dqdupc, 0
 			makeword ">R", dtorz , dtorc, 0 
 			makeword "+LOOP", 0 , dploopc, 0
+			makeword "-LOOP", 0 , dmloopc, 0
+			makeword ".R", ddotrz, 0 , 0
+			makeword ".S", ddotsz, 0 , 0
+
  			
 
 
@@ -4512,6 +4670,7 @@ zbytewords:
 
  duserdef:
 
+ dstart:
  startdict:		
  			.quad -1 
 			.quad  0

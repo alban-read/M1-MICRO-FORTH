@@ -69,7 +69,7 @@ None.
 
 Memory management is Static.
 
-People sometimes forget that static memory allocation was always there.
+People sometimes forget that static memory allocation is viable.
 
 The program contains a few tables of fixed sizes.
 
@@ -83,9 +83,7 @@ The machine stack can grow since the operating system does that.
 
 Otherwise the dictionary size and the literal pools are fixed size.
 
-The fixed sizes are reasonable for what I want to do, the machine I am using has 
-
-eight gigabytes of ram, it is a low cost entry model...
+The fixed sizes are reasonable for what I want to do, the machine I am using has eight gigabytes of ram, it is a low cost entry model...
 
 
 
@@ -219,6 +217,12 @@ Fixed a spurious and annoying error.
 
 Start with the return stack, for loops.
 
+Implemented and tested words for LOOP
+
+Updated tracing to not crash.
+
+
+
 
 
 ### Dictionary
@@ -326,17 +330,15 @@ The cost is the token lookup see NTH and the token expansion see ADDR.
 
 The token lookup is simplified by the dictionary being a fixed size.
 
+You can use the decompiler to look at words.
+
 
 
 #### Decompiler
 
 If you are writing a compiler, it helps to see what is going on.
 
-For visibility it is good to have a decompiler.
-
 In FORTH the decompiler is traditionally called SEE.
-
-
 
 : TEST IF 65 EMIT ELSE 66 EMIT ENDIF 67 EMIT ;
 
@@ -475,4 +477,55 @@ So you can disable it in RUNINTZ
 : TEST 10 1 DO CR 10 1 DO 35 EMIT LOOP LOOP ;
 
 
+### Testing LOOPs
+
+The words (DO) (DOER) (LOOP) (+LOOP) (-LOOP) are not normally displayed as they are not user words, and I have aspirations to make the interpreter safe for people to use without crashing.
+
+
+The word ALLWORDS will display all the words, including words compiled by the compiler.
+
+The words are used by the compiler to construct loops and control stuctures.
+
+The interpreter in this implementation, is straight assembler language.
+
+This provides a benefit that the compile only words can be tested in the interpreter, since in a sense FORTH is not active at that point.
+
+e.g. 
+
+10 1 (DO) I . CR (LOOP)  
+
+Will single step a loop.
+
+Allowing (DO), I, J, K, and (LOOP) to be tested interactively.
+
+
+
+
+
+### LOOP Improvements 
+
+The LOOP control statement in FORTH does confusing things.
+
+In this implentation the DO .. LOOP is designed to do what any reasonable person would expect it to do, before they used FORTH. 
+
+Normal loop
+
+: t0 10 1 DO I . CR LOOP ;
+
+Sanity is aided by the addition of DOWNDO (inspired by PASCAL) and -LOOP
+
+
+: t1 10 2 DO I . CR 2 +LOOP ;
+
+: t3 2 10 DOWNDO I . CR 2 -LOOP ;
+
+
+Summary
+
+It is very clear if the LOOP counts up or down, and very obvious if a LOOP should end or not, if it includes the start and finish (it does).
+This LOOP is not at all likely to repeat 65536 times (or in this case billions of times ) by mistake.
+
+This is not compatible 
+
+I do not expect to be able to compile ANSI FORTH, nor do I have some large source of ANSI code somewhere I can reuse.
 
