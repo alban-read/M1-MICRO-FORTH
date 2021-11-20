@@ -294,12 +294,6 @@ If you are writing a compiler, it helps to see what is going on.
 
 In FORTH the decompiler is traditionally called SEE.
 
-: TEST IF 65 EMIT ELSE 66 EMIT ENDIF 67 EMIT ;
-
-Compiler Finished
-
-Ok
-
 ```FORTH
 
 : TEST IF 65 EMIT ELSE 66 EMIT ENDIF 67 EMIT ;
