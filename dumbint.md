@@ -346,43 +346,40 @@ Compiler Finished
 
 Ok
 
+`FORTH
+
+: TEST IF 65 EMIT ELSE 66 EMIT ENDIF 67 EMIT ;
+Ok
+
+ 66 half word cells uses, compiler Finished
+  
+Ok
 SEE TEST
+WORD AT :4341358528
+       0:4341358560		^TOKENS 
+       8:TEST        		NAME
+      24:4340513040		TOKEN COMPILED
 
-WORD AT :4330433600
+      32: [     3] #ZBRANCH    
+      34: [    14] *
+      36: [     1] #LITS       
+      38: [    65] *
+      40: [   541] EMIT        
+      42: [     4] #BRANCH     
+      44: [    10] *
+      46: [     0] (NULL)      
+      48: [     1] #LITS       
+      50: [    66] *
+      52: [   541] EMIT        
+      54: [   540] ENDIF       
+      56: [     1] #LITS       
+      58: [    67] *
+      60: [   541] EMIT        
+      62: [     0] (NULL)      
+      64: END OF LIST
 
-       0:4330433632             ^TOKENS 
 
-       8:TEST                   NAME
-
-      24:4329880276             TOKEN COMPILED
-
-      32:[     3]#ZBRANCH    
-
-      34:[    12]*
-
-      36:[     1]#LITS       
-
-      38:[    65]*
-
-      40:[   246]EMIT        
-
-      42:[     4]#BRANCH     
-
-      44:[    12]*
-
-      46:[     1]#LITS       
-
-      48:[    66]*
-
-      50:[   246]EMIT        
-
-      52:[     1]#LITS       
-
-      54:[    67]*
-
-      56:[   246]EMIT        
-
-      58:
+`
 
 This shows the word and word type.
 

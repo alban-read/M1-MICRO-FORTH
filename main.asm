@@ -197,6 +197,37 @@
 
 
 
+.macro  do_trace		
+		CBZ		X6,	999f
+		STP	    LR,  X0, [SP, #-16]!
+	 
+		MOV		X0, X15
+		BL		X0addrprln
+			
+		LDRH	W0, [X15]
+		BL		X0halfpr
+		LDRH	W0, [X15]
+ 		LSL		W0, W0, #7	    ;  TOKEN*128 
+		ADD		X0, X0, X12     ; + dend
+		ADD		X0, X0, #8
+
+		ADRP	X2, startdict@PAGE	
+		ADD		X2, X2, startdict@PAGEOFF	
+		CMP		X0, X2
+		B.gt	999f
+
+		LDR		X2, [X0] 
+		BL		X0prname
+		
+		BL		ddotsz
+		BL		ddotrz
+	 
+		LDP		LR, X0, [SP], #16	
+999:
+
+.endm
+
+
 .data
 
 .align 8
@@ -2129,6 +2160,9 @@ dseez:
 		MOV     X0, X28
 		BL		X0addrpr
 
+		ADD		X0, X28, #8
+		BL		X0prname
+
 		BL		saycr	
 		
 		; display the data word
@@ -2833,7 +2867,7 @@ delsec: ;  at compile time inlines the ELSE branch
 		ADD		X15, X15, #2
 		MOV		X0, #4000 
 		STRH	W0, [X15] ; dummy offset
-		ADD		X15, X15, #2
+		;ADD		X15, X15, #2
 
 
 		; we are part of IF .. ELSE .. ENDIF 
@@ -2895,6 +2929,10 @@ delsec: ;  at compile time inlines the ELSE branch
 
 dzbranchz:
 
+		do_trace
+ 
+dzbranchz_notrace:
+
 		LDR		X1, [X16, #-8]
 		SUB		X16, X16, #8	
 		CMP		X1, #0
@@ -2904,12 +2942,24 @@ dzbranchz:
 80:
 		ADD		X15, X15, #2
 		LDRH	W0, [X15] 		; offset to endif
-		SUB		X0, X0, #2
+		 
+
+		do_trace
+
+		SUB		X0, X0, #4
 		ADD		X15, X15, X0	; change IP
+
+		do_trace
+
 		RET
 
 ; it is not zero just continue
-90:		ADD		X15, X15, #4	; skip offset
+
+90:		
+		ADD		X15, X15, #2	; skip offset
+	
+		do_trace	
+	
 		RET  
 
  
@@ -3095,7 +3145,7 @@ dtraqz:
 
 
 runintz:; interpret the list of tokens at X0
-		; until 0.
+		; until (END) #24
 
 		; SAVE IP 
 		STP	   LR,  X15, [SP, #-16]!
@@ -3109,7 +3159,8 @@ runintz:; interpret the list of tokens at X0
 		ADD		X15, X15, #2
 		LDRH	W1,  [X15]
 
-		CBZ     W1, 90f
+		CMP     W1, #24 ; (END) 
+		B.eq    90f
  
 		LSL		W1, W1, #7	    ;  TOKEN*128 
 		ADD		X1, X1, X12     ; + dend
@@ -3127,32 +3178,8 @@ runintz:; interpret the list of tokens at X0
 
 		CBZ		X6, 10b
 
-tracer:	; trace words
-
-		MOV		X0, X15
-		BL		X0addrprln
-		LDRH	W0, [X15]
-		BL		X0halfpr
-		LDRH	W0, [X15]
- 		LSL		W0, W0, #7	    ;  TOKEN*128 
-		ADD		X0, X0, X12     ; + dend
-		ADD		X0, X0, #8
-
-		ADRP	X2, startdict@PAGE	
-		ADD		X2, X2, startdict@PAGEOFF	
-		CMP		X0, X2
-		B.gt	skip_name
-
-		LDR		X2, [X0]
-		CMP		X2, #-1
-		B.eq	skip_name
-		CMP		X2, #0
-		B.eq 	skip_name
-		BL		X0prname
-
-skip_name:
+		do_trace
 		 
-
 
 dontcrash: ; treat 0 as no-op
 
@@ -3569,8 +3596,20 @@ dconsc: ; compile address of variable
 
 
 dlitz: ; next cell has address of short (half word) inline literal
+		
+		
+
+		CBZ		X6, dlitz_notrace
+		STP	    LR,  X0, [SP, #-16]!
+		do_trace
+		LDP		LR, X0, [SP], #16	
+
+
+dlitz_notrace:
+		
 		ADD		X15, X15, #2		
 		LDRH	W0, [X15]
+
 		B		stackit 
 
 dlitc: ; compile address of variable
@@ -3726,10 +3765,6 @@ ddotdisp:
 		LDR		X0, [X15, #-24]
 		BL		X0halfpr
 
- 
-		
-		LDR		X0, [X15, #-32]
-		BL		X0halfpr
 
 		LDP		LR, X15, [SP], #16	
 		RET
@@ -3908,12 +3943,12 @@ thex:	.ascii "%8X"
 		.zero 16
 
 .align 	8
-tpradd:	.ascii "%8ld"
+tpradd:	.ascii "%8ld "
 		.zero 16
 
 
 .align 	8
-tpraddln:	.ascii "\n%8ld"
+tpraddln:	.ascii "\n%8ld "
 		.zero 16
 
 
@@ -3922,8 +3957,11 @@ thalfpr:	.ascii ": [%6ld] "
 		.zero 16
 
 
+
+
+
 .align 	8
-tbranchpr:	.ascii "={%4ld}"
+tbranchpr:	.ascii "={%4ld} "
 		.zero 16
 
 
