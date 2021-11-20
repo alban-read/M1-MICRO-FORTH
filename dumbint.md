@@ -39,7 +39,7 @@ Use the computer as the tool for using the computer.
 
 It is ok to start by using some functions from the standard C library to get up and running.
 
-Later may migrate to only use system calls and internal system functions.
+Later I may migrate to only use system calls and internal system functions.
 
 ASCII text is used for function names and vaiables, not Unicode
 
@@ -52,9 +52,13 @@ Greenspans 10th rule
 
 Any sufficiently complicated C or Fortran program contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Common Lisp.
 
+
+
 Albans Nth rule
 
 Any sufficiently simple assembly language program contains a half-arsed implementation of FORTH.
+
+
 
 e.g. As soon as you start writing a program in Assembler, if you want to test it, and retain your sanity, you need to implement at least half of the things that FORTH provides.
 
@@ -140,9 +144,9 @@ If the stack is 0 IF skips to ENDIF
 : TEST IF CR 65 EMIT ENDIF 66 EMIT ;
 ```
 
-At compile time IF compiles zbranch and and undefinded offset
+At compile time IF compiles zbranch with a slot for the offset.
 
-At compile time ENDIF compiles the offset into the closest zbranch or branch.
+At compile time ENDIF compiles a value into the offset of the matching zbranch or branch.
 
 e.g. 
 
@@ -176,7 +180,7 @@ WORD AT :4345127232 TEST
 
 Note ENDIF is a no-op at run time so uses no token space.
 
-At runtime zbranch adds the offset to the IP or not, depending on the value on the stack.
+At runtime zbranch, and branch adds the offset to the IP or not, depending on the value on the stack.
 
 
 
@@ -242,51 +246,6 @@ ADDR       - ( token -- word address)
 NTH and ADDR provide a way of representing the address of the word in less than 16 bits (its position in the dictionary), rather than 64 bits (the full address)
 
 To make token expansion simple, the dictionary contains fixed size words.
-
-
-
-
-### notes
-
-nnn      convert text to integer number and push it
-
-nn.nn    convert text to decimal number and push it TODO
-
-a-Z      fetch address of fixed global variable
-
-@        fetch value from stacked address see below.
-
-!        store value into variable see below.
-
-e.g. set variable
-
-100 A !
-
-get and print the variables value on a new line
-
-CR A @ . 
-
-primitive words
-
-. + - * / etc
-
-compile a new word
-
-: new-word 
-
-  word number word number ..    ;
-
-
-The words and numbers between : and ; are compiled into tokens and stored in new-word.
-
-e.g. 
-
-: square 
-  dup *  ;
-
-6 square => 30
-
-
 
 
 
@@ -488,7 +447,8 @@ Ok
 
 Tracing does add overhead even if switched off.
 
-I plan to switch to a non tracing code path when TROFF, TODO.
+I plan to switch to either switch to a non tracing code path or simply create a version with 
+tracing ripped out.
 
 
 : TEST 10 1 DO CR 10 1 DO 35 EMIT LOOP LOOP ;
