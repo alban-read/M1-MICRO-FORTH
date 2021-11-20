@@ -1644,9 +1644,11 @@ exit_compiler:
 		MOV		X0, #0
 		STRH	W0, [X15]	
 		ADD		X15, X15, #2
-		MOV		X0, #0
+		MOV		X0, #24 ; END
 		STRH	W0, [X15]
-
+		ADD		X15, X15, #2
+		MOV		X0, #24 ; END
+		STRH	W0, [X15]
 
 		ADRP	X1, last_word@PAGE	   
 	    ADD		X1, X1, last_word@PAGEOFF
@@ -2107,7 +2109,7 @@ dseez:
 
 		CMP     X21, #0        ; end of list?
 		B.eq    190f		   ; not found 
-		CMP     X21, #-1       ; undefined entry in list?
+		CMP     X21, #-1      ; undefined entry in list?
 		b.eq    170f
 
 		; check word
@@ -2302,8 +2304,10 @@ see_tokens:
 		MOV		X0, X12
 		BL		X0addrpr
 
-		LDRH	W0, [X28,X12]
-		CBZ		W0, 160f
+		LDRH	W0, [X28, X12]
+		CMP		W0, #24 ; END
+		B.eq	end_token
+
 		BL		X0halfpr
 
 	
@@ -2316,9 +2320,14 @@ see_tokens:
 		ADD		X0, X1, #8  ; name field
 		BL		X0prname
 
+		CMP		W14, #24 ; END
+		B.eq	literal_skip
+		CMP		W14, #0 ; NULL
+		B.eq	literal_skip
 		CMP		W14, #16 ; do we have an inline argument?
 		B.gt	literal_skip
 
+litcont:
 		; we are a word with a literal inline
 		BL		saycr
 		ADD 	X12, X12, #2
@@ -2351,8 +2360,11 @@ literal_skip:
 		ADD 	X12, X12, #2
 		B		see_tokens
 
-	 
-
+end_token:
+		ADRP	X0, tcomer19@PAGE	
+		ADD		X0, X0, tcomer19@PAGEOFF
+    	BL		sayit	
+		B.eq	160f
 		
 160:		
 		BL		saycr
@@ -4013,7 +4025,9 @@ tcomer17: .ascii "\nLOOP index error.."
 tcomer18: .ascii "\nDO .. LOOP error.."
 		.zero 16
 
-
+		.align 	8
+tcomer19: .ascii ": END OF LIST\n "
+		.zero 16
 
 		.align 	8
 tliteral: .ascii " Literal Value"
@@ -4216,16 +4230,7 @@ zword: .zero 64
 			.quad 0
 
 dend:		
-			.quad -1 ; cdata - class data 
- 			.quad -1 ; name
-			.quad 0	; name
-			.quad 0	; zptr - run time action
-			.quad 0 ; cptr - compile time action
-	
-			.quad 0
-			.quad 0
-			.quad 0
-			.zero 64
+			makeword "(NULL)", 0, 0,  0       		    ; 0
 			; primitive code word headings.
 
 			; hash words 
@@ -4241,7 +4246,7 @@ dend:
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
 			makeword "#ZBRANCH", dzbranchz, dzbranchc,  0   ; 3
 			makeword "#BRANCH", dbranchz, dbranchc,  0   	; 4
-			makeword "#5", 0, 0,  0       					; 5
+			makeword "#END", 0, 0,  0       				; 5
 			makeword "#6", 0, 0,  0   						; 6
 			makeword "#7", 0, 0,  0     	  				; 7
 			makeword "#8", 0, 0,  0   					 	; 8
@@ -4262,6 +4267,7 @@ dend:
 			makeword "(DOER)", 		ddoerz, 	0,  0       ; 21
 			makeword "(DOWNDOER)", 	ddowndoerz, 0 , 0		; 22
 			makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
+	 		makeword "(END)", 		0, 0 , 0				; 24
 
 			makeemptywords 84
 
