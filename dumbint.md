@@ -110,9 +110,11 @@ Support Strings of Unicode Runes in a safe and sensible way (later)
 
 First 'compiled' word. (token compiled)
 
+```FORTH
 : test DUP * . ;
 
 5 test => 25 
+```
 
 The compiler is compiling into a token list, tokens are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
 
@@ -133,7 +135,10 @@ Implemented IF and ENDIF allowing conditional logic.
 
 If the stack is 0 IF skips to ENDIF
 
+```FORTH
+
 : TEST IF CR 65 EMIT ENDIF 66 EMIT ;
+```
 
 At compile time IF compiles zbranch and and undefinded offset
 
@@ -146,38 +151,27 @@ AB
      
 0 TEST => B
 
-In memory the layout of Test looks like 
+```FORTH
+WORD AT :4345127232 TEST        
+       0 :4345127264 		^TOKENS 
+       8 :TEST        		NAME
+      24 :4344297796 		TOKEN COMPILED
 
-+
+      32 : [     3] #ZBRANCH    
+      34 : [    10] *
+      36 : [   369] CR          
+      38 : [     1] #LITS       
+      40 : [    65] *
+      42 : [   541] EMIT        
+      44 : [   540] ENDIF       
+      46 : [     1] #LITS       
+      48 : [    66] *
+      50 : [   541] EMIT        
+      52 : [     0] (NULL)      
+      54 : END OF LIST
 
-0   Point to tokens at +32
 
-8   Name of word .....
-
-16  runintz address 
-
-24  0
-
-32  token for zbranch         <= TOKENS fed to runintz
-
-34  offset value
-
-36  token for CR
-
-38  token for small literal
-
-40  value 65 
-
-42  token for EMIT
-
-44  token for small literal
-
-46  value 66
-
-48  token for EMIT
-
-50  token for end of word 0
-
+```
 
 
 Note ENDIF is a no-op at run time so uses no token space.
@@ -190,8 +184,9 @@ Added ELSE as in
 
 IF ... ELSE  ... ENDIF 
 
-
+```FORTH
 : TEST IF CR 65 EMIT ELSE CR 66 EMIT ENDIF 67 EMIT ;
+```
 
 e.g. 
 
@@ -346,48 +341,73 @@ Compiler Finished
 
 Ok
 
-`FORTH
+```FORTH
 
 : TEST IF 65 EMIT ELSE 66 EMIT ENDIF 67 EMIT ;
 Ok
 
  66 half word cells uses, compiler Finished
   
-Ok
 SEE TEST
-WORD AT :4341358528
-       0:4341358560		^TOKENS 
-       8:TEST        		NAME
-      24:4340513040		TOKEN COMPILED
+WORD AT :4341489984 TEST        
+       0 :4341490016 		^TOKENS 
+       8 :TEST        		NAME
+      24 :4340660540 		TOKEN COMPILED
 
-      32: [     3] #ZBRANCH    
-      34: [    14] *
-      36: [     1] #LITS       
-      38: [    65] *
-      40: [   541] EMIT        
-      42: [     4] #BRANCH     
-      44: [    10] *
-      46: [     0] (NULL)      
-      48: [     1] #LITS       
-      50: [    66] *
-      52: [   541] EMIT        
-      54: [   540] ENDIF       
-      56: [     1] #LITS       
-      58: [    67] *
-      60: [   541] EMIT        
-      62: [     0] (NULL)      
-      64: END OF LIST
+      32 : [     3] #ZBRANCH    
+      34 : [    16] *
+      36 : [   369] CR          
+      38 : [     1] #LITS       
+      40 : [    65] *
+      42 : [   541] EMIT        
+      44 : [     4] #BRANCH     
+      46 : [    10] *
+      48 : [   369] CR          
+      50 : [     1] #LITS       
+      52 : [    66] *
+      54 : [   541] EMIT        
+      56 : [   540] ENDIF       
+      58 : [     1] #LITS       
+      60 : [    67] *
+      62 : [   541] EMIT        
+      64 : [     0] (NULL)      
+      66 : END OF LIST
 
-
-`
+```
 
 This shows the word and word type.
 
-A literal is marked with a *
+A literal is marked with a * 
 
 A token is displayed in brackets.
 
 The name of the word the token represents is displayed.
+
+Tracing the flow
+
+```FORTH
+TRON
+1 TEST
+1 TEST
+
+4341490016 : [     3] #ZBRANCH    S : [     1] : [    67] : [     0] R : [     0] : [     0] : [     0] 
+4341490018 : [    16] #16         S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+
+4341490020 : [   369] CR          S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4341490022 : [     1] #LITS       S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4341490024 : [    65] ????????    S : [    65] : [    67] : [     0] R : [     0] : [     0] : [     0] A
+4341490026 : [   541] EMIT        S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4341490028 : [     4] #BRANCH     S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4341490030 : [    10] #10         S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4341490038 : [   541] EMIT        S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4341490038 : [   541] EMIT        S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4341490042 : [     1] #LITS       S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4341490044 : [    67] ????????    S : [    67] : [    67] : [     0] R : [     0] : [     0] : [     0] C
+4341490046 : [   541] EMIT        S : [    67] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+```
+
+
+
 
 
 

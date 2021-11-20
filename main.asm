@@ -218,7 +218,7 @@
 
 		LDR		X2, [X0] 
 		BL		X0prname
-		
+
 		BL		ddotsz
 		BL		ddotrz
 	 
@@ -532,10 +532,11 @@ emitz:	; output tos as char
 
 	
 12:		MOV		X0, X1 
+
 X0emit:	save_registers
- 		STP		X0, X0, [SP, #-16]!
+ 
 		BL		_putchar	 
-		ADD     SP, SP, #16 
+		 
 		restore_registers
 		RET
 
@@ -2946,7 +2947,7 @@ dzbranchz_notrace:
 
 		do_trace
 
-		SUB		X0, X0, #4
+		SUB		X0, X0, #2
 		ADD		X15, X15, X0	; change IP
 
 		do_trace
@@ -2958,7 +2959,7 @@ dzbranchz_notrace:
 90:		
 		ADD		X15, X15, #2	; skip offset
 	
-		do_trace	
+	 
 	
 		RET  
 
@@ -2974,6 +2975,7 @@ dzbranchc:
 
 ; branch 
 dbranchz:
+		do_trace	
 		B		80b ; just branch
 
 
