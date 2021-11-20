@@ -67,6 +67,18 @@ But no more that that, or it becomes FORTH, and that is not the end objective of
 Just enough FORTH to test the assembler words and string them together is the trick.
 
 
+When I was a kid, I typed FIG FORTH into my Z80 machine using a hex editor, from a printed listing I ordered from the back of a magazine.
+
+I then patched it to use my machines ROM for IO and it worked.
+
+That was my first significant computer achievement.
+
+It took weeks to do: Those were the days, when there was spare time, and almost nothing on TV.
+
+I doubt if I could do that now forty years later, thankfully I now have a macro assembler.
+
+
+
 #### Memory management
 
 None.
@@ -327,6 +339,10 @@ WORD AT :4341489984 TEST
       66 : END OF LIST
 
 ```
+
+As you can see the decompiler is aimed at displaying the tokens layout in memory, geared towards helping me write and test the compiler, rather than re-creating the source code.
+
+
 
 This shows the word and word type.
 

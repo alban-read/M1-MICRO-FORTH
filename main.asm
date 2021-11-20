@@ -232,7 +232,7 @@
 
 .align 8
 
-ver:    .double 0.411
+ver:    .double 0.435
 tver:   .ascii  "Version %2.2f\n"
         .zero   4
 
@@ -888,8 +888,11 @@ start_point: ; dictionary entry points are based on first letters in words
 		LDRB 	W0,	[X22]	; first letter
 		
 		CMP		W0, #'#'	
-		B.ne	200f
+		B.eq	150f
 
+		CMP		W0, #'('	
+		B.ne	200f
+150:
 		ADRP	X28, hashdict@PAGE	   
 	    ADD		X28, X28, hashdict@PAGEOFF	
 		B		251f
