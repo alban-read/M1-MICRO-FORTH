@@ -457,38 +457,38 @@ Test nested IF ELSE ENDIF
 
 expected 
 
+```FORTH
 1 0 TESTNEST => D
 1 1 TESTNEST => ABD
-0 1 TESTNEST => ACD
+0 1 TESTNEST => AD
 0 0 TESTNEST => D
+```
 
 
 
 ### TRACING
 
-If tracing is set to 1 then words will be traced, which means printing the name of
-each word as it is executed.
+If tracing is set TRON each word is traced as it is executed.
 
-: TEST DUP * . ;
+```FORTH
 
-TROFF
+: SQ DUP * . ;
+ 42 half word cells uses, compiler Finished
+  
+Ok
+5 SQ
 
-5 TEST => 25
+4296148192 : [   455] DUP         S : [     5] : [     5] : [     0] R : [     0] : [     0] : [     0] 
+4296148194 : [  2006] *           S : [    25] : [     0] : [     0] R : [     0] : [     0] : [     0]  25
+4296148196 : [  2010] .           S : [     0] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+Ok
 
-TRON
 
-5 TEST 
-
-5 TEST
-DUP         
-*           
-.           
- 25
+```
 
 Tracing does add overhead even if switched off.
 
-So you can disable it in RUNINTZ
-
+I plan to switch to a non tracing code path when TROFF, TODO.
 
 
 : TEST 10 1 DO CR 10 1 DO 35 EMIT LOOP LOOP ;
@@ -527,15 +527,28 @@ In this implentation the DO .. LOOP is designed to do what any reasonable person
 
 Normal loop
 
+```FORTH
 : t0 10 1 DO I . CR LOOP ;
+```
+
 
 Sanity is aided by the addition of DOWNDO (inspired by PASCAL) and -LOOP
 
+Down loop
 
+```FORTH
+: t5 1 10 DOWNDO I . CR LOOP ;
+```
+
+
+LOOP gets its sense of direction from DO or DOWNDO.
+
+```FORTH
 : t1 10 2 DO I . CR 2 +LOOP ;
 
 : t3 2 10 DOWNDO I . CR 2 -LOOP ;
 
+```
 
 Summary
 

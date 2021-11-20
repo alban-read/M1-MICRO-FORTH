@@ -1827,7 +1827,7 @@ ddowndoerz:
 	LDP  	X0, X1,  [X16, #-16]  
 	SUB		X16, X16, #16
 
-	; Stack arguments 21, literal address, start, limit
+	; Stack arguments 22, literal address, start, limit
 	MOV		X2,  #22 ; DODOWN
 	STP		X2,  X12, [X14], #16
 	STP		X0,  X1,  [X14], #16
@@ -1960,13 +1960,38 @@ dmlooperz:
 	RET	
 
 
-dlooperz:
+dlooperz: ; LOOP sense add or sub
 
-	loop_vars
+	LDP		X0, X1,  [X14, #-16]
+	LDP		X2, X12, [X14, #-32]	
+	CMP		X2, #21 ; DOOER
+	B.eq	dlooperadd
+	CMP		X2, #22 ; DODOWN
+	B.eq	dloopersub
+	B		do_loop_err
 
+dloopersub:
+	SUB		X1, X1, #1
+	B 		ddownloopercmp
+
+dlooperadd:	
 	ADD		X1, X1, #1
+
+dloopercmp:
+
 	CMP		X0, X1
 	B.lt	loops_end
+
+	loop_continues
+
+	MOV		X15, X12
+
+	RET
+
+ddownloopercmp:
+
+	CMP		X0, X1
+	B.gt	loops_end
 
 	loop_continues
 
