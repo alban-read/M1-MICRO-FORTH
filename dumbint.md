@@ -635,6 +635,28 @@ dexitz:
 
 ```
 
+Discussion of the token interpreter
+
+This is small enough to discuss.
+
+The main activity repeated for each token is between label 10 and the jump back to 10.
+
+We increment IP, fetch the token,  multiply the token by 64 (the dictionary header), add to the dictionary base.
+
+Collect the words code pointer, collect the words data pointer, call the word, the words code runs and returns.
+
+This then repeats until the end of the word, it is a choice to compare the token with END or let END run and exit the function.
+
+Not sure what is best, as no profiling is implemented yet.
+
+The use of a data pointer for each word passed in X0 seems useful, it allows words to run with an argument.
+
+Sending each word its own address would be more general, making words that needed the data, look it up.
+
+
+
+
+
 
 
 
