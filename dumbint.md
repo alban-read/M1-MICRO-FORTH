@@ -61,7 +61,6 @@ Albans Nth rule
 Any sufficiently simple assembly language program contains a half-arsed implementation of FORTH.
 
 
-
 e.g. As soon as you start writing a program in Assembler, if you want to test it, and retain your sanity, you need to implement at least half of the things that FORTH provides.
 
 But no more that that, or it becomes FORTH, and that is not the end objective of working in Assembler.
@@ -104,9 +103,9 @@ Otherwise the dictionary size and the literal pools are fixed size.
 The fixed sizes are reasonable for what I want to do, the machine I am using has eight gigabytes of ram, it is a low cost entry model...
 
 
-
-
 ### goals
+
+Create an interactive environment open to introspection and exploration.
 
 Do not use 64 bit values all over the place just because it is a 64bit processor
 
@@ -270,7 +269,7 @@ A dictionary provides a way to name objects.
 
 The dictionary contains word headers.
 
-A headers has pointer to the words functions (runtime and compile time), and space for data belonging to the word.
+A headers has pointer to the words functions (runtime and compile time), and space for small quantities of data belonging to the word.
 
 
 The dictionary is 'full of holes' for user defined words, spread throughout it.
@@ -293,9 +292,21 @@ To make token expansion simple, the dictionary contains fixed size words.
 
 A 'compiled' word is just a list of tokens 
 
-The token interpeter expands tokens and calls the words machine code.
+The header points to the list of tokens in token space.
 
-X15 is the IP pointing at the next token, which can be modified by words.
+
+When a compiled word runs it calls the token interpreter with the address of its tokens.
+
+The token interpeter expands tokens to addresses and calls the words which may also be interpreted or which may be native (primitive) functions.
+
+X15 is the IP pointing at the next token, which can be modified by words, this is persisted in DP.
+
+The word is run to completion by the token interpreter, which returns to the command line.
+
+
+When typing commands in the outer interpreter command line, and when compiling new words, the token interpreter is NOT running, the outer interpreter and token compiler are written in Assembler (objecive learn ARM64, not learn FORTH), this provides some benefits to the design.
+
+This makes the token interpeter highly inspectable, I plan to add single stepping for example.
 
 
 
@@ -370,6 +381,7 @@ WORD AT :4341489984 TEST
 
 As you can see the decompiler is aimed at displaying the tokens layout in memory, geared towards helping me write and test the compiler, rather than re-creating the source code.
 
+The compiler lays down things like tokens for branch instructions and instructions to load or fetch literal values.
 
 
 This shows the word and word type.
@@ -384,7 +396,6 @@ Tracing the flow
 
 ```FORTH
 TRON
-1 TEST
 1 TEST
 
 4341490016 : [     3] #ZBRANCH    S : [     1] : [    67] : [     0] R : [     0] : [     0] : [     0] 
@@ -435,7 +446,9 @@ A compiled dictionary word just refers to the LITBASE using a halfword index
 
 Look up literal N in the LITBASE
 
+```FORTH
 LITBASE n 8* + @ .
+```
 
 The litbase
 
@@ -444,7 +457,9 @@ The litbase
 
 ## TESTS 
 
+```FORTH
 : TESTNEST IF 65 EMIT IF 66 EMIT ELSE 67 EMIT ENDIF ENDIF 68 EMIT ;
+```
 
 Test nested IF ELSE ENDIF 
 
@@ -555,4 +570,71 @@ This LOOP is not at all likely to repeat 65536 times (or in this case billions o
 This is not compatible 
 
 I do not expect to be able to compile ANSI FORTH, nor do I have some large source of ANSI code somewhere I can reuse.
+
+### The Token interpreter
+
+ARM code takes 32 bits, the register lengths are natively 64 bits.
+
+I assume that using 64 bit addresses for an interpreter would pointlessly waste memory and suck away bandwidth, so I am using tokens instead of addresses.
+
+I assume this is also likely to be slower, I have not writen profiling WORDs yet.
+
+An address based interpreter is much smaller, but this is not huge.
+
+
+
+```ASM
+
+
+runintz:; interpret the list of tokens at X0
+		; until (END) #24
+
+		; SAVE IP 
+		STP	   LR,  X15, [SP, #-16]!
+
+		MOV    X15, X0
+ 		ADRP   X12, dend@PAGE	
+		ADD	   X12, X12, dend@PAGEOFF
+		SUB	   X15, X15, #2
+		
+10:		; next token
+		ADD		X15, X15, #2
+		LDRH	W1,  [X15]
+
+		CMP     W1, #24 ; (END) 
+		B.eq    90f
+ 
+		LSL		W1, W1, #6	    ;  TOKEN*64 
+		ADD		X1, X1, X12     ; + dend
+	 
+		 
+		LDR     X0, [X1]		; words data
+		LDR     X1, [X1, #24]	; words code
+
+	 	CBZ		X1, dontcrash
+ 
+		STP		LR,  X12, [SP, #-16]!
+		BLR     X1 		
+		LDP		LR, X12, [SP], #16	
+ 
+
+		CBZ		X6, 10b
+
+		do_trace
+		 
+
+dontcrash: ; treat 0 as no-op
+
+		B		10b
+90:
+		; restore IP
+dexitz:		 
+		LDP		LR, X15, [SP], #16	
+	 
+		RET
+
+```
+
+
+
 
