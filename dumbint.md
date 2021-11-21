@@ -61,11 +61,12 @@ Albans Nth rule
 Any sufficiently simple assembly language program contains a half-arsed implementation of FORTH.
 
 
+
 e.g. As soon as you start writing a program in Assembler, if you want to test it, and retain your sanity, you need to implement at least half of the things that FORTH provides.
 
 But no more that that, or it becomes FORTH, and that is not the end objective of working in Assembler.
 
-Just enough FORTH to test the assembler words and string them together is the trick.
+Just enough FORTH is needed to test the assembler words and string them together as a script.
 
 
 When I was a kid, I typed FIG FORTH into my Z80 machine using a hex editor, from a printed listing I ordered from the back of a magazine.
@@ -76,7 +77,8 @@ That was my first significant computer achievement.
 
 It took weeks to do: Those were the days, when there was spare time, and almost nothing on TV.
 
-I doubt if I could do that now forty years later, thankfully I now have a macro assembler.
+I doubt if I could do that now forty years later, thankfully I now have a macro assembler, it is easier.
+
 
 
 
@@ -113,7 +115,9 @@ Use 32bit values when 32 bit values will do.
 
 Use words or bytes where words or bytes will do.
 
-Support integer and decimal maths
+Support integer and decimal and matrix maths
+
+Support connecting to C (as I need to talk to OS graphics library)
 
 
 Use ASCII
@@ -221,45 +225,99 @@ ENDIF looks for ELSE or IF.
 
 #### Thursday morning
 
-Fixed a mysterious error.
+- Fixed a mysterious error.
 
-Added a little (not a lot of) safety to variable access.
+- Added a little (not a lot of) safety to variable access.
 
-Added some tests and fixed nested IF ..
+- Added some tests and fixed nested IF ..
 
-Fixed a spurious and annoying error.
+- Fixed a spurious and annoying error.
 
-Start with the return stack, for loops.
+- Start with the return stack, for loops.
 
-Implemented and tested words for LOOP
+- Implemented and tested words for LOOP
 
-Updated tracing to not crash.
+= Updated tracing to not crash.
 
 
 #### Friday morning
 
-Improved tracing, delegated tracing to run time words.
+- Improved tracing, delegated tracing to run time words.
 
-Improved design of LOOP
+- Improved design of LOOP
 
-Improved SEE, distributed tracing, made trace a macro.
+- Improved SEE, distributed tracing, made trace a macro.
 
 
 #### Saturday morning
 
-Added .S .R for tracing the stack.
+- Added .S .R for tracing the stack.
 
-Fixed issues with LOOP.
+- Fixed issues with LOOP.
 
-Fixed issues with IF caused by fixing issues with LOOP.
+- Fixed issues with IF caused by fixing issues with LOOP.
 
 
 
 #### Sunday morning
 
-Create token space, shrunk word headers, compile to token space.
+Created token space, shrunk word headers, compiler now compiles into token space.
 
----------------------------------------------------------------------
+
+#### Status after the week of work.
+
+I am quite pleased as I think the core work needed is done and can now be extended.
+
+The whole experience has been completely interactive from the moment the interpreter first said OK to me.
+
+- Typical stack juggling words implemented.
+
+- Integer maths.
+
+- Interpreter works.
+
+- Compiler works.
+
+- Variables and Constants work.
+
+- Compiler supports fixed loops and conditional code.
+
+- Tracing WORDS works 
+
+- Decompiling WORDS works.
+
+TODO NEXT: Implement below
+
+I expect to do some work filling these gaps in over the next few weekends and some evenings.
+
+- Conditional loop words
+
+- Floating point words.
+
+- Strings
+
+- Missing Common and Useful FORTH WORDS
+
+- Local variables
+
+TODO LATER: 
+
+- Profiling words (not too worried about speed presently) since I will use Assembler for anything that seems slow.
+
+- Benchmarks, curious how fast or slow this is.
+
+
+THEN (over this winter)
+
+- Integrate with a graphics window, using a C library.
+
+- Start writing Moonbugs with it.
+
+
+
+
+
+-----------------------------------------------------------------------
 
 
 
