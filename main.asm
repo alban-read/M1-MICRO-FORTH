@@ -111,14 +111,7 @@
 	.quad   0
 	.quad   0
 	.quad   0
- 
- 
 .endm
-
-
-
-
-
 
 .macro makevarword name:req, v1=1, v2=0, v3=0, v4=0
 	.quad   \v1
@@ -131,7 +124,6 @@
 	.quad   \v2
 	.quad   \v3
 	.quad   \v4
-
 .endm
 
 
@@ -144,7 +136,6 @@
 	.quad   0
 	.quad   0
 	.quad   0
-
 .endm
 
  .macro makeqvword name:req
@@ -156,9 +147,6 @@
 	.quad   0
 	.quad   0
 	.quad   0
-
-
-
 .endm
 
 ;  
@@ -207,7 +195,7 @@
 
 .align 8
 
-ver:    .double 0.435
+ver:    .double 0.439
 tver:   .ascii  "Version %2.2f\n"
         .zero   4
 
@@ -390,9 +378,9 @@ sayit:
 		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 		LDR		X1, [X8]
    		save_registers
- 		STP		X1, X1, [SP, #-16]!
+ 
 		BL		_fputs	 
-		ADD     SP, SP, #16 
+		 
 		restore_registers
 		RET
 
@@ -518,9 +506,10 @@ X0emit:	save_registers
 
 emitchz:	; output X0 as char
 		save_registers
- 		STP		X0, X0, [SP, #-16]!
+
+ 
 		BL		_putchar	 
-		ADD     SP, SP, #16 
+	 
 		restore_registers
 		RET
 
@@ -614,9 +603,6 @@ X0halfpr:
 		ADD     SP, SP, #16 
 		restore_registers  
 		RET
-
-
-
 
 
 X0branchpr:
@@ -1443,15 +1429,20 @@ find_word_token:
 		; that words help compile themselves which happens here
 
 		STP		X3, X4, [SP, #-16]!
-		STP		X28, XZR, [SP, #-16]!
+		STP		X28, X16, [SP, #-16]!
+		
+		; compile time functions can change X14, X15
+
 		BLR		X2	 ;; call function
-		LDP		X28, XZR, [SP]
+		
+		
+		LDP		X28, X16, [SP]
  		LDP		X3, X4, [SP]
 
 		; words that assist the compiler must return X0 status
 
 		CMP		X0, #-1 ; fail compile time call.
-		B.eq	exit_compiler_compile_timer_err
+		B.eq	exit_compiler_compile_time_err
 
 
 skip_compile_time:
@@ -1574,8 +1565,6 @@ try_compiling_literal:
 		STRH	W3, [X15]	; value
 		ADD		X15, X15, #2
 
- 
-
 
 		B		compile_next_word
 
@@ -1585,16 +1574,11 @@ try_compiling_literal:
 		STRH	W1, [X15]	; value
 		ADD		X15, X15, #2
 
-   
-
     	B		compile_next_word
 
 
 
 30:		; exit number
-
-
-
 
 		B		exit_compiler
 
@@ -1610,8 +1594,10 @@ exit_compiler_pool_full:
 
 		B		input ; back to immediate mode
 
-exit_compiler_compile_timer_err:
-
+exit_compiler_compile_time_err:
+	    
+		reset_data_stack
+		BL		clean_last_word
 		; compile time function returned error
 		ADRP	X0,	tcomer9@PAGE	
 		ADD		X0, X0,	tcomer9@PAGEOFF
@@ -1620,7 +1606,7 @@ exit_compiler_compile_timer_err:
 
 
 exit_compiler_word_empty:
-
+		reset_data_stack
 		; : was followed by nothing which is an error.
 		ADRP	X0,	 tcomer1@PAGE	
 		ADD		X0, X0,	tcomer1@PAGEOFF
@@ -1630,19 +1616,20 @@ exit_compiler_word_empty:
 
 exit_compiler_word_full:
 		; TODO reset new  word, and stack
- 
+ 		reset_data_stack
  		BL		clean_last_word
 		BL		sayerrlength
 		B		input ; 
 
 
 exit_compiler_word_exists:
- 
+ 		reset_data_stack
 		BL		err_word_exists
 		B		input ;  
 
 exit_compiler_no_words:
 	; we ran out of words in this line.
+		reset_data_stack
 		BL  resetword
 		BL  resetline
 		BL  getline
@@ -1652,8 +1639,6 @@ exit_compiler_no_words:
 
 exit_compiler:
 
-
-		
 		MOV		X0, #0
 		STRH	W0, [X15]	
 		ADD		X15, X15, #2
@@ -1679,6 +1664,7 @@ exit_compiler:
 		SUB		X0, X15, X0
 		BL		X0print
 		BL 		saycompfin
+
 		B		advance_word ; back to main loop
 
 
@@ -1706,8 +1692,6 @@ exit_program:
 
 
 
-
-	 
 		 
 190:		
 		RET
@@ -1796,7 +1780,6 @@ ddoerz:
 	STP		X2,  X12, [X14], #16
 	STP		X0,  X1,  [X14], #16
 
-	
 
 	; Check my arguments
 	CMP		X0, X1
@@ -1827,8 +1810,6 @@ ddowndoerz:
 	B.gt	skip_do_loop
 
 	B		200f
-
-
 
 
 dochecker:
@@ -1989,7 +1970,21 @@ ddownloopercmp:
 
 
 loops_end:  ; loop end
-	SUB 	X14, X14, #32 	
+	
+	SUB 	X14, X14, #32 ; unstack loop value
+	
+	; possible optimization
+	;ADD		X15, X15, #2
+	;LDRH	W0, [X15] ; sniff ahead
+	;CMP		W0, #19
+	;B.eq	dlooperz
+	;CMP		W0, #18
+	;B.eq    dmlooperz
+	;CMP     W0, #17
+	;B.eq	dplooperz
+	;SUB		X15, X15, #2 
+
+
 	RET
 
 do_loop_err:
@@ -2000,6 +1995,10 @@ do_loop_err:
     	B		sayit
 			
 		RET	
+
+
+
+
 
 ; compile in DO LOOP, +LOOP
 
@@ -2813,10 +2812,10 @@ dendifc:
 		STP		LR,  X16, [SP, #-16]!
 
 		MOV		X3, X15
-	
+		MOV		X2, #0
 
 110:	; seek 3 as halfword.
-
+		ADD		X2, X2, #2
 		LDRH	W0, [X3]
 		CMP		W0, #3; ZBRAN
 		B.eq	140f
@@ -2824,19 +2823,20 @@ dendifc:
 		B.eq	140f
 
 		SUB		X3, X3, #2
-		CMP		X3, X28  ; did we escape the whole word?
-		B.lt	190f ; error out no IF for ENDIF
+		CMP		X2, #512  ; did we escape the whole word?
+		B.gt	190f ; error out no IF for ENDIF
 
 		B 		110b
 
 140:	; found zbran or bran
 
-
+		MOV		X2, #0
 		LDRH	W0,	[X3, #2]
 		CMP		W0, #4000
 		B.eq	145f		; ours to change
 
 		SUB		X3, X3, #2
+
 		B		110b
 		
 145:
@@ -2881,7 +2881,7 @@ delsec: ;  at compile time inlines the ELSE branch
 		STP		LR,  X16, [SP, #-16]!
 
 		MOV		X5, X15 	; keep X15 safe
-
+		MOV		X2, #0
 		; back out our token
 		; we will compile a branch instead
 
@@ -2910,13 +2910,14 @@ delsec: ;  at compile time inlines the ELSE branch
 		B.eq	140f
 
 		SUB		X3, X3, #2
-		CMP		X3, X28  ; did we escape the whole word?
-		B.lt	190f ; error out no IF for ENDIF
+		CMP		X2, #512  ; did we escape the whole word?
+		B.gt	190f ; error out no IF for ENDIF
+
 		B 		110b
 
 140:	; found zbran or bran
 
-
+		MOV		X2, #0
 		LDRH	W0,	[X3, #2]
 		CMP		W0, #4000
 		B.eq	145f		; ours to change
@@ -4203,9 +4204,33 @@ token_space_top:
 ; this is the data stack
 .align  8
 sps:	.zero 8*8	
-spu:	.zero 8
-sp1:    .zero 512*8
-spo:	.zero 8
+spu:	.quad -111111; underflow patterws
+		.quad -222222
+		.quad -333333
+		.quad -444444
+		.quad -555555
+		.quad -666666
+		.quad -777777
+		.quad -888888
+		.quad -999999
+		.quad 0
+		.quad 0
+		.quad 0
+sp1:    ; base
+		.zero 512*8
+spo:	.quad 0
+		.quad 0
+		.quad 0
+		.quad 1111111 ; overflow patterns
+		.quad 2222222
+		.quad 3333333
+		.quad 4444444
+		.quad 5555555
+		.quad 6666666
+		.quad 7777777
+		.quad 8888888
+		.quad 9999999
+
 sp0:    .zero 8*8
 dsp:	.quad sp1
 
