@@ -96,7 +96,7 @@
 ; 40    data  ..  48
 ; 48    data  ..  56
 ; 56    data  ..  64
-; ..    64 bytes  128;
+
 
  
 
@@ -111,38 +111,13 @@
 	.quad   0
 	.quad   0
 	.quad   0
-	.zero	64
+ 
  
 .endm
 
 
-; make a short text that is displayed
-.macro makedisplay name:req, text="hello world\n"
-	.quad   30f
-10:
-	.asciz	"\name"
-20:
-	.zero	16 - ( 20b-10b )
-	.quad	sayit
-	
-30: 
-	.asciz "\text"
-40:
-	.zero	64+32 - ( 40b-30b )
-.endm
 
-.macro makeshorttextconst name:req, text="hello world\n"
-	.quad   30f
-10:
-	.asciz	"\name"
-20:
-	.zero	16 - ( 20b-10b )
-	.quad  dvaraddz
-30: 
-	.asciz "\text"
-40:
-	.zero	64+32 - ( 40b-30b )
-.endm
+
 
 
 .macro makevarword name:req, v1=1, v2=0, v3=0, v4=0
@@ -156,7 +131,7 @@
 	.quad   \v2
 	.quad   \v3
 	.quad   \v4
-	.zero	64
+
 .endm
 
 
@@ -169,7 +144,7 @@
 	.quad   0
 	.quad   0
 	.quad   0
-	.zero	64
+
 .endm
 
  .macro makeqvword name:req
@@ -181,7 +156,7 @@
 	.quad   0
 	.quad   0
 	.quad   0
-	.zero	64
+
 
 
 .endm
@@ -191,7 +166,7 @@
 	.rept  \n
 	.quad  -1
  	.quad  -1
-	.zero  128-16 
+	.zero  64-16 
 	.endr
 .endm
 
@@ -207,7 +182,7 @@
 		LDRH	W0, [X15]
 		BL		X0halfpr
 		LDRH	W0, [X15]
- 		LSL		W0, W0, #7	    ;  TOKEN*128 
+ 		LSL		W0, W0, #6	    ;  TOKEN*64 
 		ADD		X0, X0, X12     ; + dend
 		ADD		X0, X0, #8
 
@@ -384,7 +359,7 @@ dotwords:
 	 	ADRP	X2, hashdict@PAGE	
 		ADD		X2, X2, hashdict@PAGEOFF
 
-20:		ADD		X2, X2, #128
+20:		ADD		X2, X2, #64
 		LDR		X0, [X2,#8]
 		CMP     X0, #-1
 		B.eq    10f
@@ -1075,7 +1050,7 @@ searchall:
 		ADRP	X28, startdict@PAGE	   
 	    ADD		X28, X28, startdict@PAGEOFF
 251:	
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 
 		RET
 
@@ -1378,7 +1353,7 @@ scan_words:
 
 	 
 try_next_word:	; try next word in dictionary
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 		B		scan_words
  	 
 		
@@ -1439,7 +1414,7 @@ find_word_token:
 		ADRP	X2, dend@PAGE	
 		ADD		X2, X2, dend@PAGEOFF	
 		SUB		X1, X1, X2
-		LSR		X1, X1, #7	 ; * 128
+		LSR		X1, X1, #6	 ; * 64
 
 		; X1 is token store halfword in [x15]
 		STRH	W1, [X15]
@@ -1493,7 +1468,7 @@ skip_compile_time:
 keep_finding_tokens:	
 		
 		; next word in dictionary
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 		B		find_word_token
 
 
@@ -2401,7 +2376,7 @@ see_tokens:
 		ADD		X2, X2, dend@PAGEOFF
 		LDRH	W1, [X12]
 		MOV		W14, W1
-		LSL		X1, X1, #7	 ; / 128 
+		LSL		X1, X1, #6	 ; / 64 
 		ADD		X1, X1, X2 
 		ADD		X0, X1, #8  ; name field
 		BL		X0prname
@@ -2460,7 +2435,7 @@ end_token:
 
 
 170:	; next word in dictionary
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 		B		120b
 
 190:	; error out 
@@ -2550,7 +2525,7 @@ dcreatz:
 
 
 260:	; try next word in dictionary
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 		B		100b
 
 280:	; error dictionary FULL
@@ -2627,7 +2602,7 @@ dcreatcz:
 
 
 260:	; try next word in dictionary
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 		B		100b
 
 280:	; error dictionary FULL
@@ -2708,7 +2683,7 @@ dcreatvz:
 
 
 260:	; try next word in dictionary
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 		B		100b
 
 280:	; error dictionary FULL
@@ -2771,7 +2746,7 @@ dtickz: ; ' - get address of NEXT words data field
 	 	B		stackit
 
 170:	; next word in dictionary
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 		B		120b
 
 190:	; error out 
@@ -3113,7 +3088,7 @@ dtickc: ; ' at compile time, turn address of word into literal
 
 
 170:	; next word in dictionary
-		SUB		X28, X28, #128
+		SUB		X28, X28, #64
 		B		120b
 
 190:	; error out 
@@ -3138,7 +3113,7 @@ dnthz: ; from address, what is our position.
 		ADD		X2, X2, dend@PAGEOFF
 		LDR 	X1, [X16, #-8] 	 
 		SUB		X1, X1, X2
-		LSR		X1, X1, #7	 ; / 128
+		LSR		X1, X1, #6	 ; / 64
 		STR 	X1, [X16, #-8] 	 
 		RET
 
@@ -3150,7 +3125,7 @@ daddrz: ; from our position, address
  	 	ADRP	X2, dend@PAGE	
 		ADD		X2, X2, dend@PAGEOFF
 		LDR 	X1, [X16, #-8] 	
-		LSL		X1, X1, #7	 ; / 128 
+		LSL		X1, X1, #6	 ; / 64 
 		ADD		X1, X1, X2
 		STR 	X1, [X16, #-8] 	 
 		RET
@@ -3215,7 +3190,7 @@ runintz:; interpret the list of tokens at X0
 		CMP     W1, #24 ; (END) 
 		B.eq    90f
  
-		LSL		W1, W1, #7	    ;  TOKEN*128 
+		LSL		W1, W1, #6	    ;  TOKEN*64 
 		ADD		X1, X1, X12     ; + dend
 	 
 		 
@@ -4449,7 +4424,6 @@ edict:
 
 fdict:		
 			makeemptywords 79
-			makeshorttextconst "GREET", "Hey how are you, hope you are keeping well in these strange times?"
 			makeqvword 103
 			makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
 gdict:
@@ -4459,9 +4433,6 @@ gdict:
 
 			makeword "HW@", dhatz, dhatc, 0
 
-			                  ; 32 char limit.
-						 	  ;012345678-012345678-012345678-12	
-			makedisplay "HI", "Hello please enjoy the session\n"
 
 			makeqvword 104
 
