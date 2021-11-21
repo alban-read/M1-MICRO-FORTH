@@ -1363,11 +1363,17 @@ scan_words:
 	    ADD		X1, X1, runintz@PAGEOFF
 		STR		X1, [X28, #24]
 
-		ADD		X1,	X28, #32
-		MOV		X15, X1			; <-- we are compiling into here
-		STR		X1, [X28]		; set start point
+		ADRP	X8, here@PAGE	
+		ADD		X8, X8, here@PAGEOFF
+		LDR		X15, [X8]
 
- 
+	 	ADRP	X8, lasthere@PAGE	
+		ADD		X8, X8, lasthere@PAGEOFF
+		STR		X15, [X8]
+
+
+		STR		X15, [X28]		; set start point
+
 		B		compile_words
 
 	 
@@ -1556,9 +1562,6 @@ try_compiling_literal:
 		ADD		X15, X15, #2
 
 
- 
-		 
-
 
 		B		compile_next_word
 
@@ -1675,7 +1678,7 @@ exit_compiler_no_words:
 exit_compiler:
 
 
-	
+		
 		MOV		X0, #0
 		STRH	W0, [X15]	
 		ADD		X15, X15, #2
@@ -1684,15 +1687,22 @@ exit_compiler:
 		ADD		X15, X15, #2
 		MOV		X0, #24 ; END
 		STRH	W0, [X15]
+ 		ADD		X15, X15, #2
 
 		ADRP	X1, last_word@PAGE	   
 	    ADD		X1, X1, last_word@PAGEOFF
 		LDR		X1, [X1]
-		SUB		X0, X15, X1
+	
+		ADRP	X8, here@PAGE	
+		ADD		X8, X8, here@PAGEOFF
+		STR		X15, [X8]
+
+		ADRP	X8, lasthere@PAGE	
+		ADD		X8, X8, lasthere@PAGEOFF
+		LDR		X0, [X8]
+
+		SUB		X0, X15, X0
 		BL		X0print
-
-
-		reset_data_stack
 		BL 		saycompfin
 		B		advance_word ; back to main loop
 
@@ -2135,10 +2145,17 @@ clean_last_word:
 		STP		X1, X1, [X0], #16
 		STP		X1, X1, [X0], #16
 
- 
-100: 
- 		LDP		X0, X1, [SP], #16	
+		ADRP	X8, lasthere@PAGE	
+		ADD		X8, X8, lasthere@PAGEOFF
+		LDR		X0, [X8]
+
+		ADRP	X8, here@PAGE	
+		ADD		X8, X8, here@PAGEOFF
+		STR		X0, [X8]
+
+
 		RET
+
 
 
 	 
@@ -2164,7 +2181,7 @@ dseez:
 
 
 120:
-		
+	
 		LDR		X21, [X28, #8] ; name field
 
 		CMP     X21, #0        ; end of list?
@@ -2278,7 +2295,8 @@ dseez:
 		ADD	 	X0, X28, #8
 		BL      X0prname 
 	 
-
+		LDR		X12, [X28] ; words pointer
+		
 		ADRP	X0, word_desc5@PAGE	   
 	    ADD		X0, X0, word_desc5@PAGEOFF
 		BL		sayit
@@ -2321,6 +2339,7 @@ dseez:
 	    ADD		X0, X0, word_desc3@PAGEOFF
 		BL		sayit
 		BL		saycr
+
 		; display this words compile time
 		MOV		X0, #32
 		BL		X0addrpr
@@ -2357,17 +2376,21 @@ dseez:
 	    ADD		X0, X0, word_desc4@PAGEOFF
 		BL		sayit
 		BL		saycr
-		MOV		X12, #32
+
+ 
 	 
 
+
 see_tokens:	
+
+
 
 		BL		saycr
 
 		MOV		X0, X12
 		BL		X0addrpr
 
-		LDRH	W0, [X28, X12]
+		LDRH	W0, [X12]
 		CMP		W0, #24 ; END
 		B.eq	end_token
 
@@ -2376,7 +2399,7 @@ see_tokens:
 	
 		ADRP	X2, dend@PAGE	
 		ADD		X2, X2, dend@PAGEOFF
-		LDRH	W1, [X28,X12]
+		LDRH	W1, [X12]
 		MOV		W14, W1
 		LSL		X1, X1, #7	 ; / 128 
 		ADD		X1, X1, X2 
@@ -2399,7 +2422,7 @@ litcont:
 		BL		X0addrpr
 
 
-		LDRH	W0, [X28,X12]
+		LDRH	W0, [X12]
 		BL		X0halfpr
 		
 
@@ -2410,7 +2433,7 @@ litcont:
 		B.ne	literal_skip
 
 		; Look up the LITLs value 
-		LDRH	W0, [X28,X12]
+		LDRH	W0, [X12]
 		ADRP   X1, quadlits@PAGE	
 		ADD	   X1, X1, quadlits@PAGEOFF
 		LDR	   X0, [X1, X0, LSL #3]
@@ -4179,32 +4202,45 @@ spaces:	.ascii "                              "
 		.zero 16
 
 
-; this is the code pointer stack
-; every address pushed here is a leaf subroutine address.
+; this is the tokens stack
+; code for token compiled words is compiled into here
+; 
 ;  
 .align 8
-cps:	.zero 8*16	
-cpu:	.zero 16
-cp1:    .zero 4096*16  
-cpo:	.zero 16
-cp0:    .zero 16
-csp:	.quad cp1
+
+lasthere: 	
+	.quad	token_space
+here:
+	.quad	token_space
+
+	.zero 16
+
+
+	
+token_space:
+	.zero	64*1024*2
+
+token_space_top:
+
+	.zero 16
 
 
 ; this is the data stack
 .align  8
 sps:	.zero 8*8	
 spu:	.zero 8
-sp1:    .zero 256*8
+sp1:    .zero 512*8
 spo:	.zero 8
 sp0:    .zero 8*8
 dsp:	.quad sp1
 
 ; this is the return stack
+; used for loop constructs and local variables.
+
 .align  8
 rps:	.zero 8*8	
 rpu:	.zero 8
-rp1:    .zero 256*8  
+rp1:    .zero 512*8  
 rpo:	.zero 8
 rp0:    .zero 8*8
 rsp:	.quad rp1
@@ -4271,8 +4307,11 @@ stringlits256:
 zpad:    .ascii "ZPAD STARTS HERE"
 		 .zero 1024
 
+
+; the word being processed
 .align 8
 zword: .zero 64
+
 
 
  .align 8
@@ -4380,7 +4419,7 @@ cdict:
 			makeemptywords 80
 
 	 
-			makevarword "DP"
+			makeword "DP", dvaraddz, dvaraddc,  here	
 			makeword "DO", 0 , doerc, 0 
 			makeword "DOWNDO", 0 , ddownerc, 0 
 			makeword "DUP", ddupz , ddupc, 0 
@@ -4690,18 +4729,18 @@ zbytewords:
 			makebword 33,	 dstorez,	dstorec,	0
 			makebword 34,	 dquotz,	dquotc,		0
 			makebword 35,	 dhashz,	dhashc,		0
-			makebword 36,	 ddollarz,	ddollarz,	0
+			makebword 36,	 ddollarz,	0,	0
 			makebword 37,	 dmodz,		dmodc,		0
-			makebword 38,	 dandz,		dandz,		0
+			makebword 38,	 dandz,		0,		0
 			makebword 39,	 dtickz,	dtickc,		0
 			makebword 40,	 dlrbz,		dlrbc,		0
 			makebword 41,	 drrbz,		drrbc,		0
-			makebword 42,	 dstarz,	dstarz,		0
+			makebword 42,	 dstarz,	  	0,		0
 			makebword 43,	 dplusz,	dplusc,		0
 			makebword 44,	 dcomaz,	dcomac,		0
 			makebword 45,	 dsubz,		dsubc,		0
-			makebword 46,	 ddotz,		ddotc,		0
-			makebword 47,	 dsdivz,	dsdivz,		0
+			makebword 46,	 ddotz,		0,		0
+			makebword 47,	 dsdivz,	0,		0
 			makebword 48,	 stackit,	stackit,	0
 	 		makebword 49,	 stackit,	stackit,	1
 			makebword 50,	 stackit,	stackit,	2
@@ -4723,12 +4762,12 @@ zbytewords:
  			
 			makeemptywords 91-64
  			
-			makebword 91,	 dlsbz,		dlsbz,		0
+			makebword 91,	 dlsbz,		0,		0
 			makebword 92,	 dshlashz,	dshlashc,	0
 			makebword 93,	 drsbz,		drsbc,		0
-			makebword 94,	 dtophatz,	dtophatz,	0
-			makebword 95,	 dunderscorez,	dunderscorez,	0
-			makebword 96,	 dbacktkz,		dbacktkz,		0
+			makebword 94,	 dtophatz,	0,	0
+			makebword 95,	 dunderscorez,	0,	0
+			makebword 96,	 dbacktkz,		0,		0
 		
 
 			makeemptywords 123-96
