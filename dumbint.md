@@ -425,8 +425,20 @@ high level words are collections of word tokens, the tokens are converted to wor
 
 
 
-#### More primitive than FORTH
+#### LITERALs
  
+An implementation difference from typical FORTH is that literal values are stored in tables and not stored in the dictionary.
+
+In the token space the word is stored to look up the literal.
+
+This makes the token space simpler, it is made up of 16 bit (half-word) tokens and nothing else.
+
+In theory it should save space since a literal need only be defined once even if many words use it.
+
+It also creates a program wide limit of 64000 instances of each thing.
+
+This will require pools for various primitive types to be added, essentially anything longer than 16 bits needs to have a pool.
+
 
 Literals
 
@@ -440,7 +452,7 @@ numeric literals large
 
 
 
-Long literals are held in the LITBASE
+Long (quad) literals are held in the LITBASE
 
 A compiled dictionary word just refers to the LITBASE using a halfword index
 
@@ -641,9 +653,9 @@ This is small enough to discuss.
 
 The main activity repeated for each token is between label 10 and the jump back to 10.
 
-We increment IP, fetch the token,  multiply the token by 64 (the dictionary header), add to the dictionary base.
+We increment IP, fetch the token,  multiply the token by 64 (the dictionary header), add to the dictionary base, this gets us the word address.
 
-Collect the words code pointer, collect the words data pointer, call the word, the words code runs and returns.
+From that we collect the words code pointer, collect the words data pointer, call the word, the words code runs and returns.
 
 This then repeats until the end of the word, it is a choice to compare the token with END or let END run and exit the function.
 
