@@ -21,6 +21,8 @@ Learn ARM64, have some fun, create useful things.
 
 ### approach
 
+I am being machine specific, e.g. ARM64 not INTEL.
+
 create small machine code primitive words 
 
  .. allow them to be tested interactively
@@ -120,7 +122,9 @@ Use ASCII
 Support Strings of Unicode Runes in a safe and sensible way (later)
 
 
-### Milestones
+### Week off November: Milestones
+
+I took a week off (leave/PTO) to work on whatever I liked and spent time on this.
 
 #### Tuesday 16th November 2021
 
@@ -233,6 +237,30 @@ Implemented and tested words for LOOP
 Updated tracing to not crash.
 
 
+#### Friday morning
+
+Improved tracing, delegated tracing to run time words.
+
+Improved design of LOOP
+
+Improved SEE, distributed tracing, made trace a macro.
+
+
+#### Saturday morning
+
+Added .S .R for tracing the stack.
+
+Fixed issues with LOOP.
+
+Fixed issues with IF caused by fixing issues with LOOP.
+
+
+
+#### Sunday morning
+
+Create token space, shrunk word headers, compile to token space.
+
+---------------------------------------------------------------------
 
 
 
@@ -376,10 +404,6 @@ TRON
 ```
 
 
-
-
-
-
 ### More primitive
 
 The concept is to write the application in assembler and script/test it
@@ -486,6 +510,9 @@ Will single step a loop.
 Allowing (DO), I, J, K, and (LOOP) to be tested interactively.
 
 
+### Compatability
+
+In general WORDS defined in the language should behave as they would in FORTH, unless that behaviour is so annoying, I had to change it.
 
 
 

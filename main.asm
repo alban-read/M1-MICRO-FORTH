@@ -14,9 +14,9 @@
 
 ;; related to the interpreter
 ; X16 is the data stack
-; X15 is the interpreter pointer
+; X15 is the interpreter pointer/dictionary pointer
 ; X14 is the return stack
-; X13 is the dictionary pointer
+; X13  
 ; X12 is the tertiary pointer
 ; X6  is the tracing register
 
@@ -198,8 +198,6 @@
 ver:    .double 0.439
 tver:   .ascii  "Version %2.2f\n"
         .zero   4
-
-
 
 .text
 
@@ -759,6 +757,7 @@ collectword:  ; byte ptr in x23, x22
 			  ; copy and advance byte ptr until space.
 
 		STP		LR, X16, [SP, #-16]!
+		
 		; reset word to zeros;
 		BL		resetword
 
@@ -3220,13 +3219,6 @@ dexitz:
 	 
 		RET
 
-
-
-	
-
-
-	 
-
 dlrbz: ; (
 		RET
 
@@ -3902,8 +3894,6 @@ ddelz:	; del (127)
 ddelc:	; del (127)
 		RET
 
-
-
 .data 
 
 ; variables
@@ -3922,11 +3912,7 @@ last_word:
 dpage: .zero 4
 zstdin: .zero 16
 
-
-
 ;; text literals
-
-
 
 .align 8
 
@@ -3986,23 +3972,13 @@ thalfpr:	.ascii ": [%6ld] "
 		.zero 16
 
 
-
-
-
 .align 	8
 tbranchpr:	.ascii "={%4ld} "
 		.zero 16
 
-
-
-
 .align 	8
 tprname:	.ascii "%-12s"
 		.zero 16
-
-
-
-
 
 .align 	8
 tovflr:	.ascii "\nstack over-flow"
@@ -4012,12 +3988,9 @@ tovflr:	.ascii "\nstack over-flow"
 tunder:	.ascii "\nstack under-flow"
 		.zero 16
 
-
-
 .align 	8
 texists:	.ascii " <-- Word Exists"
 		.zero 16
-
 
 .align 	8
 tcomer1: .ascii "\nCompiler error ':' expects a word to define."
