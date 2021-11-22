@@ -7,12 +7,6 @@ With .. tradeoffs..
 This was written from scratch, starting with a blank editor page in VS code, CLANG Assembler is used.
 
 
-### Incomprehension about Documentation
-
-I am stunned by projects in GITHUB that have complex software and no documentation 
-
-Mine are simple projects,  with documentation, I guess you can't have everything.
-
 
 ### purpose
 
@@ -31,9 +25,9 @@ create small machine code primitive words
 
 Get an interactive interpreter running from Day 1, and then build it out.
 
-The process is incremental, and interactive from the start, as soon as the outer text interpreter works, it is used to test the next features added.
+The process is incremental, and interactive from the start, as soon as the outer text interpreter said OK, it was used to test the next features added.
 
-Use the computer as the tool for using the computer.
+Use the computer against itself (Use the computer as a tool for using the computer).
 
 
 
@@ -62,45 +56,25 @@ Any sufficiently simple assembly language program contains a half-arsed implemen
 
 
 
-e.g. As soon as you start writing a program in Assembler, if you want to test it, and retain your sanity, you need to implement at least half of the things that FORTH provides.
-
-But no more that that, or it becomes FORTH, and that is not the end objective of working in Assembler.
-
-Just enough FORTH is needed to test the assembler words and string them together as a script.
-
-
-When I was a kid, I typed FIG FORTH into my Z80 machine using a hex editor, from a printed listing I ordered from the back of a magazine.
-
-I then patched it to use my machines ROM for IO and it worked.
-
-That was my first significant computer achievement.
-
-It took weeks to do: Those were the days, when there was spare time, and almost nothing on TV.
-
-I doubt if I could do that now forty years later, thankfully I now have a macro assembler, it is easier.
-
-
-
 
 #### Memory management
 
 None.
 
-Memory management is Static.
+Memory management is Static, really it is organized as a number of stacks.
 
-People sometimes forget that static memory allocation is viable.
 
-The program contains a few tables of fixed sizes.
+- The program contains a few tables of fixed sizes.
 
-If you blow past a limit you will get an error message.
+- If you blow past a limit you will get an error message.
 
-If your program exceeds a limit, just change that limit and recompile.
+- If your program exceeds a limit, just change that limit and recompile.
 
-This does waste some memory, although you can also decrease the fixed sizes. right?
+- This does waste some memory, although you can also decrease the fixed sizes. right?
 
-The machine stack can grow since the operating system does that.
+- The machine stack can grow since the operating system does that.
 
-Otherwise the dictionary size and the literal pools are fixed size.
+- Otherwise the dictionary size and the literal pools are fixed size.
 
 The fixed sizes are reasonable for what I want to do, the machine I am using has eight gigabytes of ram, it is a low cost entry model...
 
@@ -264,11 +238,13 @@ ENDIF looks for ELSE or IF.
 Created token space, shrunk word headers, compiler now compiles into token space.
 
 
-#### Status after the week of work.
+#### Week off conclusiom
 
-I am quite pleased as I think the core work needed is done and can now be extended.
+I think the core work needed is done and can now be extended.
 
 The whole experience has been completely interactive from the moment the interpreter first said OK to me.
+
+Did encounter some annoying bugs, rewrote the tracing function a couple of times, cursed the computer.
 
 - Typical stack juggling words implemented.
 
@@ -290,7 +266,9 @@ TODO NEXT: Implement below
 
 I expect to do some work filling these gaps in over the next few weekends and some evenings.
 
-- Conditional loop words
+- Conditional (indefinite) loop words
+
+- add `<DOES` to fill in the compile time code; this will allow compiler helper words to be written using high level code.  
 
 - Floating point words.
 
@@ -329,6 +307,9 @@ The dictionary contains word headers.
 
 A headers has pointer to the words functions (runtime and compile time), and space for small quantities of data belonging to the word.
 
+Important point that there are two pointers, runtime and compile time, as FORTH words are called by the compiler at compile time.
+
+Having two pointers will allow for '''FORTH <DOES ''' to be supported.
 
 The dictionary is 'full of holes' for user defined words, spread throughout it.
 
