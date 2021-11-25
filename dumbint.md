@@ -99,7 +99,7 @@ Use ASCII
 Support Strings of Unicode Runes in a safe and sensible way (later)
 
 
-### Week off November: Milestones
+### Week off November 2021 : the big push, kick off.
 
 I took a week off (leave/PTO) to work on whatever I liked and spent time on this.
 
@@ -704,6 +704,21 @@ The use of a data pointer for each word passed in X0 seems useful, it allows wor
 
 Sending each word its own address would be more general, making words that needed the data, look it up.
 
+
+
+## History
+
+## WEEK 47 (of 2021)
+
+Improved tracing of words, added initial word entry to trace.
+
+Formalized X1 as parameter to words, containing address of current word.
+
+Useful to look up any details stored in the words header.
+
+Added DEPTH to check stack depth, led to a fix of underflow check.
+
+Added depth check to (DOER) avoiding infinite loops when there are not two arguments.
 
 
 

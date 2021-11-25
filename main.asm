@@ -1814,8 +1814,6 @@ ddoerz:
 	CMP		X0, #2
 	B.lt	do_loop_arguments	
 
-
-
 	; Get my arguments
 	LDP  	X0, X1,  [X16, #-16]  
 	SUB		X16, X16, #16
@@ -1838,7 +1836,6 @@ ddowndoerz:
 
 	STP		LR,  X12, [SP, #-16]!
 	MOV		X12, X15
-
 
 	; do we have two arguments
 	ADRP	X8, dsp@PAGE	   
