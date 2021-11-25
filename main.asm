@@ -3891,6 +3891,37 @@ ddotsz:
 
 
 
+;; STRINGS ASCII ZERO terminated
+
+; executes .' using an inline literal lookup.
+
+dstrdotz:
+		RET
+
+
+
+; compiles string into the string literal pool.
+; compiles string literal token and value into word.
+dstrdotc:
+
+
+		RET
+
+
+; fetch address of short literal string, inline literal
+dslitSz:
+		RETS
+
+
+; fetch address of long literal string, inline literal
+dslitLz:
+		RETS
+
+
+
+
+
+
 dlsbz:  ; [ 
 		RET
 		
@@ -4345,23 +4376,17 @@ quadlits:
 
 
 
-; strings ASCII
+; STRINGS ASCII
 ; string lits ASCII counted strings
 
-.stringlits32:
-.rept  512
+ 
+short_strings:
+.rept  2048
 	.zero 	64
 .endr
-.stringlits64:
-.rept  512
-	.zero 	64
-.endr
-.stringlits128:
-.rept  512
-	.zero 	128
-.endr
-stringlits256:
-.rept  512
+
+long_strings:
+.rept  1024
 	.zero 	256
 .endr
 
@@ -4413,7 +4438,7 @@ dend:
 			; these hash words are inline compile only
 		
 
-			; inline literals < 16
+			; words that take inline literals < 16
 			makeword "#LITS", dlitz, dlitc,  0       		; 1
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
 			makeword "#ZBRANCH", dzbranchz, dzbranchc,  0   ; 3
@@ -4423,8 +4448,8 @@ dend:
 			makeword "#7", 0, 0,  0     	  				; 7
 			makeword "#8", 0, 0,  0   					 	; 8
 			makeword "#9", 0, 0,  0     					; 9
-			makeword "#10", 0, 0,  0     					; 10
-			makeword "#11", 0, 0,  0     					; 11
+			makeword "#$S", dslitSz, 0,  0     				; 10
+			makeword "#$L", dslitLz, 0,  0     				; 11
 			makeword "#12", 0, 0,  0   						; 12
 			makeword "#13", 0, 0,  0       					; 13
 			makeword "#14", 0, 0,  0     					; 14
@@ -4780,6 +4805,7 @@ zdict:
 			makeword "-LOOP", 0 , dmloopc, 0
 			makeword ".R", ddotrz, 0 , 0
 			makeword ".S", ddotsz, 0 , 0
+			makeword ".'", dstrdotz, dstrdotc , 0
 
  			
 

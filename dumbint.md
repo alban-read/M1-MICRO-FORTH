@@ -61,22 +61,21 @@ Any sufficiently simple assembly language program contains a half-arsed implemen
 
 None.
 
-Memory management is Static, really it is organized as a number of stacks.
-
+Memory management is Static, really it is organized as a number of stacks and pools.
 
 - The program contains a few tables of fixed sizes.
 
 - If you blow past a limit you will get an error message.
 
-- If your program exceeds a limit, just change that limit and recompile.
+- If your program exceeds a limit, just change that limit and rebuild.
 
-- This does waste some memory, although you can also decrease the fixed sizes. right?
 
-- The machine stack can grow since the operating system does that.
+### Memory - literal pools
 
-- Otherwise the dictionary size and the literal pools are fixed size.
+The compiler uses literal pools, that is a deviation from most FORTH implementations, that use a single dictionary.
 
-The fixed sizes are reasonable for what I want to do, the machine I am using has eight gigabytes of ram, it is a low cost entry model...
+A literal pool fits in better with the whole RISC, rigid alignment, fixed length words, load/store, seperate code and data, computer model we have going on post intel.
+
 
 
 ### goals
