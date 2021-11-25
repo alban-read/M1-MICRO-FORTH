@@ -3631,6 +3631,22 @@ hwstorz:  ; ( n address -- )
 		RET
 
 
+catz: ;  ( address -- n ) fetch var.
+		LDR		X0, [X16, #-8] 
+		CBZ		X0, itsnull
+		LDRB    W0, [X0]
+		STR		X0, [X16, #-8]
+		RET
+
+cstorz:  ; ( n address -- )
+		LDR		X0, [X16, #-8] 
+		LDR		X1, [X16, #-16]
+		CBZ		X0, itsnull2
+		STRB 	W1, [X0]
+		SUB		X16, X16, #16
+		RET
+
+
 nsubz:	;
 		LDR		X1, [X16, #-8]
 		SUB		X1, X1, X0
@@ -3904,21 +3920,131 @@ dstrdotz:
 ; compiles string literal token and value into word.
 dstrdotc:
 
+		STP	    LR,  X15, [SP, #-16]!
+		; clear target space
+		ADRP	X8, string_buffer@PAGE	   
+	    ADD		X8, X8, string_buffer@PAGEOFF
+		MOV		X22, X8
 
+		.rept    64
+			STP		XZR, XZR, [X22], #16
+		.endr
+
+		MOV		X22, X8
+	 	
+		MOV		W1, #0
+
+10:		LDRB	W0, [X23], #1
+		CMP		W0, #39 ; '
+		b.eq	90f
+		CMP		W0, #10
+		B.eq	90f
+		CMP		W0, #12
+		B.eq	90f
+		CMP		W0, #13
+		B.eq	90f
+ 		CMP		W0, #0
+		B.eq	90f
+
+30: 	STRB	W0, [X22], #1
+		ADD		W1, W1, #1
+		CMP		W1, #255	; size limit
+		B.ne	10b
+
+
+	 	CMP		W1, #32		; count
+		B.lt	40
+		
+		MOV		W3, #0
+
+
+50:		; long string
+		ADRP	X8, long_strings@PAGE	   
+	    ADD		X12, X8, long_strings@PAGEOFF
+52:	 	
+		LDR		X0, [X12]
+		CBZ		X0, 55f
+		CMP		X0, #-1
+		B.eq	80f ; string full
+		ADD		X12, X12, #256
+		ADD		W3, W3, #1
+		B		52b
+
+55:		MOV		X22, X8	
+		.rept 16
+		LDP		X0, X1, [X12], #16
+		STP		X0, X1, [X22], #16
+		.endr
+		B		90f
+
+
+40:		; short string
+		; find free short string
+
+		ADRP	X8, short_strings@PAGE	   
+	    ADD		X12, X8, short_strings@PAGEOFF
+42:	 	
+		LDR		X0, [X12]
+		CBZ		X0, 45f
+		CMP		X0, #-1
+		B.eq	80f ; string full
+		ADD		X12, X12, #64
+		ADD		W3, W3, #1
+		B		42b
+
+45:		MOV		X22, X8	
+		.rept 4	
+		LDP		X0, X1, [X12], #16
+		STP		X0, X1, [X22], #16
+		.endr
+		B		90f
+
+80:		; strings full
+
+
+		STR		X3, [X16], #8
+
+90:
+		LDP		LR, X15, [SP], #16	
 		RET
 
 
 ; fetch address of short literal string, inline literal
 dslitSz:
-		RETS
+		RET
 
 
 ; fetch address of long literal string, inline literal
 dslitLz:
-		RETS
+		RET
 
 
+dhashbufferz:
+ 
+		ADRP	X8, string_buffer@PAGE	   
+	    ADD		X8, X8, string_buffer@PAGEOFF
+		MOV		X12, X8
 
+		MOV		W7, #53					; p=53		
+		MOV		X8, #51721
+		MOVK	X8, #15258, LSL #16		; m=1e9+9
+		MOV		W1,	#0					; hash
+		MOV		W2, #1					; p_pow
+
+10:		LDRB	W0, [X12], #1
+ 		CBZ		W0,  90f
+
+		ADD		W0, W0, #1
+		MUL		W3, W2, W0
+		ADD		W1,	W1, W3
+		MUL		W2, W2, W7
+		SDIV	W4, W2, W8
+		ADD		W1, W1, W4
+		ADD		X12, X12, #1
+		B		10b
+	
+90:		STR		X1, [X16], #8
+		RET
 
 
 
@@ -4379,17 +4505,30 @@ quadlits:
 ; STRINGS ASCII
 ; string lits ASCII counted strings
 
+
+
+
+
+
+string_buffer:
+.zero 2048
+
  
 short_strings:
 .rept  2048
 	.zero 	64
 .endr
+.quad	-1
+.quad	-1
+
+
 
 long_strings:
 .rept  1024
 	.zero 	256
 .endr
-
+.quad	-1
+.quad	-1
 
 
 ; used for line input
@@ -4488,7 +4627,7 @@ hashdict:
 adict:
 
 			makeemptywords 84
-
+			makeword "BUFFER$", dvaraddz, dvaraddc,  string_buffer
 			makeword "BREAK",  dbreakz, dbreakc, 0
 	  		makeword "BL",  dconstz, dconstz, 32
 			
@@ -4497,7 +4636,8 @@ adict:
 
 bdict:
 			makeemptywords 80
-
+			makeword "C@", 		catz, 0, 0
+			makeword "C!", 		cstorz, 0, 0
 			makeword "CONSTANT", dcreatcz , dcreatcc, 0
 			makeword "CREATE", 	dcreatz, dcreatc, 0
 			makeword "CALL", 	dcallz, dcallc, 0
@@ -4549,10 +4689,10 @@ gdict:
 
 
 			makeqvword 104
-
+			makeword "HASHBUFFER$", dhashbufferz, 0,  0
 			makeword "H", dvaraddz, dvaraddc,  8 * 72 + ivars	
 hdict:
-
+	
 			makeemptywords 66
 			makeqvword 105
 			makeword "I", diloopz, diloopc,  0
@@ -4579,6 +4719,8 @@ kdict:
 
 			makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
 		
+			makeword "LONG$", dvaraddz, dvaraddc,  long_strings
+
 			makeword "LITBASE", dvaraddz, dvaraddc,  quadlits
 		
 ldict:
@@ -4674,7 +4816,7 @@ rdict:
 			; using the assmbler, WITHOUT reducing the empty
 			; word count above it.
 
-
+			makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 			makeword "SWAP", dswapz , dswapc, 0 
 	
 
@@ -4805,7 +4947,7 @@ zdict:
 			makeword "-LOOP", 0 , dmloopc, 0
 			makeword ".R", ddotrz, 0 , 0
 			makeword ".S", ddotsz, 0 , 0
-			makeword ".'", dstrdotz, dstrdotc , 0
+			makeword ".'", 0, dstrdotc , 0
 
  			
 
