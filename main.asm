@@ -88,15 +88,20 @@
 ; the data can be used as pointers to other data
 ; or as literals for the word.
 
-; 0 	pointr ..  8 
+; 0 	pointr ..  8    -> ptr to data or tokens
 ; 8  	name  ..  16
 ; 16	name  ..  24
-; 24    run   ..  32
-; 32    comp  ..  40
-; 40    data  ..  48
+; 24    run   ..  32	-> run time func
+; 32    comp  ..  40    -> compile time func
+; 40    data  ..  48	-> ptr to data or tokens
 ; 48    data  ..  56
 ; 56    data  ..  64
 
+;
+;
+;
+;
+;
 
  
 
@@ -158,6 +163,31 @@
 	.endr
 .endm
 
+
+
+.macro  trace_show_word		
+
+		CBZ		X6,	999f
+
+		STP	    LR,  X0, [SP, #-16]!
+	 	STP	    X1,  X12, [SP, #-16]!
+		 
+		ADD		X12,  X1, #8
+		MOV		X0,  X1
+		BL		X0addrprln
+
+		LDRH	W0, [X15]
+		BL		X0halfpr
+
+		MOV		X0, X12
+		BL		X0prname
+
+		BL		ddotsz
+		
+	 	LDP		X1, X12, [SP], #16	
+		LDP		LR, X0, [SP], #16	
+999:
+.endm
 
 
 .macro  do_trace		
@@ -757,7 +787,7 @@ collectword:  ; byte ptr in x23, x22
 			  ; copy and advance byte ptr until space.
 
 		STP		LR, X16, [SP, #-16]!
-		
+
 		; reset word to zeros;
 		BL		resetword
 
@@ -1153,11 +1183,15 @@ fw1:
 		LDR     X2,	[X28, #24]  
 		CMP		X2, #0 
 		B.eq	finish_list
+
 		LDR     X0,	[X28] ; data
 		STP		X28, XZR, [SP, #-16]!
+	 
+		MOV		X1,	 X28
+		
+		BLR		X2	 ;; call function X0 data, X1 address
 
-		BLR		X2	 ;; call function
-
+ 
 		LDP		X28, XZR, [SP]
 
 		B       advance_word
@@ -1429,10 +1463,11 @@ find_word_token:
 
 		STP		X3, X4, [SP, #-16]!
 		STP		X28, X16, [SP, #-16]!
-		
+		LDR     X0,	[X28] ; data
+		MOV		X1, X28
 		; compile time functions can change X14, X15
 
-		BLR		X2	 ;; call function
+		BLR		X2	 ;; call function X0 =data, X1=address
 		
 		
 		LDP		X28, X16, [SP]
@@ -1770,6 +1805,17 @@ ddoerz:
 	STP		LR,  X12, [SP, #-16]!
 	MOV		X12, X15
 
+	; do we have two arguments
+	ADRP	X8, dsp@PAGE	   
+	ADD		X8, X8, dsp@PAGEOFF
+	LDR		X0, [X8]
+	SUB		X0, X16, X0
+	LSR     X0, X0, #3
+	CMP		X0, #2
+	B.lt	do_loop_arguments	
+
+
+
 	; Get my arguments
 	LDP  	X0, X1,  [X16, #-16]  
 	SUB		X16, X16, #16
@@ -1792,6 +1838,17 @@ ddowndoerz:
 
 	STP		LR,  X12, [SP, #-16]!
 	MOV		X12, X15
+
+
+	; do we have two arguments
+	ADRP	X8, dsp@PAGE	   
+	ADD		X8, X8, dsp@PAGEOFF
+	LDR		X0, [X8]
+	SUB		X0, X16, X0
+	LSR     X0, X0, #3
+	CMP		X0, #2
+	B.lt	do_loop_arguments
+
 
 	; Get my arguments
 	LDP  	X0, X1,  [X16, #-16]  
@@ -1859,10 +1916,18 @@ do_without_loop:
     BL		sayit	
 
 
+do_loop_arguments:
+	; not enough arguments
+	ADRP	X0, tcomer20@PAGE	
+	ADD		X0, X0, tcomer20@PAGEOFF
+    BL		sayit	
+	LDP		LR, X15, [SP], #16	; unwind word
+
+
+
 200:
 	LDP     LR, X12, [SP], #16
 	RET
-
 
 ; : TEST 10 1 DO I . SPACE LOOP 102 . CR ;
 ; : TEST2 10 1 DO I . SPACE 10 1 DO 35 EMIT LOOP SPACE LOOP ;
@@ -2087,6 +2152,32 @@ dandz: ; &
 
 dandc: ; & 
 		RET
+
+
+ddepthz: 
+
+		ADRP	X0, spu@PAGE	   
+	    ADD		X0, X0, spu@PAGEOFF
+		CMP		X16, X0
+		b.gt	50f	
+
+		; reset stack we are under
+	  	reset_data_stack
+		 
+50:
+		ADRP	X8, dsp@PAGE	   
+	    ADD		X8, X8, dsp@PAGEOFF
+		LDR		X0, [X8]
+		SUB		X0, X16, X0
+
+		LSR     X0, X0, #3
+		STR		X0, [X16], #8	
+		RET
+
+ddepthc:
+
+		RET
+
 
 get_last_word:
 		STP		X0, X1, [SP, #-16]!
@@ -3093,7 +3184,6 @@ dtickc: ; ' at compile time, turn address of word into literal
 
 190:	; error out 
 		MOV	X0, #-1
-
 		B		200f
 
 
@@ -3102,10 +3192,7 @@ dtickc: ; ' at compile time, turn address of word into literal
 		LDP     LR, X16, [SP], #16
 		LDP		X3, X4, [SP], #16	
 		LDP		X22, X28, [SP], #16	
-
 		RET
-
-
 
 
 dnthz: ; from address, what is our position.
@@ -3172,8 +3259,17 @@ dtraqz:
 
 
 
+runintcz: ; interpret the list of tokens at word + 
+
+		; over ride X0 to compile time token address
+
+		LDR		X0, [X1, #40]		; compile mode tokens
+
+
 runintz:; interpret the list of tokens at X0
 		; until (END) #24
+
+		trace_show_word		
 
 		; SAVE IP 
 		STP	   LR,  X15, [SP, #-16]!
@@ -3195,12 +3291,15 @@ runintz:; interpret the list of tokens at X0
 	 
 		 
 		LDR     X0, [X1]		; words data
-		LDR     X1, [X1, #24]	; words code
+		LDR     X2, [X1, #24]	; words code
 
 	 	CBZ		X1, dontcrash
+		CBZ		X2, dontcrash
  
 		STP		LR,  X12, [SP, #-16]!
-		BLR     X1 		
+
+		BLR     X2 		; with X0 as data and X1 as address
+		
 		LDP		LR, X12, [SP], #16	
  
 
@@ -3393,7 +3492,6 @@ dnipz: ;
 		RET
 
 
-
 dcolonz: ; : define new word, docol
 		RET
 
@@ -3489,7 +3587,6 @@ dhatz: ; "@" at - fetch
 datc: ;  "@"  
 		RET		
 
-
 	
 atz: ;  ( address -- n ) fetch var.
 		LDR		X0, [X16, #-8] 
@@ -3580,8 +3677,6 @@ dnmulc:
 		RET	
 		
 
-
-
 ndivz:	; perform shift right to divide
 		LDR		X1, [X16, #-8]
 		LSR		X1, X1, X0
@@ -3618,13 +3713,10 @@ dconsc: ; compile address of variable
 
 dlitz: ; next cell has address of short (half word) inline literal
 		
-		
-
 		CBZ		X6, dlitz_notrace
 		STP	    LR,  X0, [SP, #-16]!
 		do_trace
 		LDP		LR, X0, [SP], #16	
-
 
 dlitz_notrace:
 		
@@ -4010,7 +4102,7 @@ tcomer5: .ascii "Compiler error  "
 
 
 .align 	8
-tcomer6: .ascii " half word cells uses, compiler Finished\n  "
+tcomer6: .ascii " half word cells used, compiler Finished\n  "
 		.zero 16
 
 
@@ -4044,21 +4136,21 @@ tcomer13: .ascii "\nENDIF could not find IF.."
 
 
 		.align 	8
-tcomer14: .ascii "\nLOOP could not find DO.."
+tcomer14: .ascii "\nDO .. LOOP - LOOP could not find DO.."
 		.zero 16
 
 		.align 	8
-tcomer15: .ascii "\n+LOOP could not find DO.."
-		.zero 16
-
-
-		.align 	8
-tcomer16: .ascii "\nDO could not find LOOP.."
+tcomer15: .ascii "\nDO .. LOOP - +LOOP could not find DO.."
 		.zero 16
 
 
 		.align 	8
-tcomer17: .ascii "\nLOOP index error.."
+tcomer16: .ascii "\nDO .. LOOP - DO could not find LOOP.."
+		.zero 16
+
+
+		.align 	8
+tcomer17: .ascii "\nDO .. LOOP - LOOP index error.."
 		.zero 16
 
 		.align 	8
@@ -4073,6 +4165,9 @@ tcomer19: .ascii ": END OF LIST\n "
 tliteral: .ascii " Literal Value"
 		.zero 16
 
+		.align 	8
+tcomer20: .ascii "DO .. LOOP error - DO needs two argments.\n "
+		.zero 16
 
 
 .align 	8
@@ -4177,7 +4272,7 @@ token_space_top:
 ; this is the data stack
 .align  8
 sps:	.zero 8*8	
-spu:	.quad -111111; underflow patterws
+    	.quad -111111; underflow patterws
 		.quad -222222
 		.quad -333333
 		.quad -444444
@@ -4188,7 +4283,7 @@ spu:	.quad -111111; underflow patterws
 		.quad -999999
 		.quad 0
 		.quad 0
-		.quad 0
+spu:	.quad 0
 sp1:    ; base
 		.zero 512*8
 spo:	.quad 0
@@ -4396,9 +4491,8 @@ cdict:
 			makeword "DO", 0 , doerc, 0 
 			makeword "DOWNDO", 0 , ddownerc, 0 
 			makeword "DUP", ddupz , ddupc, 0 
-			makeword "DROP", ddropz , ddropc, 0 
-		 	 	
-
+			makeword "DROP", ddropz , ddropc, 0 	 	
+			makeword "DEPTH", ddepthz , 0, 0 
 
 			makeqvword 100
 			makeword "D", dvaraddz, dvaraddc,  8 * 68 + ivars	
