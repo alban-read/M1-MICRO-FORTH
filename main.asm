@@ -3052,8 +3052,8 @@ dzbranchz_notrace:
 
 		LDR		X1, [X16, #-8]
 		SUB		X16, X16, #8	
-		CMP		X1, #0
-		B.ne	90f
+		CMP		X1, #-1
+		B.eq	90f
 
 ; it is zero, branch forwards n tokens		
 80:
