@@ -3547,7 +3547,29 @@ lessthanz:
 dltc: ;  "<"  
 		RET		
 
-dequz: ; "=" less than
+
+
+dnoteqz:	; <>
+
+		LDR		X0, [X16, #-8] 
+		LDR		X1, [X16, #-16]
+		CMP  	X0, X1		
+		B.eq	10f
+		MVN		X0, XZR ; true
+		B		20f
+10:
+		MOV		X0, XZR
+20:
+		STR 	X0, [X16, #-16]
+		SUB		X16, X16, #8
+		RET
+
+
+		RET
+
+
+
+dequz: ; "=" 
 	
 equalz:
 		LDR		X0, [X16, #-8] 
@@ -5160,7 +5182,7 @@ zdict:
 			makeword ".R", ddotrz, 0 , 0
 			makeword ".S", ddotsz, 0 , 0
 			makeword ".'", dstrdotz, dstrdotc , 0
-
+			makeword "<>", dnoteqz, 0 , 0
  			
 
 
