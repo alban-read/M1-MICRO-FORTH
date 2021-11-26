@@ -518,7 +518,7 @@ expected
 ```FORTH
 1 0 TESTNEST => D
 1 1 TESTNEST => ABD
-0 1 TESTNEST => AD
+0 1 TESTNEST => ACD
 0 0 TESTNEST => D
 ```
 
@@ -722,6 +722,11 @@ Added depth check to (DOER) avoiding infinite loops when there are not two argum
 
 
 
+### IF 
 
+IF          ---         ELSE                          --- ENDIF
+
+Stack                 Read Location                   Read location 
+Location              Update (IF)                     Update (ELSE)
 
 

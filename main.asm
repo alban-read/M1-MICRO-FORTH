@@ -2855,32 +2855,18 @@ difz:
 
 difc:
 
-
-100:	
-		STP		X22, X28, [SP, #-16]!
-		STP		X3,  X4, [SP, #-16]!
-		STP		LR,  X16, [SP, #-16]!
-	 
-	;  push zbran and dummy offset
-
-		MOV		X0, #3 ; #ZBRAN
+		MOV		X0, #3 ; (IF)
 		STRH	W0, [X15]
 		ADD		X15, X15, #2
 		MOV		X0, #4000 
 		STRH	W0, [X15] ; dummy offset
-	 
+		MOV		X0, #3 ; (IF)
+	 	STP		X0,  X15, [X14], #16 ; save branch
 		B		200f
 
 190:	; error out 
 		MOV	X0, #-1
-
-		B		200f
 200:
-		; restore registers for compiler loop
-		LDP     LR, X16, [SP], #16
-		LDP		X3, X4, [SP], #16	
-		LDP		X22, X28, [SP], #16	
-
 		RET			
 
 
@@ -2893,49 +2879,24 @@ dendifz:
 
 dendifc:
 
-100:	
-		STP		X22, X28, [SP, #-16]!
-		STP		X3,  X4, [SP, #-16]!
-		STP		LR,  X16, [SP, #-16]!
+	 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
+		SUB 	X14, X14, #16 		; pop the ELSE/ENDIF
+		CMP		X2, #4; (ELSE)
+		B.eq	100f
+		CMP 	X2, #3; (IF)
+		B.eq	100f
+		B 		190f  
 
-		MOV		X3, X15
-		MOV		X2, #0
+100:
+	
+		SUB     X4, X15, X5  ; dif between zbran and else.
+		ADD		X4, X4, #4
+		ADD 	W4, W4, #32 ; avoid confusion
+		STRH	W4, [X5]	; store that
 
-110:	; seek 3 as halfword.
-		ADD		X2, X2, #2
-		LDRH	W0, [X3]
-		CMP		W0, #3; ZBRAN
-		B.eq	140f
-		CMP		W0, #4; BRAN
-		B.eq	140f
-
-		SUB		X3, X3, #2
-		CMP		X2, #512  ; did we escape the whole word?
-		B.gt	190f ; error out no IF for ENDIF
-
-		B 		110b
-
-140:	; found zbran or bran
-
-		MOV		X2, #0
-		LDRH	W0,	[X3, #2]
-		CMP		W0, #4000
-		B.eq	145f		; ours to change
-
-		SUB		X3, X3, #2
-
-		B		110b
-		
-145:
-		SUB     X4, X15, X3 ; dif between zbran and endif.
-		ADD		X3, X3, #2  ; branch data follows zbran
-		SUB 	X4, X4, #2
-		ADD		W4, W4, #32  ; avoid confusion
-		STRH	W4, [X3]	; store that
 		MOV		X0, #0
-
-		
 		B		200f
+ 
 
 190:	; error out - no IF for our ENDIF.
 		
@@ -2945,13 +2906,6 @@ dendifc:
 		 	
 		MOV	X0, #-1
 		B		200f
-200:
-		; restore registers for compiler loop
-		LDP     LR, X16, [SP], #16
-		LDP		X3, X4, [SP], #16	
-		LDP		X22, X28, [SP], #16	
-
-
 		RET			
 
 
@@ -2963,83 +2917,36 @@ delsez:
 
 delsec: ;  at compile time inlines the ELSE branch
 
-100:	
-		STP		X22, X28, [SP, #-16]!
-		STP		X3,  X4, [SP, #-16]!
-		STP		LR,  X16, [SP, #-16]!
-
-		MOV		X5, X15 	; keep X15 safe
-		MOV		X2, #0
-
-		; back out our token
-		; we will compile a branch instead
-
-		 
-
-		;  push zbran and dummy offset
 
 		MOV		X0, #4 ; #BRANCH
 		STRH	W0, [X15]
 		ADD		X15, X15, #2
 		MOV		X0, #4000 
-		STRH	W0, [X15] ; dummy offset
-		;ADD		X15, X15, #2
+		STRH	W0, [X15] ; dummy offset for ENDIF
+ 
+		; check for if
+		LDP		X2, X5,  [X14, #-16] ; X5 is branch
+		CMP		X2, #3 ; (IF)
+		B.ne	190f
 
+		; drop if and stack else
+		SUB 	X14, X14, #16
+		MOV		X0, #4 ; (ELSE)
+		STP		X2,  X15, [X14], #16 ; store ELSE address
 
-		; we are part of IF .. ELSE .. ENDIF 
-		; so we look for IF now.
-
-
-	 	MOV		X3, X5
 	
-110:	; seek 3 as halfword.
-
-		LDRH	W0, [X3]
-		CMP		W0, #3; ZBRAN
-		B.eq	140f
-
-		SUB		X3, X3, #2
-		CMP		X2, #512  ; did we escape the whole word?
-		B.gt	190f ; error out no IF for ENDIF
-
-		B 		110b
-
-140:	; found zbran or bran
-
-		MOV		X2, #0
-		LDRH	W0,	[X3, #2]
-		CMP		W0, #4000
-		B.eq	145f		; ours to change
-
-		SUB		X3, X3, #2
-		B		110b
-
-
-
-145:	; found zbran
-
-		SUB     X4, X5, X3  ; dif between zbran and else.
-		ADD		X3, X3, #2  ; branch data follows zbran
-
+		SUB     X4, X15, X5  ; dif between zbran and else.
 		ADD		X4, X4, #4
-
 		ADD 	W4, W4, #32 ; avoid confusion
-		STRH	W4, [X3]	; store that
-		MOV		X0, #0
+		STRH	W4, [X5]	; store that
 
+		MOV		X0, #0
 		B		200f
 
 190:	; error out 
 		MOV	X0, #-1
 
-		B		200f
-
 200:
-		; restore registers for compiler loop
-		LDP     LR, X16, [SP], #16
-		LDP		X3, X4, [SP], #16	
-		LDP		X22, X28, [SP], #16	
-
 		RET		
 
 ; if top of stack is zero branch
@@ -3052,18 +2959,17 @@ dzbranchz_notrace:
 
 		LDR		X1, [X16, #-8]
 		SUB		X16, X16, #8	
-		CMP		X1, #-1
-		B.eq	90f
+		CMP		X1, #0
+		B.ne	90f
 
 ; it is zero, branch forwards n tokens		
 80:
-		ADD		X15, X15, #2
-		LDRH	W0, [X15] 		; offset to endif
+	 
+		LDRH	W0, [X15, #2] 		; offset to endif
 		SUB		W0, W0, #32		; avoid confusion 
 
 		do_trace
-
-		SUB		X0, X0, #4
+		SUB		X0, X0, #2
 		ADD		X15, X15, X0	; change IP
 
 		do_trace
@@ -3610,8 +3516,6 @@ dnoteqz:	; <>
 		RET
 
 
-		RET
-
 
 
 dequz: ; "=" 
@@ -3654,6 +3558,18 @@ greaterthanz:
 
 dgtc: ;  ">"  
 		RET		
+
+
+
+
+dinvertz:	; INVERT
+
+		LDR		X0, [X16, #-8] 
+		SUB		X16, X16, #8
+		MVN		X0, X0
+		STR 	X0, [X16], #8
+		RET
+
 
 dqmz: ; "?" if zero
 		RET
@@ -4855,8 +4771,8 @@ dend:
 			; words that take inline literals < 16
 			makeword "#LITS", dlitz, dlitc,  0       		; 1
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
-			makeword "#ZBRANCH", dzbranchz, dzbranchc,  0   ; 3
-			makeword "#BRANCH", dbranchz, dbranchc,  0   	; 4
+			makeword "(IF)", dzbranchz, dzbranchc,  0 	    ; 3
+			makeword "(ELSE)", dbranchz, dbranchc,  0   	; 4
 			makeword "#END", 0, 0,  0       				; 5
 			makeword "#6", 0, 0,  0   						; 6
 			makeword "#7", 0, 0,  0     	  				; 7
@@ -4879,6 +4795,7 @@ dend:
 			makeword "(DOWNDOER)", 	ddowndoerz, 0 , 0		; 22
 			makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
 	 		makeword "(END)", 		0, 0 , 0				; 24
+		
 
 			makeemptywords 84
 
@@ -4949,6 +4866,7 @@ edict:
 			makeemptywords 48
 		 	
 			makeqvword 102
+			makeword "FALSE", dconstz, dconstc,  0
 			makeword "FORGET", clean_last_word , 0, 0 
 			makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
 			makeword "FINDLIT", dfindlitz, dfindlitc,  0
@@ -4974,6 +4892,7 @@ hdict:
 			makeqvword 105
 			makeword "I", diloopz, diloopc,  0
 			makeword "IF", difz, difc,  0
+			makeword "INVERT", dinvertz, 0,  0
 
 idict:
 			makeemptywords 66
@@ -5113,6 +5032,7 @@ rdict:
 
 sdict:
 			makeemptywords 50
+			makeword "TRUE", dconstz, dconstc,  -1
 			makeword "TRACING?", dtraqz, 0, 0
 			makeword "TRON", dtronz, 0, 0
 			makeword "TROFF", dtroffz, 0, 0
