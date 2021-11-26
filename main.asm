@@ -3548,6 +3548,51 @@ dltc: ;  "<"
 		RET		
 
 
+dequalzz:	; 0=
+
+		LDR		X0, [X16, #-8] 
+		SUB		X16, X16, #8
+		CMP		X0, #0
+		B.eq	10f
+		MOV		X0, XZR ; true
+		B		20f
+10:
+		MVN		X0, XZR
+20:
+		STR 	X0, [X16], #8
+		RET
+
+
+dltzz:	; 0<
+
+		LDR		X0, [X16, #-8] 
+		SUB		X16, X16, #8
+		CMP		X0, #0
+		B.lt	10f
+		MOV		X0, XZR ; true
+		B		20f
+10:
+		MVN		X0, XZR
+20:
+		STR 	X0, [X16], #8
+		RET
+
+dgtzz:	; 0>
+
+		LDR		X0, [X16, #-8] 
+		SUB		X16, X16, #8
+		CMP		X0, #0
+		B.gt	10f
+		MOV		X0, XZR ; true
+		B		20f
+10:
+		MVN		X0, XZR
+20:
+		STR 	X0, [X16], #8
+		RET
+
+
+
 
 dnoteqz:	; <>
 
@@ -5171,6 +5216,10 @@ zdict:
 			makeword "24+", dnplusz , 0, 24
 			makeword "24-", dnsubz , 0, 24
 			
+			makeword "0=", dequalzz, 0 , 0
+			makeword "0<", dltzz, 0 , 0
+			makeword "0>", dgtzz, 0 , 0
+
 			makeword "/MOD", dsmodz , dsmodc, 0
 
 			makeword ".VERSION", announce , 0, 0
@@ -5183,6 +5232,7 @@ zdict:
 			makeword ".S", ddotsz, 0 , 0
 			makeword ".'", dstrdotz, dstrdotc , 0
 			makeword "<>", dnoteqz, 0 , 0
+		
  			
 
 
