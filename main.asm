@@ -3409,6 +3409,19 @@ dplusz: ; +
 dplusc: ; 
 		RET
 
+
+
+dorz: ; OR
+	 
+		B		orz
+
+		RET
+
+dorc: ; 
+		RET
+
+
+
 ddropz: ;  
 		SUB 	X16, X16, #8
 		RET
@@ -4815,6 +4828,8 @@ hashdict:
 
 			makeword "ABS" , dabsz, dabsc, 0
 
+			makeword "AND" , dandz, 0, 0
+
 			makeqvword 97
 			makeword "A", dvaraddz, dvaraddc,  8 * 65 + ivars	 
 	
@@ -4941,7 +4956,7 @@ mdict:
 ndict:		
 			makeemptywords 62
 
-
+			makeword "OR", dorz, 0, 0
 			makeword "OVER", doverz, doverc, 0
 			makeqvword 111
 			makeword "O", dvaraddz, dvaraddc,  8 * 79 + ivars	
