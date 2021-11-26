@@ -3918,17 +3918,23 @@ dstrdotz:
 
 ; compiles string into the string literal pool.
 ; compiles string literal token and value into word.
+
+
 dstrdotc:
 
-		STP	    LR,  X15, [SP, #-16]!
+		STP	    LR,  XZR, [SP, #-16]!
+	
+
+
 		; clear target space
 		ADRP	X8, string_buffer@PAGE	   
 	    ADD		X8, X8, string_buffer@PAGEOFF
 		MOV		X22, X8
-
 		.rept    64
 			STP		XZR, XZR, [X22], #16
 		.endr
+
+	 
 
 		MOV		X22, X8
 	 	
@@ -3936,78 +3942,133 @@ dstrdotc:
 
 10:		LDRB	W0, [X23], #1
 		CMP		W0, #39 ; '
-		b.eq	90f
+		b.eq	200f
 		CMP		W0, #10
-		B.eq	90f
+		B.eq	990f
 		CMP		W0, #12
-		B.eq	90f
+		B.eq	990f
 		CMP		W0, #13
-		B.eq	90f
+		B.eq	990f
  		CMP		W0, #0
-		B.eq	90f
+		B.eq	990f
 
 30: 	STRB	W0, [X22], #1
 		ADD		W1, W1, #1
-		CMP		W1, #255	; size limit
+		
 		B.ne	10b
 
+ 
 
-	 	CMP		W1, #32		; count
-		B.lt	40
+	 	CMP		W1, #63		; count
+		B.lt	200f
 		
 		MOV		W3, #0
 
-
-50:		; long string
-		ADRP	X8, long_strings@PAGE	   
-	    ADD		X12, X8, long_strings@PAGEOFF
-52:	 	
-		LDR		X0, [X12]
-		CBZ		X0, 55f
-		CMP		X0, #-1
-		B.eq	80f ; string full
-		ADD		X12, X12, #256
-		ADD		W3, W3, #1
-		B		52b
-
-55:		MOV		X22, X8	
-		.rept 16
-		LDP		X0, X1, [X12], #16
-		STP		X0, X1, [X22], #16
-		.endr
-		B		90f
+	
 
 
-40:		; short string
-		; find free short string
+
+200:	; short string
+
+
+		MOV		X22, X8
+		MOV		W7, #53					 
+		MOV		X8, #51721
+		MOVK	X8, #15258, LSL #16		 
+		MOV		W1,	#0					 
+		MOV		W2, #1					 
+
+205:	LDRB	W0, [X22], #1
+ 		CBZ		W0,  208f
+
+		ADD		W0, W0, #1
+		MUL		W3, W2, W0
+		ADD		W1,	W1, W3
+		MUL		W2, W2, W7
+		SDIV	W4, W2, W8
+		ADD		W1, W1, W4
+		ADD		X22, X22, #1
+		B		205b
+
+		MOV		X2, X1
+
+
+208:		
+
+		ADRP	X8, short_strings_hash@PAGE	   
+	    ADD		X13, X8, short_strings_hash@PAGEOFF
+	 
+		MOV		X3, #0	; position in table		
+	
+210:
+		LDR		X0,	[X13, X3, LSL#3]
+		CBZ		X0, 220f
+		CMP		X0, X3 ; is this our hash?
+		B.eq 	800f   ; already in table
+		ADD		X3, X3, #1
+		B		210b
+
+220:  	; found free slot at x3
+
+		 
+
+		STR		X2, [X13, X3, LSL#3]		; store hash
+
+
+		MOV		X0, X3
+		LSL		X0, X0, #6
+
+
+		ADRP	X8, string_buffer@PAGE	   
+	    ADD		X8, X8, string_buffer@PAGEOFF
+		MOV		X22, X8
 
 		ADRP	X8, short_strings@PAGE	   
-	    ADD		X12, X8, short_strings@PAGEOFF
-42:	 	
-		LDR		X0, [X12]
-		CBZ		X0, 45f
-		CMP		X0, #-1
-		B.eq	80f ; string full
-		ADD		X12, X12, #64
-		ADD		W3, W3, #1
-		B		42b
+	    ADD		X13, X8, short_strings@PAGEOFF
+		ADD		X13, X13, X0 ; string base + n * 64
 
-45:		MOV		X22, X8	
-		.rept 4	
-		LDP		X0, X1, [X12], #16
-		STP		X0, X1, [X22], #16
+		; copy from string buffer to string
+		.rept 4
+		LDP		X0, X1, [X22], #16
+		STP		X0, X1, [X13], #16
 		.endr
-		B		90f
-
-80:		; strings full
+		B 		800f
 
 
-		STR		X3, [X16], #8
+300:	; long string
 
-90:
-		LDP		LR, X15, [SP], #16	
+
+800:	; end no error
+		MOV		W0, #12 ; (.S)
+		STRH	W0, [X15], #2
+		STRH	W3, [X15]
+		B		990f
+
+
+980:	; hash table full
+		MOV		X0, #-1	
+		LDP		LR, XZR, [SP], #16	
 		RET
 
+990:	MOV		X0, #0
+		LDP		LR, XZR, [SP], #16	
+		RET
+
+
+
+
+; print short literal string, inline literal
+dslitSzdot: 
+		
+		ADRP	X8, short_strings@PAGE	   
+	    ADD		X12, X8, short_strings@PAGEOFF
+		ADD		X15, X15, #2		
+		LDRH	W0, [X15]
+		LSL		X0, X0, #6
+		ADD		X0, X0, X12
+		B		sayit
+		;
+		RET
 
 ; fetch address of short literal string, inline literal
 dslitSz:
@@ -4025,11 +4086,11 @@ dhashbufferz:
 	    ADD		X8, X8, string_buffer@PAGEOFF
 		MOV		X12, X8
 
-		MOV		W7, #53					; p=53		
+		MOV		W7, #53					 
 		MOV		X8, #51721
-		MOVK	X8, #15258, LSL #16		; m=1e9+9
-		MOV		W1,	#0					; hash
-		MOV		W2, #1					; p_pow
+		MOVK	X8, #15258, LSL #16		 
+		MOV		W1,	#0					 
+		MOV		W2, #1					 
 
 10:		LDRB	W0, [X12], #1
  		CBZ		W0,  90f
@@ -4514,6 +4575,13 @@ string_buffer:
 .zero 2048
 
  
+short_strings_hash:
+.rept  2048
+	.quad	0
+.endr
+.quad	-1
+.quad	-1
+
 short_strings:
 .rept  2048
 	.zero 	64
@@ -4521,6 +4589,11 @@ short_strings:
 .quad	-1
 .quad	-1
 
+
+long_strings_hash:
+.rept  2048
+	.quad	-1
+.endr
 
 
 long_strings:
@@ -4589,7 +4662,7 @@ dend:
 			makeword "#9", 0, 0,  0     					; 9
 			makeword "#$S", dslitSz, 0,  0     				; 10
 			makeword "#$L", dslitLz, 0,  0     				; 11
-			makeword "#12", 0, 0,  0   						; 12
+			makeword "(.S)", dslitSzdot, 0,  0   			; 12
 			makeword "#13", 0, 0,  0       					; 13
 			makeword "#14", 0, 0,  0     					; 14
 			makeword "#15", 0, 0,  0     					; 15
@@ -4816,6 +4889,8 @@ rdict:
 			; using the assmbler, WITHOUT reducing the empty
 			; word count above it.
 
+
+			makeword "SHORT$HASH", dvaraddz, dvaraddc,  short_strings_hash
 			makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 			makeword "SWAP", dswapz , dswapc, 0 
 	
