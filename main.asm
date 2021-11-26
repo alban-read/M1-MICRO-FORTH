@@ -2845,7 +2845,7 @@ dtickz: ; ' - get address of NEXT words data field
 
 
 ; control flow
-; condition IF .. ENDIF 
+; condition IF .. ELSE .. ENDIF 
 
 
 
@@ -2930,6 +2930,7 @@ dendifc:
 		SUB     X4, X15, X3 ; dif between zbran and endif.
 		ADD		X3, X3, #2  ; branch data follows zbran
 		SUB 	X4, X4, #2
+		ADD		W4, W4, #32  ; avoid confusion
 		STRH	W4, [X3]	; store that
 		MOV		X0, #0
 
@@ -2969,6 +2970,7 @@ delsec: ;  at compile time inlines the ELSE branch
 
 		MOV		X5, X15 	; keep X15 safe
 		MOV		X2, #0
+
 		; back out our token
 		; we will compile a branch instead
 
@@ -3021,7 +3023,7 @@ delsec: ;  at compile time inlines the ELSE branch
 
 		ADD		X4, X4, #4
 
-
+		ADD 	W4, W4, #32 ; avoid confusion
 		STRH	W4, [X3]	; store that
 		MOV		X0, #0
 
@@ -3057,7 +3059,39 @@ dzbranchz_notrace:
 80:
 		ADD		X15, X15, #2
 		LDRH	W0, [X15] 		; offset to endif
-		 
+		SUB		W0, W0, #32		; avoid confusion 
+
+		do_trace
+
+		SUB		X0, X0, #4
+		ADD		X15, X15, X0	; change IP
+
+		do_trace
+
+		RET
+
+90:		
+		ADD		X15, X15, #2	; skip offset
+	
+		RET  
+
+
+
+dzbranchc:
+	
+
+		RET
+
+
+; always branch 
+dbranchz:
+
+		do_trace	
+ 	
+ 
+		ADD		X15, X15, #2
+		LDRH	W0, [X15] 		; offset to endif
+		SUB		W0, W0, #32		; avoid confusion 
 
 		do_trace
 
@@ -3068,29 +3102,6 @@ dzbranchz_notrace:
 
 		RET
 
-; it is not zero just continue
-
-90:		
-		ADD		X15, X15, #2	; skip offset
-	
-	 
-	
-		RET  
-
- 
- 
- 
-
-dzbranchc:
-	
-
-		RET
-
-
-; branch 
-dbranchz:
-		do_trace	
-		B		80b ; just branch
 
 
 dbranchc:
@@ -3911,65 +3922,9 @@ ddotsz:
 
 ; executes .' using an inline literal lookup.
 
-dstrdotz:
-		RET
+.macro short_string_hash
 
-
-
-; compiles string into the string literal pool.
-; compiles string literal token and value into word.
-
-
-dstrdotc:
-
-		STP	    LR,  XZR, [SP, #-16]!
-	
-
-
-		; clear target space
-		ADRP	X8, string_buffer@PAGE	   
-	    ADD		X8, X8, string_buffer@PAGEOFF
-		MOV		X22, X8
-		.rept    64
-			STP		XZR, XZR, [X22], #16
-		.endr
-
-	 
-
-		MOV		X22, X8
-	 	
-		MOV		W1, #0
-
-10:		LDRB	W0, [X23], #1
-		CMP		W0, #39 ; '
-		b.eq	200f
-		CMP		W0, #10
-		B.eq	990f
-		CMP		W0, #12
-		B.eq	990f
-		CMP		W0, #13
-		B.eq	990f
- 		CMP		W0, #0
-		B.eq	990f
-
-30: 	STRB	W0, [X22], #1
-		ADD		W1, W1, #1
-		
-		B.ne	10b
-
- 
-
-	 	CMP		W1, #63		; count
-		B.lt	200f
-		
-		MOV		W3, #0
-
-	
-
-
-
-200:	; short string
-
+200:	; short string hash
 
 		MOV		X22, X8
 		MOV		W7, #53					 
@@ -3994,7 +3949,10 @@ dstrdotc:
 
 
 208:		
+.endm
 
+
+.macro	short_hash_find_free
 		ADRP	X8, short_strings_hash@PAGE	   
 	    ADD		X13, X8, short_strings_hash@PAGEOFF
 	 
@@ -4010,7 +3968,60 @@ dstrdotc:
 
 220:  	; found free slot at x3
 
-		 
+.endm
+
+.macro clear_string_buffer
+		; clear target space
+		ADRP	X8, string_buffer@PAGE	   
+	    ADD		X8, X8, string_buffer@PAGEOFF
+		MOV		X22, X8
+		.rept    64
+			STP		XZR, XZR, [X22], #16
+		.endr
+
+		MOV		X22, X8	
+.endm
+
+
+; run time .'  for interpreter only
+
+dstrdotz:
+
+
+		STP	    LR,  XZR, [SP, #-16]!
+	
+		clear_string_buffer
+
+		MOV		W1, #0
+
+10:		LDRB	W0, [X23], #1
+		CMP		W0, #39 ; '
+		b.eq	200f
+		CMP		W0, #10
+		B.eq	990f
+		CMP		W0, #12
+		B.eq	990f
+		CMP		W0, #13
+		B.eq	990f
+ 		CMP		W0, #0
+		B.eq	990f
+
+30: 	STRB	W0, [X22], #1
+		ADD		W1, W1, #1
+		
+		B.ne	10b
+
+	 	CMP		W1, #255		; count
+		B.lt	200f
+		
+		MOV		W3, #0
+
+		B		770f 		; string too long
+
+
+
+		short_string_hash
+		short_hash_find_free
 
 		STR		X2, [X13, X3, LSL#3]		; store hash
 
@@ -4018,6 +4029,93 @@ dstrdotc:
 		MOV		X0, X3
 		LSL		X0, X0, #6
 
+		ADRP	X8, string_buffer@PAGE	   
+	    ADD		X8, X8, string_buffer@PAGEOFF
+		MOV		X22, X8
+
+		ADRP	X8, short_strings@PAGE	   
+	    ADD		X13, X8, short_strings@PAGEOFF
+		ADD		X13, X13, X0 ; string base + n * 64
+		MOV		X2,  X13
+
+		; copy from string buffer to string
+		.rept 16
+		LDP		X0, X1, [X22], #16
+		STP		X0, X1, [X13], #16
+		.endr
+
+		MOV		X0, X2
+		BL		sayit
+
+
+770:	; err string too long.
+
+		MOV		X0, #-1	
+		LDP		LR, X15, [SP], #16	
+		;; TODO
+	 
+		RET
+
+
+780:	; hash table full
+		MOV		X0, #-1	
+		LDP		LR, X15, [SP], #16	
+		;; TODO
+
+		RET
+
+
+800:	; normal exit
+		
+		LDP		LR, X15, [SP], #16	
+	 
+		RET
+
+
+
+; compiles string into the string literal pool.
+; compiles string literal token and value into word.
+dstrdotc:
+
+		STP	    LR,  XZR, [SP, #-16]!
+	
+		clear_string_buffer
+
+		MOV		W1, #0
+
+10:		LDRB	W0, [X23], #1
+		CMP		W0, #39 ; '
+		b.eq	200f
+		CMP		W0, #10
+		B.eq	990f
+		CMP		W0, #12
+		B.eq	990f
+		CMP		W0, #13
+		B.eq	990f
+ 		CMP		W0, #0
+		B.eq	990f
+
+30: 	STRB	W0, [X22], #1
+		ADD		W1, W1, #1
+		
+		B.ne	10b
+
+	 	CMP		W1, #255		; count
+		B.lt	200f
+		
+		MOV		W3, #0
+
+		B		880f 		; string too long
+
+		
+		short_string_hash
+		short_hash_find_free
+
+		STR		X2, [X13, X3, LSL#3]		; store hash
+
+
+		MOV		X0, X3
+		LSL		X0, X0, #6
 
 		ADRP	X8, string_buffer@PAGE	   
 	    ADD		X8, X8, string_buffer@PAGEOFF
@@ -4028,7 +4126,7 @@ dstrdotc:
 		ADD		X13, X13, X0 ; string base + n * 64
 
 		; copy from string buffer to string
-		.rept 4
+		.rept 16
 		LDP		X0, X1, [X22], #16
 		STP		X0, X1, [X13], #16
 		.endr
@@ -4041,8 +4139,14 @@ dstrdotc:
 800:	; end no error
 		MOV		W0, #12 ; (.S)
 		STRH	W0, [X15], #2
+		ADD		W3, W3, #32 ; avoid confusion.
 		STRH	W3, [X15]
 		B		990f
+
+880:	; string too long
+		MOV		X0, #-1	
+		LDP		LR, XZR, [SP], #16	
+		RET
 
 
 980:	; hash table full
@@ -4055,23 +4159,40 @@ dstrdotc:
 		RET
 
 
-
-
-; print short literal string, inline literal
+; print a short literal string, inline literal
 dslitSzdot: 
 		
+		STP		LR,  X12, [SP, #-16]!
+		STP		X0,  X8, [SP, #-16]!
+
+		ADRP	X8, short_strings@PAGE	   
+	    ADD		X12, X8, short_strings@PAGEOFF
+
+		ADD		X15, X15, #2		
+		LDRH	W0, [X15]
+		SUB 	W0, W0, #32 ; avoid confusion
+ 
+		LSL		X0, X0, #6
+		ADD		X0, X0, X12
+
+		BL		sayit
+		
+		LDP     X0, X8, [SP], #16
+		LDP     LR, X12, [SP], #16
+
+		RET
+
+; fetch address of a short literal string, inline literal
+dslitSz:
 		ADRP	X8, short_strings@PAGE	   
 	    ADD		X12, X8, short_strings@PAGEOFF
 		ADD		X15, X15, #2		
 		LDRH	W0, [X15]
+		SUB 	W0, W0, #32 ; avoid confusion
 		LSL		X0, X0, #6
 		ADD		X0, X0, X12
-		B		sayit
+		B		stackit
 		;
-		RET
-
-; fetch address of short literal string, inline literal
-dslitSz:
 		RET
 
 
@@ -4535,7 +4656,6 @@ ivars:	.zero 256*16
 		.zero 	512
 
 
-
 .align 16 
 
 ; if the compiler sees a long lit > 16000 it makes a long lit
@@ -4584,12 +4704,14 @@ short_strings_hash:
 
 short_strings:
 .rept  2048
-	.zero 	64
+	.zero 	256
 .endr
 .quad	-1
 .quad	-1
 
 
+
+;; long strings  
 long_strings_hash:
 .rept  2048
 	.quad	-1
@@ -4597,8 +4719,8 @@ long_strings_hash:
 
 
 long_strings:
-.rept  1024
-	.zero 	256
+.rept  128
+	.zero 	512
 .endr
 .quad	-1
 .quad	-1
@@ -4662,7 +4784,7 @@ dend:
 			makeword "#9", 0, 0,  0     					; 9
 			makeword "#$S", dslitSz, 0,  0     				; 10
 			makeword "#$L", dslitLz, 0,  0     				; 11
-			makeword "(.S)", dslitSzdot, 0,  0   			; 12
+			makeword "(.')", dslitSzdot, 0,  0   			; 12
 			makeword "#13", 0, 0,  0       					; 13
 			makeword "#14", 0, 0,  0     					; 14
 			makeword "#15", 0, 0,  0     					; 15
@@ -5022,7 +5144,7 @@ zdict:
 			makeword "-LOOP", 0 , dmloopc, 0
 			makeword ".R", ddotrz, 0 , 0
 			makeword ".S", ddotsz, 0 , 0
-			makeword ".'", 0, dstrdotc , 0
+			makeword ".'", dstrdotz, dstrdotc , 0
 
  			
 
