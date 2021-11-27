@@ -752,6 +752,25 @@ word2number:	; converts ascii at word to 32bit number
 		RET
 
 
+
+
+
+dsleepz: ; sleep	
+	
+		LDR		X0, [X16, #-8]
+		SUB		X16, X16, #8	
+			
+12:
+		save_registers
+		STP		X1, X0, [SP, #-16]!
+		BL		_sleep 
+		ADD     SP, SP, #16 
+		restore_registers  
+		RET
+
+
+
+
 chkunderflow: ; check for stack underflow
 		ADRP	X0, spu@PAGE	   
 	    ADD		X0, X0, spu@PAGEOFF
@@ -1198,57 +1217,6 @@ fw1:
 
 finish_list: ; we did not find a defined word.
 
-	 
-
-check_integer_variables:
-
-		; look for a single letter variable name
-		; followed by @ (fetch) or ! (store)
- 
-		ADRP	X22, zword@PAGE	   
-	    ADD		X22, X22, zword@PAGEOFF
-		LDRB	W0, [X22, #1]
-		CMP		W0, #'@'
-		B.eq	ivfetch
-		CMP		W0, #'!'
-		B.eq	ivset
-		B		20f
-
-ivfetch: ; from variable push to stack
-		LDRB 	W0,	[X22]
-		LSL		X0, X0, #3
-		ADRP	X27,ivars@PAGE 
-		ADD		X27, X27, ivars@PAGEOFF
-		LDR		X0, [X27, X0]
-		STR		X0, [X16], #8	
-		; todo check overflow.
-		B       advance_word
-
-ivset:	; from stack set variable
-		LDRB 	W0,	[X22]
-		LSL     X0, X0, #3
-		LDR		X1, [X16, #-8]
-		SUB		X16, X16, #8
-		; todo check under-flow.
-
-		; check underflow
-		ADRP	X2, spu@PAGE	   
-	    ADD		X2, X2, spu@PAGEOFF
-		CMP		X16, X2
-		b.gt	ivset2	
-
-		; reset stack
-		reset_data_stack
-		; report underflow
-		BL		sayunderflow
-		B		10b
-
-ivset2:		
-		ADRP	X27,ivars@PAGE 
-		ADD		X27, X27, ivars@PAGEOFF
-		ADD     X27, X27, X0
-		STR		X1, [X27]
-		B		10b
 
 
 20:
@@ -1760,21 +1728,6 @@ dfromrc:
 
 ; DO .. LOOP, +LOOP uses the return stack.
 
-; #DOER (5)
-; #LOOPER (7)
-
-; logic 
-; TEST first, perform body. check loop control and repeat TEST.
-; #DOER runs once, checks if end of loop reached, if so branch forward.
-; #LOOPER runs every loop 
-; #LOOPER increment loop control; and branches back.
-; #+LOOPER take increment from stack; and branches back.
-; OR at end of loop continues
-; Loop takes 8 bytes [#DOER][offset] ... [#LOOPER][offset]
-
-; DO LOOP, +LOOP
-
-
 
 ; #21DOER 
 ; checks arguments
@@ -2057,10 +2010,6 @@ do_loop_err:
 			
 		RET	
 
-
-
-
-
 ; compile in DO LOOP, +LOOP
 
 doerc:
@@ -2201,10 +2150,7 @@ clean_last_word:
  		STP		X1, X1, [X0], #16
 		STP		X1, X1, [X0], #16
 		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
-		STP		X1, X1, [X0], #16
+
 
 		ADRP	X8, lasthere@PAGE	
 		ADD		X8, X8, lasthere@PAGEOFF
@@ -3173,6 +3119,11 @@ dtraqz:
 
 
 
+dtickerz:
+		MRS     X0, cntpct_el0
+		B		stackit
+
+
 runintcz: ; interpret the list of tokens at word + 
 
 		; over ride X0 to compile time token address
@@ -3182,6 +3133,8 @@ runintcz: ; interpret the list of tokens at word +
 
 runintz:; interpret the list of tokens at X0
 		; until (END) #24
+
+
 
 		trace_show_word		
 
@@ -3228,6 +3181,8 @@ dontcrash: ; treat 0 as no-op
 90:
 		; restore IP
 dexitz:		 
+		 
+
 		LDP		LR, X15, [SP], #16	
 	 
 		RET
@@ -5016,7 +4971,7 @@ rdict:
 			makeword "SHORT$HASH", dvaraddz, dvaraddc,  short_strings_hash
 			makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 			makeword "SWAP", dswapz , dswapc, 0 
-	
+			makeword "SLEEP", dsleepz , 0, 0 
 
 			makeword "SPACES", spacesz , spacesc, 0 
 		
@@ -5034,6 +4989,9 @@ sdict:
 			makeemptywords 50
 			makeword "TRUE", dconstz, dconstc,  -1
 			makeword "TRACING?", dtraqz, 0, 0
+			makeword "TICKS", dtickerz, 0, 0
+			makeword "TPMS", dconstz, dconstz, 24000
+			makeword "TPS",  dconstz, dconstz, 24000000
 			makeword "TRON", dtronz, 0, 0
 			makeword "TROFF", dtroffz, 0, 0
 			makeword "TYPEZ", ztypez, ztypec, 0	
