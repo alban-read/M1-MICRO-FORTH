@@ -163,9 +163,10 @@
 	.endr
 .endm
 
+.macro  trace_show_word_
+.endm
 
-
-.macro  trace_show_word		
+.macro  trace_show_word
 
 		CBZ		X6,	999f
 
@@ -189,8 +190,10 @@
 999:
 .endm
 
+.macro  do_trace_	
+.endm
 
-.macro  do_trace		
+.macro  do_trace	
 		CBZ		X6,	999f
 		STP	    LR,  X0, [SP, #-16]!
 	 
@@ -1095,6 +1098,9 @@ main:
 		 
 
 init:	
+
+		ADRP   X27, dend@PAGE	
+		ADD	   X27, X27, dend@PAGEOFF
 
 		ADRP	X0, dsp@PAGE	   
 	    ADD		X0, X0, dsp@PAGEOFF
@@ -2164,7 +2170,27 @@ clean_last_word:
 		RET
 
 
+;;; test FIB
 
+dtstfib:
+		STP	   LR,  X15, [SP, #-16]!
+
+		LDR	   X0, [X16, #-8]
+		MOV	   X1, #0
+		MOV	   X2, #1
+floop:
+		MOV	   X3, X2
+		ADD	   X2, X1, X2
+		MOV    X1, X3
+		SUB    X0, X0, #1
+		CMP    X0, #1
+		B.ne   floop
+
+		MOV     X0, X2
+		STR		X0, [X16], #8
+		LDP		LR, X12, [SP], #16
+		RET	
+		
 	 
 
 ;; Introseption and inspection
@@ -3124,6 +3150,95 @@ dtickerz:
 		B		stackit
 
 
+dtimeitz: ; time the next work
+
+		save_registers
+
+	
+		
+		BL		advancespaces
+		BL		collectword
+
+		BL 		empty_wordQ
+		B.eq	190f
+
+		BL		start_point
+
+120:
+		LDR		X21, [X28, #8] ; name field
+
+		CMP     X21, #0        ; end of list?
+		B.eq    190f		   ; not found 
+		CMP     X21, #-1       ; undefined entry in list?
+		b.eq    170f
+
+		BL      get_word
+		LDR		X21, [X28, #8] ; name field
+		CMP		X21, X22       ; is this our word?
+		B.ne	170f
+
+
+		MOV     X1,	X28  
+ 
+		; WORD IN X1
+
+		LDR     X0, [X1]		; words data
+		LDR     X2, [X1, #24]	; words code
+
+	 	CBZ		X1, 200f
+		CBZ		X2, 200f
+
+		MRS     X12, cntpct_el0
+
+		STP		LR,  X12, [SP, #-16]!
+
+		BLR     X2 		; with X0 as data and X1 as address
+		
+		LDP		LR, X12, [SP], #16	
+
+	
+		MRS     X1,  cntpct_el0
+		SUB		X0, X1, X12
+		MOV     X12, X0
+
+		MOV     X2, #1000
+		MOV 	X1, #24			
+		MUL     X1, X1, X2
+		UDIV    X0, X0, X1		; ms
+
+		BL		X0print
+		
+	    ADRP	X0, tcomer21@PAGE	
+		ADD		X0, X0, tcomer21@PAGEOFF
+		BL		sayit
+
+		MOV		X0, X12
+		MOV     X2, #100
+		MOV 	X1, #24			
+		MUL     X1, X1, X2
+		UDIV    X0, X0, X1		; ns
+
+
+		BL		X0print
+		
+	    ADRP	X0, tcomer22@PAGE	
+		ADD		X0, X0, tcomer22@PAGEOFF
+		BL		sayit
+
+		B 		200f
+
+170:	; next word in dictionary
+		SUB		X28, X28, #64
+		B		120b
+
+190:	; error out 
+		MOV	X0, #-1
+
+200:
+		restore_registers
+		RET
+
+
 runintcz: ; interpret the list of tokens at word + 
 
 		; over ride X0 to compile time token address
@@ -3134,41 +3249,27 @@ runintcz: ; interpret the list of tokens at word +
 runintz:; interpret the list of tokens at X0
 		; until (END) #24
 
-
-
 		trace_show_word		
 
 		; SAVE IP 
 		STP	   LR,  X15, [SP, #-16]!
-
-		MOV    X15, X0
- 		ADRP   X12, dend@PAGE	
-		ADD	   X12, X12, dend@PAGEOFF
-		SUB	   X15, X15, #2
+		SUB	   X15, X0, #2
 		
 10:		; next token
-		ADD		X15, X15, #2
-		LDRH	W1,  [X15]
 
+		LDRH	W1, [X15, #2]!
+		
 		CMP     W1, #24 ; (END) 
 		B.eq    90f
- 
-		LSL		W1, W1, #6	    ;  TOKEN*64 
-		ADD		X1, X1, X12     ; + dend
+
+ 		LSL		W0, W1, #6	   
+		ADD		X1, X27, X0  ; + dend
 	 
-		 
-		LDR     X0, [X1]		; words data
 		LDR     X2, [X1, #24]	; words code
-
-	 	CBZ		X1, dontcrash
+		LDR     X0, [X1]		; words data
 		CBZ		X2, dontcrash
- 
-		STP		LR,  X12, [SP, #-16]!
 
-		BLR     X2 		; with X0 as data and X1 as address
-		
-		LDP		LR, X12, [SP], #16	
- 
+		BLR     X2 		; with X0 as data and X1 as address	 
 
 		CBZ		X6, 10b
 
@@ -3179,12 +3280,20 @@ dontcrash: ; treat 0 as no-op
 
 		B		10b
 90:
-		; restore IP
-dexitz:		 
-		 
 
+		
 		LDP		LR, X15, [SP], #16	
-	 
+		RET
+
+
+
+dexitz: ; EXIT
+	
+		RET
+
+dexitc: ; EXIT compiles end
+		MOV		X0, #5 ; (EXIT)
+		STRH	W0, [X15]
 		RET
 
 dlrbz: ; (
@@ -3264,8 +3373,14 @@ dbreakc: ;
 
 
 dplusz: ; +
-		B  		addz
+		LDR		X0, [X16, #-8]
+		LDR		X1, [X16, #-16]
+		ADD		X0, X0, X1
+		STR		X0, [X16, #-16]
+		SUB		X16, X16, #8
 		RET
+
+
 
 dplusc: ; 
 		RET
@@ -3392,7 +3507,7 @@ dltz: ; "<" less than
 lessthanz:
 		LDR		X0, [X16, #-8] 
 		LDR		X1, [X16, #-16]
-		CMP  	X0, X1		
+		CMP  	X1, X0		
 		B.gt	10f
 		B.eq	10f
 		MVN		X0, XZR ; true
@@ -3453,6 +3568,20 @@ dgtzz:	; 0>
 		RET
 
 
+dgt1z:	; 1>
+
+		LDR		X0, [X16, #-8] 
+		SUB		X16, X16, #8
+		CMP		X0, #1
+		B.gt	10f
+		MOV		X0, XZR ; true
+		B		20f
+10:
+		MVN		X0, XZR
+20:
+		STR 	X0, [X16], #8
+		RET
+
 
 
 dnoteqz:	; <>
@@ -3498,7 +3627,7 @@ dgtz: ; ">" greater than
 greaterthanz:
 		LDR		X0, [X16, #-8] 
 		LDR		X1, [X16, #-16]
-		CMP  	X0, X1		
+		CMP  	X1, X0		
 		B.lt	10f
 		B.eq	10f
 		MVN		X0, XZR ; true
@@ -3622,6 +3751,19 @@ dnsubz:
 dnsubc:	
 		RET	
 
+
+doneminusz: 
+		LDR		X0, [X16, #-8]
+		SUB		X0, X0, #1
+		STR		X0, [X16, #-8]
+		RET
+ 
+dotwominusz:
+		LDR		X0, [X16, #-8]
+		SUB		X0, X0, #2
+		STR		X0, [X16, #-8]
+		RET
+ 
 
 
 nplusz:	;
@@ -4456,6 +4598,13 @@ tliteral: .ascii " Literal Value"
 tcomer20: .ascii "DO .. LOOP error - DO needs two argments.\n "
 		.zero 16
 
+.align 	8
+tcomer21: .ascii "  : ms to run ( "
+		.zero 16
+
+tcomer22: .ascii "  ) ns \n "
+		.zero 16
+
 
 .align 	8
 tforget: .ascii "\nForgeting last_word word: "
@@ -4728,7 +4877,7 @@ dend:
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
 			makeword "(IF)", dzbranchz, dzbranchc,  0 	    ; 3
 			makeword "(ELSE)", dbranchz, dbranchc,  0   	; 4
-			makeword "#END", 0, 0,  0       				; 5
+			makeword "(EXIT)", 0, 0,  0       				; 5
 			makeword "#6", 0, 0,  0   						; 6
 			makeword "#7", 0, 0,  0     	  				; 7
 			makeword "#8", 0, 0,  0   					 	; 8
@@ -4745,7 +4894,7 @@ dend:
 			makeword "(+LOOP)", 	dplooperz, 	0,  0       ; 17
 			makeword "(-LOOP)", 	dmlooperz, 	0,  0       ; 18
 			makeword "(LOOP)", 		dlooperz, 	0,  0       ; 19
-			makeword "EXIT", 		dexitz, 	0,  0       ; 20
+			makeword "#20", 		0, 	0,  0               ; 20
 			makeword "(DOER)", 		ddoerz, 	0,  0       ; 21
 			makeword "(DOWNDOER)", 	ddowndoerz, 0 , 0		; 22
 			makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
@@ -4801,8 +4950,8 @@ cdict:
 			makeword "DP", dvaraddz, dvaraddc,  here	
 			makeword "DO", 0 , doerc, 0 
 			makeword "DOWNDO", 0 , ddownerc, 0 
-			makeword "DUP", ddupz , ddupc, 0 
-			makeword "DROP", ddropz , ddropc, 0 	 	
+			makeword "DUP", ddupz , 0, 0 
+			makeword "DROP", ddropz , 0, 0 	 	
 			makeword "DEPTH", ddepthz , 0, 0 
 
 			makeqvword 100
@@ -4813,6 +4962,7 @@ ddict:
 			makeword "ELSE", 0 , delsec, 0 
 			makeword "ENDIF", 0 , dendifc, 0 
 			makeword "EMIT", emitz , 0, 0 
+			makeword "EXIT", 0, 	dexitc,  0          
 		 	
 			makeqvword 101
 			makeword "E", dvaraddz, dvaraddc,  8 * 69 + ivars	
@@ -4821,6 +4971,9 @@ edict:
 			makeemptywords 48
 		 	
 			makeqvword 102
+
+			makeword "FFIB", dtstfib, 0,  0
+		
 			makeword "FALSE", dconstz, dconstc,  0
 			makeword "FORGET", clean_last_word , 0, 0 
 			makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
@@ -4970,7 +5123,7 @@ rdict:
 
 			makeword "SHORT$HASH", dvaraddz, dvaraddc,  short_strings_hash
 			makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
-			makeword "SWAP", dswapz , dswapc, 0 
+			makeword "SWAP", dswapz , 0, 0 
 			makeword "SLEEP", dsleepz , 0, 0 
 
 			makeword "SPACES", spacesz , spacesc, 0 
@@ -4987,6 +5140,7 @@ rdict:
 
 sdict:
 			makeemptywords 50
+			makeword "TIMEIT", dtimeitz, 0, 0
 			makeword "TRUE", dconstz, dconstc,  -1
 			makeword "TRACING?", dtraqz, 0, 0
 			makeword "TICKS", dtickerz, 0, 0
@@ -5073,8 +5227,8 @@ zdict:
 			makeword "1+", dnplusz , 0, 1 
 			makeword "2+", dnplusz , 0, 2
 			makeword "4+", dnplusz , 0, 4
-			makeword "1-", dnsubz , 0, 1
-			makeword "2-", dnsubz , 0, 2
+			makeword "1-", doneminusz , 0, 1
+			makeword "2-", dotwominusz , 0, 2
 			makeword "2*", dnmulz , 0, 2
 			makeword "2/", dndivz , 0, 2
 			makeword "4*", dnmulz , 0, 2
@@ -5097,7 +5251,7 @@ zdict:
 			makeword "0=", dequalzz, 0 , 0
 			makeword "0<", dltzz, 0 , 0
 			makeword "0>", dgtzz, 0 , 0
-
+			makeword "1>", dgt1z, 0 , 0
 			makeword "/MOD", dsmodz , dsmodc, 0
 
 			makeword ".VERSION", announce , 0, 0

@@ -6,6 +6,16 @@
 
 : TABLE  CR 11 1 DO  11 1 DO  I J *  .  SPACE LOOP CR LOOP ;
 
+
+
+ : run-fib 
+ TICKS 
+    25 0 DO 
+        34 FIB DROP 
+    LOOP 
+ TICKS SWAP - TPMS / . ;
+
+
 : FIB  
   DUP 2 < IF
    DROP 1
@@ -16,9 +26,27 @@
    +
  THEN ;
 
- : run-fib 
- TICKS 
-    25 0 DO 
-        34 FIB DROP 
-    LOOP 
- TICKS SWAP - TPMS / . ;
+
+
+: ul-fib-1
+  34 FIB DROP 
+  34 FIB DROP 
+  34 FIB DROP 
+  34 FIB DROP 
+  34 FIB DROP 
+ ;
+
+ : ul-fib-2
+ ul-fib-1
+ ul-fib-1
+ ul-fib-1
+ ul-fib-1
+ ul-fib-1
+ ;
+
+
+
+ : run-ulfib 
+  TICKS  ul-fib-2  TICKS SWAP - TPMS / . ;
+
+
