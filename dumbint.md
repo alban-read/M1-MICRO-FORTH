@@ -720,8 +720,6 @@ Added DEPTH to check stack depth, led to a fix of underflow check.
 Added depth check to (DOER) avoiding infinite loops when there are not two arguments.
 
 
-
-
 ### IF 
 
 IF          ---         ELSE                          --- ENDIF
@@ -729,4 +727,9 @@ IF          ---         ELSE                          --- ENDIF
 Stack                 Read Location                   Read location 
 Location              Update (IF)                     Update (ELSE)
 
+
+Added TIMING words to assess the speed of the application.
+
+These Tests show that the word token interpreter is very slow.
+Good, speeding it up will be very interesting.
 
