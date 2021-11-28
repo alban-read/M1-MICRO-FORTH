@@ -204,7 +204,7 @@
 		BL		X0halfpr
 		LDRH	W0, [X15]
  		LSL		W0, W0, #6	    ;  TOKEN*64 
-		ADD		X0, X0, X12     ; + dend
+		ADD		X0, X0, X27     ; + dend
 		ADD		X0, X0, #8
 
 		ADRP	X2, startdict@PAGE	
@@ -364,8 +364,7 @@ alldotwords:
 		LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 		LDR		X1, [X8]
 
-		ADRP	X2, dend@PAGE	
-		ADD		X2, X2, dend@PAGEOFF
+		MOV     X2, X27 ; dend
 		B  		20f
 
 
@@ -1404,8 +1403,7 @@ find_word_token:
 
 		; found word (at X28), get token.
 		MOV     X1, X28
-		ADRP	X2, dend@PAGE	
-		ADD		X2, X2, dend@PAGEOFF	
+		MOV     X2, X27 ; dend
 		SUB		X1, X1, X2
 		LSR		X1, X1, #6	 ; * 64
 
@@ -2429,9 +2427,8 @@ see_tokens:
 
 		BL		X0halfpr
 
-	
-		ADRP	X2, dend@PAGE	
-		ADD		X2, X2, dend@PAGEOFF
+		
+		MOV 	X2, X27 ; dend
 		LDRH	W1, [X12]
 		MOV		W14, W1
 		LSL		X1, X1, #6	 ; / 64 
@@ -3082,8 +3079,7 @@ dtickc: ; ' at compile time, turn address of word into literal
 
 
 dnthz: ; from address, what is our position.
- 	 	ADRP	X2, dend@PAGE	
-		ADD		X2, X2, dend@PAGEOFF
+ 	 	MOV     X2, X27 ; dend
 		LDR 	X1, [X16, #-8] 	 
 		SUB		X1, X1, X2
 		LSR		X1, X1, #6	 ; / 64
@@ -3095,8 +3091,7 @@ dnthc: ; '
 
 
 daddrz: ; from our position, address
- 	 	ADRP	X2, dend@PAGE	
-		ADD		X2, X2, dend@PAGEOFF
+ 	 	MOV		X2, X27 ; dend
 		LDR 	X1, [X16, #-8] 	
 		LSL		X1, X1, #6	 ; / 64 
 		ADD		X1, X1, X2
@@ -3296,11 +3291,57 @@ dexitc: ; EXIT compiles end
 		STRH	W0, [X15]
 		RET
 
-dlrbz: ; (
+
+dlcmntz:	; // comment to end of line or /
+dlcmntc:
+
+		SUB		X15, X15, #2
+10:		LDRB	W0, [X23], #1
+		CMP		W0, #'/' 
+		b.eq	990f
+		CMP		W0, #10
+		B.eq	990f
+		CMP		W0, #12
+		B.eq	990f
+		CMP		W0, #13
+		B.eq	990f
+ 		CMP		W0, #0
+		B.eq	990f
+		ADD		W1, W1, #1
+		B 		10b
+
+990:
+		MOV 	X0, #0
 		RET
 
-dlrbc: ; (
+
+dlrbc: 
+dlrbz: ; ( This is a comment that ends with .. )
+
+		SUB		X15, X15, #2
+10:		LDRB	W0, [X23], #1
+		CMP		W0, #')' 
+		b.eq	990f
+		CMP		W0, #10
+		B.eq	990f
+		CMP		W0, #12
+		B.eq	990f
+		CMP		W0, #13
+		B.eq	990f
+ 		CMP		W0, #0
+		B.eq	990f
+		ADD		W1, W1, #1
+		B 		10b
+
+990:
+		MOV 	X0, #0
 		RET
+
+ 
+
+ 
+
+			
 
 drrbz: ; )
 		RET
@@ -4845,6 +4886,26 @@ zword: .zero 64
 			.quad 0
 			.quad 0
 
+		
+
+
+
+
+
+
+
+
+
+
+
+
+			.quad 0
+			.quad 0
+			.quad 0
+			.quad 0
+
+dend:	
+
 			; WORD headers
  		    ; each word name is 16 bytes of zero terminated ascii	
 			; a pointer to the adress of the run time machine code function to call.
@@ -4855,12 +4916,6 @@ zword: .zero 64
 
 			; the end of the list - also the beginning of the same.
 
-			.quad 0
-			.quad 0
-			.quad 0
-			.quad 0
-
-dend:		
 			makeword "(NULL)", 0, 0,  0       		    ; 0
 			; primitive code word headings.
 
@@ -4899,7 +4954,8 @@ dend:
 			makeword "(DOWNDOER)", 	ddowndoerz, 0 , 0		; 22
 			makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
 	 		makeword "(END)", 		0, 0 , 0				; 24
-		
+
+			makeword "(",	 		dlrbz, dlrbc,	0		; ( comment
 
 			makeemptywords 84
 
@@ -5254,6 +5310,8 @@ zdict:
 			makeword "1>", dgt1z, 0 , 0
 			makeword "/MOD", dsmodz , dsmodc, 0
 
+			makeword "//", dlcmntz , dlcmntc, 0
+
 			makeword ".VERSION", announce , 0, 0
 
 			makeword "?DUP", dqdupz, dqdupc, 0
@@ -5277,8 +5335,8 @@ zbytewords:
 			makebword 37,	 dmodz,		dmodc,		0
 			makebword 38,	 dandz,		0,		0
 			makebword 39,	 dtickz,	dtickc,		0
-			makebword 40,	 dlrbz,		dlrbc,		0
-			makebword 41,	 drrbz,		drrbc,		0
+			makebword 40,	 dlrbz,		dlrbc,		0			; (
+			makebword 41,	 0,			0,			0			; )
 			makebword 42,	 dstarz,	  	0,		0
 			makebword 43,	 dplusz,	dplusc,		0
 			makebword 44,	 dcomaz,	dcomac,		0

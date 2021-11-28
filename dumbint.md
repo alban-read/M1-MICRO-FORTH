@@ -728,8 +728,20 @@ Stack                 Read Location                   Read location
 Location              Update (IF)                     Update (ELSE)
 
 
+### Timing words
+
+Premature optimization may be the root of all evil.
+
+It is still important to measure your functions, there are many ways to write the same thing.
+
+
 Added TIMING words to assess the speed of the application.
 
 These Tests show that the word token interpreter is very slow.
+
 Good, speeding it up will be very interesting.
+
+TIMEIT test1
+
+Will time the word test1.
 
