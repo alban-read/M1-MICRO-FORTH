@@ -88,70 +88,63 @@
 ; the data can be used as pointers to other data
 ; or as literals for the word.
 
-; 0 	pointr ..  8    -> ptr to data or tokens
-; 8  	name  ..  16
-; 16	name  ..  24
-; 24    run   ..  32	-> run time func
-; 32    comp  ..  40    -> compile time func
-; 40    data  ..  48	-> ptr to data or tokens
-; 48    data  ..  56
-; 56    data  ..  64
-
-;
-;
-;
-;
-;
-
+ 
+; data 
+; runtime
+; data
+; comptime
+; data
+; data
+; name 
  
 
 .macro makeword name:req, runtime=-1, comptime=-1, datavalue=1
 	.quad   \datavalue
+	.quad	\runtime
+	.quad   0				; data
+	.quad   \comptime
+	.quad   0
+	.quad	0
 10:
 	.asciz	"\name"
 20:
 	.zero	16 - ( 20b-10b )
-	.quad	\runtime
-	.quad   \comptime
-	.quad   0
-	.quad   0
-	.quad   0
 .endm
 
 .macro makevarword name:req, v1=1, v2=0, v3=0, v4=0
 	.quad   \v1
+	.quad	dvaraddz
+	.quad   \v2
+	.quad   dvaraddc
+	.quad   \v3
+	.quad   \v4
 10:
 	.asciz	"\name"
 20:
 	.zero	16 - ( 20b-10b )
-	.quad	dvaraddz
-	.quad   dvaraddc
-	.quad   \v2
-	.quad   \v3
-	.quad   \v4
 .endm
 
 
 .macro makebword name:req, runtime=-1, comptime=-1, datavalue=1
 	.quad   \datavalue
-	.byte	\name
-	.zero   15
 	.quad	\runtime
+	.quad   0
 	.quad   \comptime
 	.quad   0
 	.quad   0
-	.quad   0
+	.byte	\name
+	.zero   15
 .endm
 
  .macro makeqvword name:req
  	.quad   8 * \name + ivars	
-	.byte	\name
-	.zero   15
 	.quad	dvaraddz
+	.quad 	0
 	.quad   dvaraddc
 	.quad   0
 	.quad   0
-	.quad   0
+	.byte	\name
+	.zero   15
 .endm
 
 ;  
@@ -159,7 +152,12 @@
 	.rept  \n
 	.quad  -1
  	.quad  -1
-	.zero  64-16 
+	.quad  0
+	.quad  0
+	.quad  0
+	.quad  0
+	.quad  -1
+	.quad  -1
 	.endr
 .endm
 
@@ -173,7 +171,7 @@
 		STP	    LR,  X0, [SP, #-16]!
 	 	STP	    X1,  X12, [SP, #-16]!
 		 
-		ADD		X12,  X1, #8
+		ADD		X12,  X1, #48
 		MOV		X0,  X1
 		BL		X0addrprln
 
@@ -205,7 +203,7 @@
 		LDRH	W0, [X15]
  		LSL		W0, W0, #6	    ;  TOKEN*64 
 		ADD		X0, X0, X27     ; + dend
-		ADD		X0, X0, #8
+		ADD		X0, X0, #48
 
 		ADRP	X2, startdict@PAGE	
 		ADD		X2, X2, startdict@PAGEOFF	
@@ -378,13 +376,14 @@ dotwords:
 		ADD		X2, X2, hashdict@PAGEOFF
 
 20:		ADD		X2, X2, #64
-		LDR		X0, [X2,#8]
+		LDR		X0, [X2, #48]
 		CMP     X0, #-1
 		B.eq    10f
+
 		CMP     X0, #0
 		B.eq    15f
-		LDR		X0, [X2,#8]
-		ADD     X0, X2, #8
+
+		ADD     X0, X2,  #48
 		STP		X2, X1, [SP, #-16]!
 		save_registers
 		BL		_fputs	 
@@ -419,7 +418,7 @@ resetword: ; clear word return x22
 		ADRP	X22, zword@PAGE	   
 	    ADD		X22, X22, zword@PAGEOFF
 		STP     XZR, XZR, [X22]
-		STP     XZR, XZR, [X22, #8]
+		STP     XZR, XZR, [X22, #48]
 		RET
 
 resetline:
@@ -1193,7 +1192,7 @@ fw1:
 252: 
 		BL 		get_word
 		 
-		LDR		X21, [X28, #8]  ; name field
+		LDR		X21, [X28, #48]  ; name field
 		CMP     X21, #0        ; end of list?
 		B.eq    finish_list	
 		CMP     X21, #-1       ; undefined entry in list?
@@ -1204,7 +1203,7 @@ fw1:
 
 		; found word, exec function
  
-		LDR     X2,	[X28, #24]  
+		LDR     X2,	[X28, #8]  
 		CMP		X2, #0 
 		B.eq	finish_list
 
@@ -1300,7 +1299,7 @@ create_word:
 
 scan_words:
 
-		LDR		X1, [X28, #8] ; name field
+		LDR		X1, [X28, #48] ; name field
 		LDR     X0, [X22]
 		CMP		X1, X0
 		B.eq	exit_compiler_word_exists; word exists
@@ -1321,14 +1320,26 @@ scan_words:
 
 		; copy words name text over
 		LDR     X0, [X22]
-		STR		X0, [X28, #8]
+		STR		X0, [X28, #48]
 		ADD		X22, X22, #8
 		LDR     X0, [X22]
-		STR		X0, [X28, #16]
+		STR		X0, [X28, #56]
+
+
+		CBZ		X6, faster_mode
 
 		ADRP	X1, runintz@PAGE	; high level word.   
 	    ADD		X1, X1, runintz@PAGEOFF
-		STR		X1, [X28, #24]
+		STR		X1, [X28, #8]
+		B 		set_word_runtime
+
+faster_mode:
+
+		ADRP	X1, fastrunintz@PAGE	; high level word.   
+	    ADD		X1, X1, fastrunintz@PAGEOFF
+		STR		X1, [X28, #8]
+
+set_word_runtime:
 
 		ADRP	X8, here@PAGE	
 		ADD		X8, X8, here@PAGEOFF
@@ -1382,8 +1393,8 @@ compile_next_word:
 
 find_word_token:
 
-		LDR		X21, [X28, #8] ; name field
-		ADD		X0, X28, #8
+		LDR		X21, [X28, #48] ; name field
+		ADD		X0, X28, #48
 	 
 		CMP     X21, #0     
 		B.eq    try_compiling_literal	
@@ -1415,9 +1426,19 @@ find_word_token:
 
 		ADRP	X1, runintz@PAGE	; high level word.   
 	    ADD		X1, X1, runintz@PAGEOFF
-		LDR		X0, [X28, #24]
+		LDR		X0, [X28, #8]
 		CMP		X0, X1
 		B.eq	skip_compile_time
+
+
+		ADRP	X1, fastrunintz@PAGE	; high level word.   
+	    ADD		X1, X1, fastrunintz@PAGEOFF
+		LDR		X0, [X28, #8]
+		CMP		X0, X1
+		B.eq	skip_compile_time
+
+
+		
 
 		ADRP	X1, daddrz@PAGE	; high level word.   
 	    ADD		X1, X1, daddrz@PAGEOFF
@@ -1425,7 +1446,7 @@ find_word_token:
 		B.eq	skip_compile_time
 
 		; invoke compile time function
-		LDR		X2, [X28, #32]
+		LDR		X2, [X28, #24]
 		CBZ		X2, skip_compile_time
 
 
@@ -2186,10 +2207,19 @@ floop:
 
 		MOV     X0, X2
 		STR		X0, [X16], #8
-		LDP		LR, X12, [SP], #16
+		LDP		LR, X15, [SP], #16
 		RET	
 		
-	 
+
+fibtest: ; 1- DUP 1-'  
+		LDR		X0, [X16, #-8]
+		SUB     X0, X0, #1
+		STR		X0, [X16, #-8]
+		LDR		X0, [X16, #-8]
+		SUB     X0, X0, #1
+		STR		X0, [X16], #8
+		RET 
+
 
 ;; Introseption and inspection
 ; good to see what our compiler is doing.
@@ -2213,7 +2243,7 @@ dseez:
 
 120:
 	
-		LDR		X21, [X28, #8] ; name field
+		LDR		X21, [X28, #48] ; name field
 
 		CMP     X21, #0        ; end of list?
 		B.eq    190f		   ; not found 
@@ -2223,7 +2253,7 @@ dseez:
 		; check word
 
 		BL      get_word
-		LDR		X21, [X28, #8] ; name field
+		LDR		X21, [X28, #48] ; name field
 		CMP		X21, X22       ; is this our word?
 		B.ne	170f
 
@@ -2237,12 +2267,12 @@ dseez:
 		MOV     X0, X28
 		BL		X0addrpr
 
-		ADD		X0, X28, #8
+		ADD		X0, X28, #48
 		BL		X0prname
 
 		BL		saycr	
 		
-		; display the data word
+		; display the data word 0
 		MOV		X0, #0
 		BL		X0addrpr
 
@@ -2257,7 +2287,7 @@ dseez:
 
 		ADRP	X2, dconstz@PAGE	   
 	    ADD		X2, X2, dconstz@PAGEOFF
-		LDR		X0, [X28, #24]
+		LDR		X0, [X28, #8]
 		CMP		X0, X2
 		B.ne	12070f
 
@@ -2270,7 +2300,7 @@ dseez:
 
 		ADRP	X2, dvaraddz@PAGE	   
 	    ADD		X2, X2, dvaraddz@PAGEOFF
-		LDR		X0, [X28, #24]
+		LDR		X0, [X28, #8]
 		CMP		X0, X2
 		B.ne	12080f
 
@@ -2291,12 +2321,6 @@ dseez:
 
 12080:
 
-		ADRP	X2, runintz@PAGE	   
-	    ADD		X2, X2, runintz@PAGEOFF
-		LDR		X0, [X28, #24]
-		CMP		X0, X2
-		B.ne	12090f
-
 		ADRP	X0, word_desc9@PAGE	   
 	    ADD		X0, X0, word_desc9@PAGEOFF
 		BL		sayit
@@ -2315,74 +2339,143 @@ dseez:
 
 		BL		saycr		
 
-		; display this words name
+
+		; display this words runtime
 		MOV		X0, #8
 		BL		X0addrpr
 		
 		MOV		X0, #':'
 		BL		X0emit
 
- 
-		ADD	 	X0, X28, #8
-		BL      X0prname 
-	 
-		LDR		X12, [X28] ; words pointer
-		
-		ADRP	X0, word_desc5@PAGE	   
-	    ADD		X0, X0, word_desc5@PAGEOFF
-		BL		sayit
-
-
-		BL		saycr
-
-		; display this words runtime
-		MOV		X0, #24
-		BL		X0addrpr
-		
-		MOV		X0, #':'
-		BL		X0emit
-
-		LDR		X0, [X28, #24]
+		LDR		X0, [X28, #8]
 		BL      X0addrpr 
 
 		ADRP	X2, dconstz@PAGE	   
 	    ADD		X2, X2, dconstz@PAGEOFF
-		LDR		X0, [X28, #24]
+		LDR		X0, [X28, #8]
 		CMP		X0, X2
 		B.eq	12010f
 
 
 		ADRP	X2, dvaraddz@PAGE	   
 	    ADD		X2, X2, dvaraddz@PAGEOFF
-		LDR		X0, [X28, #24]
+		LDR		X0, [X28, #8]
 		CMP		X0, X2
 		B.eq	12020f
 
-		ADRP	X2, runintz@PAGE	   
-	    ADD		X2, X2, runintz@PAGEOFF
-		LDR		X0, [X28, #24]
-		CMP		X0, X2
-		B.eq	12030f
+	
+
 
 ; must be a primitive word 
+
 
 		ADRP	X0, word_desc3@PAGE	   
 	    ADD		X0, X0, word_desc3@PAGEOFF
 		BL		sayit
-		BL		saycr
 
+
+		; display the data word 1
+
+		BL      saycr
+		MOV		X0, #16
+		BL		X0addrpr
+
+		MOV		X0, #':'
+		BL		X0emit
+
+		LDR 	X0, [X28, #16]	
+		BL		X0addrpr
+
+
+		ADRP	X0, word_desc10_1@PAGE	   
+	    ADD		X0, X0, word_desc10_1@PAGEOFF
+		BL		sayit
+		 
 		; display this words compile time
-		MOV		X0, #32
+		BL		saycr
+		MOV		X0, #24
 		BL		X0addrpr
 		
+		MOV		X0, #':'
+		BL		X0emit
 
-		LDR		X0, [X28, #32]
+		; offset into word
+		LDR		X0, [X28, #24]
 		BL      X0addrpr 
 
 
 		ADRP	X0, word_desc12@PAGE	   
 	    ADD		X0, X0, word_desc12@PAGEOFF
 		BL		sayit
+
+	
+		; display the data word 1
+
+		BL      saycr
+		MOV		X0, #32
+		BL		X0addrpr
+
+		MOV		X0, #':'
+		BL		X0emit
+
+		LDR 	X0, [X28, #32]	
+		BL		X0addrpr
+		
+		ADRP	X0, word_desc10_2@PAGE	   
+	    ADD		X0, X0, word_desc10_2@PAGEOFF
+		BL		sayit
+		BL		saycr
+
+		; display the data word 3
+
+		 
+		MOV		X0, #40
+		BL		X0addrpr
+
+		MOV		X0, #':'
+		BL		X0emit
+
+		LDR 	X0, [X28, #40]	
+		BL		X0addrpr
+		ADRP	X0, word_desc10_3@PAGE	   
+	    ADD		X0, X0, word_desc10_3@PAGEOFF
+		BL		sayit
+		BL		saycr
+
+
+		; display the name
+		; offset into word
+		MOV		X0, #48
+		BL		X0addrpr
+		
+		MOV		X0, #':'
+		BL		X0emit
+
+ 
+		ADD	 	X0, X28, #48
+		BL      X0prname 
+
+		LDR		X12, [X28] ; words pointer
+		
+		ADRP	X0, word_desc5@PAGE	   
+	    ADD		X0, X0, word_desc5@PAGEOFF
+		BL		sayit
+		BL		saycr
+
+
+		ADRP	X2, runintz@PAGE	   
+	    ADD		X2, X2, runintz@PAGEOFF
+		LDR		X0, [X28, #8]
+		CMP		X0, X2
+		B.eq	see_HLW0
+
+
+		ADRP	X2, fastrunintz@PAGE	   
+	    ADD		X2, X2, fastrunintz@PAGEOFF
+		LDR		X0, [X28, #8]
+		CMP		X0, X2
+		B.eq	see_HLW1
+
 
 		B		160f
 
@@ -2401,20 +2494,28 @@ dseez:
 		B		160f
 
 
-12030:	; HIGH LEVEL WORD
+see_HLW0: ; HIGH LEVEL WORD
 
 		ADRP	X0, word_desc4@PAGE	   
 	    ADD		X0, X0, word_desc4@PAGEOFF
 		BL		sayit
 		BL		saycr
 
+		B  		see_pointer
+
+see_HLW1:
  
+		ADRP	X0, word_desc4_1@PAGE	   
+	    ADD		X0, X0, word_desc4_1@PAGEOFF
+		BL		sayit
+		BL		saycr
 	 
 
+see_pointer:
+	 
+		LDR		X12, [X28] ; words pointer
 
 see_tokens:	
-
-
 
 		BL		saycr
 
@@ -2433,7 +2534,7 @@ see_tokens:
 		MOV		W14, W1
 		LSL		X1, X1, #6	 ; / 64 
 		ADD		X1, X1, X2 
-		ADD		X0, X1, #8  ; name field
+		ADD		X0, X1, #48  ; name field
 		BL		X0prname
 
 		CMP		W14, #24 ; END
@@ -2545,7 +2646,7 @@ dcreatz:
 100:	; find free word and start building it
 
 
-		LDR		X1, [X28, #8] ; name field
+		LDR		X1, [X28, #48] ; name field
 		LDR     X0, [X22]
 		CMP		X1, X0
 		B.eq	290f
@@ -2564,15 +2665,25 @@ dcreatz:
 
 		; copy text over
 		LDR     X0, [X22]
-		STR		X0, [X28, #8]
+		STR		X0, [X28, #48]
 		ADD		X22, X22, #8
 		LDR     X0, [X22]
-		STR		X0, [X28, #16]
+		STR		X0, [X28, #56]
 
-		ADRP	X1, runintz@PAGE	; high level word.   
+
+		CBZ		X6, 150f
+		B  		160f
+
+		ADRP	X1, runintz@PAGE	; high level word traceable   
 	    ADD		X1, X1, runintz@PAGEOFF
-		STR		X1, [X28, #24]
+		STR		X1, [X28,#8]
 
+150:
+		ADRP	X1, fastrunintz@PAGE	; high level word not traceable  
+	    ADD		X1, X1, fastrunintz@PAGEOFF
+		STR		X1, [X28,#8]
+
+160:
 		ADD		X1,	X28, #32
 		STR		X1, [X28]
 
@@ -2617,7 +2728,7 @@ dcreatcz:
 100:	; find free word and start building it
 
 
-		LDR		X1, [X28, #8] ; name field
+		LDR		X1, [X28, #48] ; name field
 		LDR     X0, [X22]
 		CMP		X1, X0
 		B.eq	290f
@@ -2637,15 +2748,15 @@ dcreatcz:
 
 		; copy text for name over
 		LDR     X0, [X22]
-		STR		X0, [X28, #8]
+		STR		X0, [X28, #48]
 		ADD		X22, X22, #8
 		LDR     X0, [X22]
-		STR		X0, [X28, #16]
+		STR		X0, [X28, #56]
 
 		; constant code
 		ADRP	X1, dconstz@PAGE	 
 	    ADD		X1, X1, dconstz@PAGEOFF
-		STR		X1, [X28, #24]
+		STR		X1, [X28, #8]
 
 
 		; set constant from tos.
@@ -2697,7 +2808,7 @@ dcreatvz:
 100:	; find free word and start building it
 
 
-		LDR		X1, [X28, #8] ; name field
+		LDR		X1, [X28, #48] ; name field
 		LDR     X0, [X22]
 		CMP		X1, X0
 		B.eq	290b
@@ -2716,15 +2827,15 @@ dcreatvz:
 
 		; copy text for name over
 		LDR     X0, [X22]
-		STR		X0, [X28, #8]
+		STR		X0, [X28, #48]
 		ADD		X22, X22, #8
 		LDR     X0, [X22]
-		STR		X0, [X28, #16]
+		STR		X0, [X28, #56]
 
 		; variable code
 		ADRP	X1, dvaraddz@PAGE	; high level word.   
 	    ADD		X1, X1, dvaraddz@PAGEOFF
-		STR		X1, [X28, #24]
+		STR		X1, [X28, #8]
 
 		ADD		X1,	X28, #32
 		STR		X1, [X28]
@@ -2773,7 +2884,7 @@ dtickz: ; ' - get address of NEXT words data field
 		BL		start_point
 
 120:
-		LDR		X21, [X28, #8] ; name field
+		LDR		X21, [X28, #48] ; name field
 
 		CMP     X21, #0        ; end of list?
 		B.eq    190f		   ; not found 
@@ -2788,7 +2899,7 @@ dtickz: ; ' - get address of NEXT words data field
 		;BL      sayit 
 
 		BL      get_word
-		LDR		X21, [X28, #8] ; name field
+		LDR		X21, [X28, #48] ; name field
 		CMP		X21, X22       ; is this our word?
 		B.ne	170f
 
@@ -3002,7 +3113,7 @@ dtickc: ; ' at compile time, turn address of word into literal
 		BL		start_point
 
 120:
-		LDR		X21, [X28, #8] ; name field
+		LDR		X21, [X28, #48] ; name field
 
 		CMP     X21, #0        ; end of list?
 		B.eq    190f		   ; not found 
@@ -3011,7 +3122,7 @@ dtickc: ; ' at compile time, turn address of word into literal
 
 
 		BL      get_word
-		LDR		X21, [X28, #8] ; name field
+		LDR		X21, [X28, #48] ; name field
 		CMP		X21, X22       ; is this our word?
 		B.ne	170f
 
@@ -3108,7 +3219,7 @@ dcallz:	;  code field (from ' WORD on stack)
 		LDR 	X1, [X16, #-8] 	 
 		SUB		X16, X16, #8
 		LDR     X0, [X1]
-		LDR     X1, [X1, #24]
+		LDR     X1, [X1, #8]
 		BR      X1 		
 
 
@@ -3160,7 +3271,7 @@ dtimeitz: ; time the next work
 		BL		start_point
 
 120:
-		LDR		X21, [X28, #8] ; name field
+		LDR		X21, [X28, #48] ; name field
 
 		CMP     X21, #0        ; end of list?
 		B.eq    190f		   ; not found 
@@ -3168,7 +3279,7 @@ dtimeitz: ; time the next work
 		b.eq    170f
 
 		BL      get_word
-		LDR		X21, [X28, #8] ; name field
+		LDR		X21, [X28, #48] ; name field
 		CMP		X21, X22       ; is this our word?
 		B.ne	170f
 
@@ -3178,7 +3289,7 @@ dtimeitz: ; time the next work
 		; WORD IN X1
 
 		LDR     X0, [X1]		; words data
-		LDR     X2, [X1, #24]	; words code
+		LDR     X2, [X1, #8]	; words code
 
 	 	CBZ		X1, 200f
 		CBZ		X2, 200f
@@ -3233,6 +3344,190 @@ dtimeitz: ; time the next work
 		restore_registers
 		RET
 
+ 
+
+; assign fast or tracable runtime to word.
+
+dtracable:
+
+		save_registers
+
+		BL		advancespaces
+		BL		collectword
+
+		BL 		empty_wordQ
+		B.eq	190f
+
+		BL		start_point
+
+120:
+		LDR		X21, [X28, #48] ; name field
+
+		CMP     X21, #0        ; end of list?
+		B.eq    190f		   ; not found 
+		CMP     X21, #-1       ; undefined entry in list?
+		b.eq    170f
+
+		BL      get_word
+		LDR		X21, [X28, #48] ; name field
+		CMP		X21, X22       ; is this our word?
+		B.ne	170f
+
+		; is it high level
+		LDR     X0, [X28, #8]	; words code
+		ADRP	X8, runintz@PAGE	 
+	    ADD		X8, X8, runintz@PAGEOFF
+		CMP		X0, X8
+		B.eq    140f
+
+ 		ADRP	X8, fastrunintz@PAGE	 
+	    ADD		X8, X8, fastrunintz@PAGEOFF
+		STR		X8, [X28, #8]	; words code is now fast
+		CMP		X0, X8
+		B.eq    140f
+	
+		B  		200f
+140:
+
+ 		ADRP	X8, runintz@PAGE	  
+	    ADD		X8, X8, runintz@PAGEOFF
+		STR		X8, [X28, #8]	
+		B		200f
+
+
+170:	; next word in dictionary
+		SUB		X28, X28, #64
+		B		120b
+
+190:	; error out 
+		MOV	X0, #-1
+
+200:
+		restore_registers
+		RET
+
+duntracable:
+
+		save_registers
+
+		BL		advancespaces
+		BL		collectword
+
+		BL 		empty_wordQ
+		B.eq	190f
+
+		BL		start_point
+
+120:
+		LDR		X21, [X28, #48] ; name field
+
+		CMP     X21, #0        ; end of list?
+		B.eq    190f		   ; not found 
+		CMP     X21, #-1       ; undefined entry in list?
+		b.eq    170f
+
+		BL      get_word
+		LDR		X21, [X28, #48] ; name field
+		CMP		X21, X22       ; is this our word?
+		B.ne	170f
+
+		; is it high level
+		LDR     X0, [X28, #8]	; words code
+		ADRP	X8, runintz@PAGE	 
+	    ADD		X8, X8, runintz@PAGEOFF
+		CMP		X0, X8
+		B.eq    140f
+
+ 		ADRP	X8, fastrunintz@PAGE	 
+	    ADD		X8, X8, fastrunintz@PAGEOFF
+		STR		X8, [X28, #8]	; words code is now fast
+		CMP		X0, X8
+		B.eq    140f
+
+
+		B  		200f
+
+140:
+
+ 		ADRP	X8, fastrunintz@PAGE	 
+	    ADD		X8, X8, fastrunintz@PAGEOFF
+		STR		X8, [X28, #8]	; words code is now fast
+		B		200f
+
+
+170:	; next word in dictionary
+		SUB		X28, X28, #64
+		B		120b
+
+190:	; error out 
+		MOV	X0, #-1
+
+200:
+		restore_registers
+		RET
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+; fast not traceable, otherwise the same as runintz below.
+
+fastrunintcz: ; interpret the list of tokens at word + 
+
+		; over ride X0 to compile time token address
+
+		LDR		X0, [X1, #40]		; compile mode tokens
+
+
+fastrunintz:; interpret the list of tokens at X0
+		; until (END) #24
+
+ 
+
+		; SAVE IP 
+		STP	   LR,  X15, [SP, #-16]!
+		SUB	   X15, X0, #2
+		
+		MOV     X29, #64
+
+		; unrolling the loop here x16 makes this a lot faster,
+10:		; next token
+
+		.rept 	32
+		LDRH	W1, [X15, #2]!
+
+		CMP     W1, #24 ; (END) 
+		B.eq    90f
+
+		MADD	X1, X29, X1, X27
+
+		LDR     X2, [X1, #8]
+		LDR		X0, [X1]
+		CBZ		X2, 10b
+
+		BLR     X2 		; with X0 as data and X1 as address	 
+
+		.endr
+
+		b 		10b
+
+
+; traceable version
 
 runintcz: ; interpret the list of tokens at word + 
 
@@ -3250,33 +3545,34 @@ runintz:; interpret the list of tokens at X0
 		STP	   LR,  X15, [SP, #-16]!
 		SUB	   X15, X0, #2
 		
+		MOV     X29, #64
+
+		; unrolling the loop here x16 makes this a lot faster,
 10:		; next token
 
+		.rept 	16
 		LDRH	W1, [X15, #2]!
-		
+
 		CMP     W1, #24 ; (END) 
 		B.eq    90f
 
- 		LSL		W0, W1, #6	   
-		ADD		X1, X27, X0  ; + dend
-	 
-		LDR     X2, [X1, #24]	; words code
-		LDR     X0, [X1]		; words data
-		CBZ		X2, dontcrash
+		MADD	X1, X29, X1, X27
+
+		LDR     X2, [X1, #8]
+		LDR		X0, [X1]
+		CBZ		X2, 10b
 
 		BLR     X2 		; with X0 as data and X1 as address	 
 
-		CBZ		X6, 10b
-
-		do_trace
-		 
-
-dontcrash: ; treat 0 as no-op
-
-		B		10b
-90:
-
 		
+		; this is why we are a little slower.
+		do_trace
+
+		.endr
+
+		b 		10b
+		  
+90:
 		LDP		LR, X15, [SP], #16	
 		RET
 
@@ -4670,7 +4966,11 @@ word_desc3: .ascii "\t\tPRIM RUN"
 		.zero 16
 
 .align 	8
-word_desc4: .ascii "\t\tTOKEN COMPILED"
+word_desc4: .ascii "\t\tTOKEN COMPILED TRACEABLE"
+		.zero 16
+
+.align 	8
+word_desc4_1: .ascii "\t\tTOKEN COMPILED FAST"
 		.zero 16
 
 .align 	8
@@ -4697,11 +4997,25 @@ word_desc9: .ascii "\t\t^TOKENS "
 
 
 .align 	8
-word_desc10: .ascii "\t\tARGUMENT "
+word_desc10: .ascii "\t\tARGUMENT 1"
 		.zero 16
 
 .align 	8
-word_desc11: .ascii "WORD AT :"
+word_desc10_1: .ascii "\t\tARGUMENT 2"
+		.zero 16
+
+.align 	8
+word_desc10_2: .ascii "\t\tExtra DATA 1"
+		.zero 16
+
+.align 	8
+word_desc10_3: .ascii "\t\tExtra DATA 2"
+		.zero 16
+
+
+
+.align 	8
+word_desc11: .ascii "SEE WORD :"
 		.zero 16
 
 
@@ -4889,16 +5203,6 @@ zword: .zero 64
 		
 
 
-
-
-
-
-
-
-
-
-
-
 			.quad 0
 			.quad 0
 			.quad 0
@@ -5029,7 +5333,7 @@ edict:
 			makeqvword 102
 
 			makeword "FFIB", dtstfib, 0,  0
-		
+			makeword "FASTER", duntracable, 0, 0
 			makeword "FALSE", dconstz, dconstc,  0
 			makeword "FORGET", clean_last_word , 0, 0 
 			makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
@@ -5197,6 +5501,7 @@ rdict:
 sdict:
 			makeemptywords 50
 			makeword "TIMEIT", dtimeitz, 0, 0
+			makeword "TRACEABLE", dtracable, 0, 0
 			makeword "TRUE", dconstz, dconstc,  -1
 			makeword "TRACING?", dtraqz, 0, 0
 			makeword "TICKS", dtickerz, 0, 0
@@ -5214,6 +5519,7 @@ tdict:
 			makeemptywords 50
 			makeqvword 117
 			makeword "U", dvaraddz, dvaraddc,  8 * 85 + ivars	
+			makeword "FASTEST", duntracable, 0, 0
 
 udict:
 
@@ -5261,7 +5567,7 @@ ydict:
 zdict:
 
 			makeemptywords 30
-			
+			makeword "1-DUP1-", fibtest, 0,  10
 			makeword "10", dconstz, dconstc,  10
 			makeword "11", dconstz, dconstc,  11
 			makeword "12", dconstz, dconstc,  12
