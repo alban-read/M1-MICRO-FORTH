@@ -3229,13 +3229,15 @@ dcallc:	; CALL code field (on stack)
 
 ; runintz is the inner interpreter of 'compiled' words.
 ; X15 IP is our instruction pointer.
+; there is a FASTER and a TRACEABLE version.
+; You can switch between.
 
 ; A high level word is a list of tokens
 ; tokens are expanded to word addresses
 ; each word is then executed.
 
 
-; for faster speed comment out all tracing
+ 
 
 dtronz:
 		MOV		X6, #-1
@@ -3260,8 +3262,6 @@ dtimeitz: ; time the next work
 
 		save_registers
 
-	
-		
 		BL		advancespaces
 		BL		collectword
 
@@ -3348,6 +3348,7 @@ dtimeitz: ; time the next work
 
 ; assign fast or tracable runtime to word.
 
+; switch to tracable mode.
 dtracable:
 
 		save_registers
@@ -3406,6 +3407,7 @@ dtracable:
 		restore_registers
 		RET
 
+; switch to fast mode
 duntracable:
 
 		save_registers
@@ -3467,24 +3469,6 @@ duntracable:
 		RET
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ; fast not traceable, otherwise the same as runintz below.
 
 fastrunintcz: ; interpret the list of tokens at word + 
@@ -3492,6 +3476,9 @@ fastrunintcz: ; interpret the list of tokens at word +
 		; over ride X0 to compile time token address
 
 		LDR		X0, [X1, #40]		; compile mode tokens
+
+
+
 
 
 fastrunintz:; interpret the list of tokens at X0
@@ -3508,7 +3495,8 @@ fastrunintz:; interpret the list of tokens at X0
 		; unrolling the loop here x16 makes this a lot faster,
 10:		; next token
 
-		.rept 	32
+		.rept 	16
+
 		LDRH	W1, [X15, #2]!
 
 		CMP     W1, #24 ; (END) 
@@ -3633,11 +3621,7 @@ dlrbz: ; ( This is a comment that ends with .. )
 		MOV 	X0, #0
 		RET
 
- 
 
- 
-
-			
 
 drrbz: ; )
 		RET
@@ -5450,49 +5434,13 @@ rdict:
 
 			makeemptywords 50
 
-
-			; use asm to build a high level 'demo' word
-
-		;	.quad   30f	; address of halfword token code.
-		;	10:
-		;		.asciz	"SQUARE"
-		;	20:
-		;		.zero	16 - ( 20b-10b )
-		;		.quad	runintz   ; interpret
-		;	30:  ; halfword token list
-		;		.hword  507     ; LIT
-		;		.hword  2       ; lit index
-		;		.hword  507     ; LIT
-		;		.hword  3       ; lit index
-		;		.hword	1097	; +
-		;		.hword	183		; DUP
-		;		.hword  1096    ; *
-		;		.hword  1100    ; .
-		;		.hword  0       ; END OF WORD
-		;	40:
-		;		.zero	128 - ( 40b-30b ) - 32		
-
-			; to get the tokens 
-			; ' DUP NTH .
-			; ' * NTH .
-			; ' . NTH .
-			; The tokens change if a new word is added 
-			; using the assmbler, WITHOUT reducing the empty
-			; word count above it.
-
-
 			makeword "SHORT$HASH", dvaraddz, dvaraddc,  short_strings_hash
 			makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 			makeword "SWAP", dswapz , 0, 0 
 			makeword "SLEEP", dsleepz , 0, 0 
-
 			makeword "SPACES", spacesz , spacesc, 0 
-		
-
 			makeword "SPACE", emitchz , emitchc, 32
-
 			makevarword "SP", dsp
-
 			makeword "SEE", dseez , 0, 0 
 
 			makeqvword 115 
