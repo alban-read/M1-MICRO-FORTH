@@ -2958,18 +2958,32 @@ dendifz:
 ; We look for closest ELSE or IF by seeking the branch.
 
 dendifc:
+		
+		SUB 	X15, X15, #2 ; do not compile endif
 
 	 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
 		SUB 	X14, X14, #16 		; pop the ELSE/ENDIF
 		CMP		X2, #4; (ELSE)
-		B.eq	100f
+		B.eq	80f
 		CMP 	X2, #3; (IF)
 		B.eq	100f
 		B 		190f  
 
-100:
+
+80:		; fix up ELSE
 	
 		SUB     X4, X15, X5  ; dif between zbran and else.
+		ADD		X4, X4, #0
+		ADD 	W4, W4, #32 ; avoid confusion
+		STRH	W4, [X5]	; store that
+
+		MOV		X0, #0
+		B		200f
+
+
+100: ; fix up IF
+	
+		SUB     X4, X15, X5  ; dif between zbran and (IF).
 		ADD		X4, X4, #4
 		ADD 	W4, W4, #32 ; avoid confusion
 		STRH	W4, [X5]	; store that
@@ -2988,7 +3002,7 @@ dendifc:
 		B		200f
 		RET			
 
-
+200:
 delsez:
 		RET
 
@@ -3011,7 +3025,7 @@ delsec: ;  at compile time inlines the ELSE branch
 
 		; drop if and stack else
 		SUB 	X14, X14, #16
-		MOV		X0, #4 ; (ELSE)
+		MOV		X2, #4 ; (ELSE)
 		STP		X2,  X15, [X14], #16 ; store ELSE address
 
 	
@@ -3070,21 +3084,17 @@ dzbranchc:
 
 
 ; always branch 
-dbranchz:
-
+dbranchz: ; (ELSE)
+		
 		do_trace	
- 	
- 
+
 		ADD		X15, X15, #2
+		
 		LDRH	W0, [X15] 		; offset to endif
 		SUB		W0, W0, #32		; avoid confusion 
+ 
 
-		do_trace
-
-		SUB		X0, X0, #2
 		ADD		X15, X15, X0	; change IP
-
-		do_trace
 
 		RET
 
@@ -5218,8 +5228,8 @@ dend:
 			; words that take inline literals < 16
 			makeword "#LITS", dlitz, dlitc,  0       		; 1
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
-			makeword "(IF)", dzbranchz, dzbranchc,  0 	    ; 3
-			makeword "(ELSE)", dbranchz, dbranchc,  0   	; 4
+			makeword "(IF)", dzbranchz, 0,  0 	    ; 3
+			makeword "(ELSE)", dbranchz, 0,  0   	; 4
 			makeword "(EXIT)", 0, 0,  0       				; 5
 			makeword "#6", 0, 0,  0   						; 6
 			makeword "#7", 0, 0,  0     	  				; 7
