@@ -3626,20 +3626,16 @@ runintz:; interpret the list of tokens at X0
 		; unrolling the loop here x16 makes this a lot faster,
 10:		; next token
 
-		.rept 	8
+		.rept 	16
+	
 		LDRH	W1, [X15, #2]!
-
-		CMP     W1, #0 ; (END) / (EXIT)
-		B.eq    90f
-
+		CBZ     X1, 90f
+ 
 		MADD	X1, X29, X1, X27
-
-		LDR     X2, [X1, #8]
-		LDR		X0, [X1]
+		LDP     X0, X2, [X1]
 		CBZ		X2, 10b
-
-		BLR     X2 		; with X0 as data and X1 as address	 
-
+	 
+		BLR     X2 		 
 		
 		; this is why we are a little slower.
 		do_trace
@@ -5217,10 +5213,6 @@ quadlits:
 ; string lits ASCII counted strings
 
 
-
-
-
-
 string_buffer:
 .zero 2048
 
@@ -5275,9 +5267,7 @@ zword: .zero 64
 			.quad 0
 			.quad 0
 
-		
-
-
+	
 			.quad 0
 			.quad 0
 			.quad 0
@@ -5295,9 +5285,9 @@ dend:
 
 			; the end of the list - also the beginning of the same.
 
-			; for safety give the null word a zero code word.
+		 
 
-			makeword "(EXIT)", dexitz, 0,  0       		    ; 0
+	
 
 			; primitive code word headings.
 
@@ -5309,34 +5299,43 @@ dend:
 			; these hash words are inline compile only
 		
 
-			; words that take inline literals < 16
-			makeword "#LITS", dlitz, dlitc,  0       		; 1
-			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
-			makeword "(IF)", dzbranchz, 0,  0 	    		; 3
+			; words that can take inline literals as arguments
+			makeword "(EXIT)", dexitz, 0,  0       		    ; 0 - never runs
+			makeword "(LITS)",  dlitz, dlitc,  0       		; 1
+			makeword "(LITL)",  dlitlz, dlitlc,  0     		; 2
+			makeword "(IF)",   dzbranchz, 0,  0 	    	; 3
 			makeword "(ELSE)", dbranchz, 0,  0   			; 4
 			makeword "(5)", 0, 0,  0       					; 5
 			makeword "(6)", 0, 0,  0   						; 6
 			makeword "(7)", 0, 0,  0     	  				; 7
 			makeword "(8)", 0, 0,  0   					 	; 8
 			makeword "(9)", 0, 0,  0     					; 9
-			makeword "#$S", dslitSz, 0,  0     				; 10
-			makeword "#$L", dslitLz, 0,  0     				; 11
+			makeword "($S)",  dslitSz, 0,  0     			; 10
+			makeword "($L)",  dslitLz, 0,  0     			; 11
 			makeword "(.')", dslitSzdot, 0,  0   			; 12
-			makeword "#13", 0, 0,  0       					; 13
-			makeword "#14", 0, 0,  0     					; 14
-			makeword "#15", 0, 0,  0     					; 15
-			makeword "#16", 0, 0,  0   			    	 	; 16
+			makeword "(13)", 0, 0,  0       				; 13
+			makeword "(14)", 0, 0,  0     					; 14
+			makeword "(15)", 0, 0,  0     					; 15
 
 			; other fixed position tokens
+			makeword "(16)", 0, 0,  0   			    	; 16
 			makeword "(+LOOP)", 	dplooperz, 	0,  0       ; 17
 			makeword "(-LOOP)", 	dmlooperz, 	0,  0       ; 18
 			makeword "(LOOP)", 		dlooperz, 	0,  0       ; 19
-			makeword "#20", 		0, 	0,  0               ; 20
+			makeword "(20)", 		0, 	0,  0               ; 20
 			makeword "(DOER)", 		ddoerz, 	0,  0       ; 21
 			makeword "(DOWNDOER)", 	ddowndoerz, 0 , 0		; 22
 			makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
 	 		makeword "(END)", 		dendz, 0 , 0			; 24
+			makeword "(25)", 		0, 	0,  0               ; 25
+			makeword "(26)", 		0, 	0,  0               ; 26
+			makeword "(27)", 		0, 	0,  0               ; 27
+			makeword "(28)", 		0, 	0,  0               ; 28
+			makeword "(29)", 		0, 	0,  0               ; 29
+			makeword "(30)", 		0, 	0,  0               ; 30
+			makeword "(31)", 		0, 	0,  0               ; 31
 
+			; just words starting with (
 			makeword "(",	 		dlrbz, dlrbc,	0		; ( comment
 
 			makeemptywords 84
