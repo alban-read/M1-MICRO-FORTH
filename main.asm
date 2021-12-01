@@ -3860,7 +3860,7 @@ fastrunintz:; interpret the list of tokens at X0
 
 
 ; only run the word for STEPPING steps.
- 
+; allow word to be tested a few steps at a time. 
 
 stepoutz:
 
@@ -3887,7 +3887,8 @@ step_in_runz: ; take more steps
 	LDR     X25, [X8] ; steps to run for 
 	 
 step_away:
-	STP		LR,  X15, [SP, #-16]!
+	CBZ		X15, 98f	; we finished 
+	STP		LR,  XZR, [SP, #-16]!
 	MOV		X29, #64
 
 	; unrolling the loop here x16 makes this a lot faster, 
@@ -3909,9 +3910,17 @@ step_away:
 	; this is why we are a little slower.
 	do_trace
 
- 
-
 	b		10b
+
+90:
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+95: ; we finish so mark IP as invalid
+	LDP		LR, XZR, [SP], #16
+	MOV		X15, #0
+98:
+	RET
 
 ; traceable version
 
