@@ -2081,9 +2081,11 @@ dmloopc:
 ;
 
 
-dbeginz: ; BEGIN
-
-RET
+dbeginz: ; BEGIN runtime
+	; Stack begins IP
+	MOV		X2,  #'B' ;  BEGIN 
+	STP		X2,  X15, [X14], #16
+	RET
 
 
 dbeginc: ; COMPILE BEGIN
@@ -2100,7 +2102,40 @@ duntilc:
 RET
 
 
-dwhilez: ; WHILE
+dwhilez: ; WHILE needs a foward branch to AGAIN
+
+
+		LDP		X2, X5,  [X14, #-16] ; X5 is branch
+		CMP		X2, #'B' ;BEGIN
+		B.ne	190f
+
+		; I am in a BEGIN loop testing while
+
+		LDR		X1, [X16, #-8]
+		SUB		X16, X16, #8	
+		CMP		X1, #0
+		B.eq	180f 		; loop finishes
+
+		; I am finishing, skip forward to AGAIN
+
+
+
+		; loop continues
+		
+		RET 
+
+
+180:
+		SUB 	X14, X14, #16
+		RET
+
+
+
+
+190:    ; WHILE needs BEGIN
+		LDP		LR, X15, [SP], #16	
+		RET
+
 
 RET
 
@@ -2119,11 +2154,22 @@ drepeatc:	; COMPILE REPEAT
 
 RET
 
-
+; : t2 BEGIN 1+ DUP 10 > IF LEAVE THEN DUP . CR AGAIN .' fini ' DROP ;
 dagainz:	; AGAIN
 
-RET
+		LDP		X2, X5,  [X14, #-16] ; X5 is branch
+		CMP		X2, #'B' ;BEGIN
+		B.ne	190f
 
+		MOV		X15, X5	; back we go
+		RET
+
+	
+190:	; continue - no BEGIN for our AGAIN.
+		RET			
+	
+
+	
 
 dagainc:	; COMPILE AGAIN
 
@@ -2135,21 +2181,26 @@ RET
 
 dleavez:	; LEAVE
 
+		LDP		X2, X5,  [X14, #-16] ; X5 is branch
+		CMP		X2, #'B' ;BEGIN
+		B.ne	190f
 
-RET
+		; I am in a BEGIN loop, pop it now and AGAIN will end
+		SUB 	X14, X14, #16
+		RET
+
+
+190:    ; not leaving a loop? leave whole word.
+		LDP		LR, X15, [SP], #16	
+		RET
+
+
+ 
 
 
 dleavec:	; COMPILE LEAVE
 
 RET
-
-
-
-
-
-
-
-
 
 
 
@@ -2552,7 +2603,6 @@ dseez:
 		BL		sayit
 		BL		saycr
 
-
 		ADRP	X2, runintz@PAGE	   
 	    ADD		X2, X2, runintz@PAGEOFF
 		LDR		X0, [X28, #8]
@@ -2690,12 +2740,8 @@ end_token:
 		RET
 
 
-
 dseec:
 		RET
-
-
-
 
 
 ;; CREATION WORDS
@@ -2827,8 +2873,6 @@ dcreatcz:
 		CMP     X1, #-1       ; undefined entry in list?
 		b.ne    260f
 		
-	
-
 		; undefined so build the word here
 
 		; this is now the last_word word being built.
@@ -2994,7 +3038,6 @@ dtickz: ; ' - get address of NEXT words data field
 		B.ne	170f
 
 		; found word, stack address of word
- 	
 
 		MOV     X0,	X28  
 		restore_registers
@@ -3016,8 +3059,6 @@ dtickz: ; ' - get address of NEXT words data field
 
 ; control flow
 ; condition IF .. ELSE .. ENDIF 
-
-
 
 difz:
 		RET
@@ -3162,7 +3203,6 @@ dzbranchz_notrace:
 
 90:		
 		ADD		X15, X15, #2	; skip offset
-	
 		RET  
 
 
@@ -3182,9 +3222,6 @@ dbranchz: ; (ELSE)
 		ADD		X15, X15, X0	; change IP
 
 		RET
-
-
-
 dbranchc:
 		RET
 
@@ -3320,8 +3357,6 @@ dcallz:	;  code field (from ' WORD on stack)
 
 dcallc:	; CALL code field (on stack)
 
-
-
 ; runintz is the inner interpreter of 'compiled' words.
 ; X15 IP is our instruction pointer.
 ; there is a FASTER and a TRACEABLE version.
@@ -3331,8 +3366,6 @@ dcallc:	; CALL code field (on stack)
 ; tokens are expanded to word addresses
 ; each word is then executed.
 
-
- 
 
 dtronz:
 		MOV		X6, #-1
@@ -5014,6 +5047,14 @@ tcomer22: .ascii "  ) ns \n "
 		.zero 16
 
 
+
+		.align 	8
+tcomer23: .ascii "BEGIN .. AGAIN error - AGAIN needs BEGIN.\n "
+		.zero 16
+
+
+
+
 .align 	8
 tforget: .ascii "\nForgeting last_word word: "
 		.zero 16
@@ -5300,7 +5341,7 @@ dend:
 		
 
 			; words that can take inline literals as arguments
-			makeword "(EXIT)", dexitz, 0,  0       		    ; 0 - never runs
+			makeword "(END)", dexitz, 0,  0       		    ; 0 - never runs
 			makeword "(LITS)",  dlitz, dlitc,  0       		; 1
 			makeword "(LITL)",  dlitlz, dlitlc,  0     		; 2
 			makeword "(IF)",   dzbranchz, 0,  0 	    	; 3
@@ -5404,7 +5445,7 @@ ddict:
 			makeword "ELSE", 0 , delsec, 0 
 			makeword "ENDIF", 0 , dendifc, 0 
 			makeword "EMIT", emitz , 0, 0 
-			makeword "EXIT", 0, 	dexitc,  0          
+			makeword "EXIT", dexitz, 	0,  0          
 		 	
 			makeqvword 101
 			makeword "E", dvaraddz, dvaraddc,  8 * 69 + ivars	
