@@ -176,6 +176,7 @@
 
 	MOV		X0, X12
 	LDRH    W1, [X15,#-2] 
+	CBZ     W1, 20f
 	CMP		W1,	16
 	B.gt	20f
  	ADRP	X0, literal_name@PAGE	
@@ -214,6 +215,7 @@
 	LDR		X2, [X0] 
 
 	LDRH    W1, [X15,#-2] 
+	CBZ		W1, 20f
 	CMP		W1,	16
 	B.gt	20f
  	ADRP	X0, literal_name@PAGE	
@@ -1400,7 +1402,7 @@ set_word_runtime:
 
 
 	STR		X15, [X28]		; set start point
-
+ 
 	B		compile_words
 
 	
@@ -5181,7 +5183,7 @@ zstdin: .zero 16
 
 .align 8
 literal_name:
-.ascii  "* literal"
+.ascii  "<- literal"
 	.zero 16
 
 .align 8
@@ -5692,7 +5694,7 @@ dend:
 		makeword "(DOWNDOER)", 	ddowndoerz, 0 , 0		; 22
 		makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
 		makeword "(END)", 		dendz, 0 , 0			; 24
-		makeword "(25)", 		0, 	0,  0				; 25
+		makeword "(DOCOL)",		0, 	0,  0				; 25
 		makeword "(26)", 		0, 	0,  0				; 26
 		makeword "(27)", 		0, 	0,  0				; 27
 		makeword "(28)", 		0, 	0,  0				; 28
