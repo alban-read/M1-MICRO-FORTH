@@ -1666,13 +1666,11 @@ exit_compiler_no_words:
 
 exit_compiler:
 
-		MOV		X0, #0
-		STRH	W0, [X15]	
-		ADD		X15, X15, #2
-		MOV		X0, #24 ; END
+	 
+		MOV		X0,#0 ; EXIT
 		STRH	W0, [X15]
 		ADD		X15, X15, #2
-		MOV		X0, #24 ; END
+		MOV		X0, #0 ; EXIT
 		STRH	W0, [X15]
  		ADD		X15, X15, #2
 
@@ -1749,6 +1747,13 @@ dfromrz:
 
 dfromrc:
 		RET
+
+
+
+; DO LOOP words
+; The definite loops
+;
+;
 
 
 ; DO .. LOOP, +LOOP uses the return stack.
@@ -2035,7 +2040,7 @@ do_loop_err:
 			
 		RET	
 
-; compile in DO LOOP, +LOOP
+; compile in DO LOOP, +LOOP, DOWNDO -LOOP
 
 doerc:
 		MOV	X0, #21 ; 
@@ -2065,6 +2070,91 @@ dmloopc:
 		MOV	X0, #18
 		STRH W0, [X15] ; replace code
 		RET
+
+
+
+; The INDEFINITE LOOPS
+; BEGIN ... AGAIN
+; BEGIN ... f UNTIL
+; BEGIN .. f WHILE .... REPEAT
+;
+;
+
+
+dbeginz: ; BEGIN
+
+RET
+
+
+dbeginc: ; COMPILE BEGIN
+
+RET
+
+
+duntilz:
+
+RET
+
+duntilc:
+
+RET
+
+
+dwhilez: ; WHILE
+
+RET
+
+dwhilec: ; COMPILE WHILE
+
+
+RET
+
+drepeatz: ; REPEAT
+
+
+RET
+
+
+drepeatc:	; COMPILE REPEAT
+
+RET
+
+
+dagainz:	; AGAIN
+
+RET
+
+
+dagainc:	; COMPILE AGAIN
+
+RET
+
+
+
+; LEAVE 
+
+dleavez:	; LEAVE
+
+
+RET
+
+
+dleavec:	; COMPILE LEAVE
+
+RET
+
+
+
+
+
+
+
+
+
+
+
+;;;;;;;;;
+
 
 
 dstorez:	; ( addr value -- )
@@ -2523,7 +2613,7 @@ see_tokens:
 		BL		X0addrpr
 
 		LDRH	W0, [X12]
-		CMP		W0, #24 ; END
+		CMP		W0, #0 ; END / EXIT
 		B.eq	end_token
 
 		BL		X0halfpr
@@ -2537,7 +2627,7 @@ see_tokens:
 		ADD		X0, X1, #48  ; name field
 		BL		X0prname
 
-		CMP		W14, #24 ; END
+		CMP		W14, #0; END / EXIT
 		B.eq	literal_skip
 		CMP		W14, #0 ; NULL
 		B.eq	literal_skip
@@ -2959,7 +3049,7 @@ dendifz:
 
 dendifc:
 		
-		SUB 	X15, X15, #2 ; do not compile endif
+		;SUB 	X15, X15, #2 ; do not compile endif
 
 	 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
 		SUB 	X14, X14, #16 		; pop the ELSE/ENDIF
@@ -3087,13 +3177,8 @@ dzbranchc:
 dbranchz: ; (ELSE)
 		
 		do_trace	
-
-		ADD		X15, X15, #2
-		
-		LDRH	W0, [X15] 		; offset to endif
+		LDRH	W0, [X15,#2] 	; offset to endif
 		SUB		W0, W0, #32		; avoid confusion 
- 
-
 		ADD		X15, X15, X0	; change IP
 
 		RET
@@ -3318,7 +3403,7 @@ dtimeitz: ; time the next work
 		MOV     X12, X0
 
 		MOV     X2, #1000
-		MOV 	X1, #24			
+		MOV 	X1, #24			; 24000
 		MUL     X1, X1, X2
 		UDIV    X0, X0, X1		; ms
 
@@ -3330,7 +3415,7 @@ dtimeitz: ; time the next work
 
 		MOV		X0, X12
 		MOV     X2, #100
-		MOV 	X1, #24			
+		MOV 	X1, #24			; 2400
 		MUL     X1, X1, X2
 		UDIV    X0, X0, X1		; ns
 
@@ -3488,41 +3573,34 @@ fastrunintcz: ; interpret the list of tokens at word +
 		LDR		X0, [X1, #40]		; compile mode tokens
 
 
-
-
-
 fastrunintz:; interpret the list of tokens at X0
 		; until (END) #24
-
- 
 
 		; SAVE IP 
 		STP	   LR,  X15, [SP, #-16]!
 		SUB	   X15, X0, #2
-		
-		MOV     X29, #64
+		MOV    X29, #64
 
 		; unrolling the loop here x16 makes this a lot faster,
 10:		; next token
-
+		
 		.rept 	16
 
 		LDRH	W1, [X15, #2]!
-
-		CMP     W1, #24 ; (END) 
-		B.eq    90f
-
+		CBZ     X1, 90f
+ 
 		MADD	X1, X29, X1, X27
-
-		LDR     X2, [X1, #8]
-		LDR		X0, [X1]
+		LDP     X0, X2, [X1]
 		CBZ		X2, 10b
-
+	 
 		BLR     X2 		; with X0 as data and X1 as address	 
 
+20:
 		.endr
 
 		b 		10b
+
+
 
 
 ; traceable version
@@ -3548,10 +3626,10 @@ runintz:; interpret the list of tokens at X0
 		; unrolling the loop here x16 makes this a lot faster,
 10:		; next token
 
-		.rept 	16
+		.rept 	8
 		LDRH	W1, [X15, #2]!
 
-		CMP     W1, #24 ; (END) 
+		CMP     W1, #0 ; (END) / (EXIT)
 		B.eq    90f
 
 		MADD	X1, X29, X1, X27
@@ -3570,6 +3648,8 @@ runintz:; interpret the list of tokens at X0
 
 		b 		10b
 		  
+dendz:	; EXIT interpreter - called by exit
+
 90:
 		LDP		LR, X15, [SP], #16	
 		RET
@@ -3577,11 +3657,11 @@ runintz:; interpret the list of tokens at X0
 
 
 dexitz: ; EXIT
-	
+		LDP		LR, X15, [SP], #16	
 		RET
 
 dexitc: ; EXIT compiles end
-		MOV		X0, #5 ; (EXIT)
+		MOV		X0, #0 ; (EXIT)
 		STRH	W0, [X15]
 		RET
 
@@ -4238,6 +4318,7 @@ dfindlitc:
 
 
 dconstz: ; value of constant
+		LDR		X0, [X1]
 		STR		X0, [X16], #8
 		RET
 
@@ -5214,7 +5295,10 @@ dend:
 
 			; the end of the list - also the beginning of the same.
 
-			makeword "(NULL)", 0, 0,  0       		    ; 0
+			; for safety give the null word a zero code word.
+
+			makeword "(EXIT)", dexitz, 0,  0       		    ; 0
+
 			; primitive code word headings.
 
 			; hash words 
@@ -5228,13 +5312,13 @@ dend:
 			; words that take inline literals < 16
 			makeword "#LITS", dlitz, dlitc,  0       		; 1
 			makeword "#LITL", dlitlz, dlitlc,  0     		; 2
-			makeword "(IF)", dzbranchz, 0,  0 	    ; 3
-			makeword "(ELSE)", dbranchz, 0,  0   	; 4
-			makeword "(EXIT)", 0, 0,  0       				; 5
-			makeword "#6", 0, 0,  0   						; 6
-			makeword "#7", 0, 0,  0     	  				; 7
-			makeword "#8", 0, 0,  0   					 	; 8
-			makeword "#9", 0, 0,  0     					; 9
+			makeword "(IF)", dzbranchz, 0,  0 	    		; 3
+			makeword "(ELSE)", dbranchz, 0,  0   			; 4
+			makeword "(5)", 0, 0,  0       					; 5
+			makeword "(6)", 0, 0,  0   						; 6
+			makeword "(7)", 0, 0,  0     	  				; 7
+			makeword "(8)", 0, 0,  0   					 	; 8
+			makeword "(9)", 0, 0,  0     					; 9
 			makeword "#$S", dslitSz, 0,  0     				; 10
 			makeword "#$L", dslitLz, 0,  0     				; 11
 			makeword "(.')", dslitSzdot, 0,  0   			; 12
@@ -5251,7 +5335,7 @@ dend:
 			makeword "(DOER)", 		ddoerz, 	0,  0       ; 21
 			makeword "(DOWNDOER)", 	ddowndoerz, 0 , 0		; 22
 			makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
-	 		makeword "(END)", 		0, 0 , 0				; 24
+	 		makeword "(END)", 		dendz, 0 , 0			; 24
 
 			makeword "(",	 		dlrbz, dlrbc,	0		; ( comment
 
@@ -5268,6 +5352,9 @@ hashdict:
 
 			makeword "ADDR" , daddrz, daddrc, 0
 
+
+			makeword "AGAIN" , dagainz, dagainc, 0
+
 			makeword "ABS" , dabsz, dabsc, 0
 
 			makeword "AND" , dandz, 0, 0
@@ -5279,6 +5366,8 @@ hashdict:
 adict:
 
 			makeemptywords 84
+
+			makeword "BEGIN" , dbeginz, dbeginc, 0
 			makeword "BUFFER$", dvaraddz, dvaraddc,  string_buffer
 			makeword "BREAK",  dbreakz, dbreakc, 0
 	  		makeword "BL",  dconstz, dconstz, 32
@@ -5373,6 +5462,9 @@ kdict:
 		
 			makeqvword 108
 
+
+			makeword "LEAVE", dleavez , dleavec, 0 
+
 			makeword "LOOP", 0 , dloopc, 0 
 
 			makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
@@ -5431,6 +5523,7 @@ qdict:
 			makeemptywords 50
 
 			makeword "REPRINT", reprintz , reprintc, 0 
+	 		makeword "REPEAT", drepeatz , drepeatc, 0 
 	 
 
 			makeword "ROT", drotz , drotc, 0 
@@ -5476,13 +5569,12 @@ tdict:
 
 			makeemptywords 50
 			makeqvword 117
-			makeword "U", dvaraddz, dvaraddc,  8 * 85 + ivars	
-			makeword "FASTEST", duntracable, 0, 0
 
+			makeword "UNTIL", duntilz, duntilc, 0	
+			makeword "U", dvaraddz, dvaraddc,  8 * 85 + ivars	
+		 
 udict:
 
-
-	
 			makeemptywords 48
 			makeword "VERSION", announce , 0, 0
 
@@ -5496,7 +5588,7 @@ vdict:
 			makeemptywords 48
 
 			makeword "WORDS", dotwords , 0, 0 
-		 
+		 	makeword "WHILE", dwhilez , dwhilec, 0 
 	
 			makeqvword 119
  			makeword "W", dvaraddz, dvaraddc,  8 * 87 + ivars	
