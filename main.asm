@@ -175,6 +175,13 @@
 	BL		X0halfpr
 
 	MOV		X0, X12
+	LDRH    W1, [X15,#-2] 
+	CMP		W1,	16
+	B.gt	20f
+ 	ADRP	X0, literal_name@PAGE	
+	ADD		X0, X0, literal_name@PAGEOFF	
+	
+20:
 	BL		X0prname
 
 	BL		ddotsz
