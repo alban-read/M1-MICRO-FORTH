@@ -2092,16 +2092,37 @@ dbeginc: ; COMPILE BEGIN
 
 RET
 
-
+; : t2 BEGIN 1+ DUP DUP . CR 10 >  UNTIL .' fini ' DROP ;
 duntilz:
 
-RET
+
+		LDP		X2, X5,  [X14, #-16] ; X5 is branch
+		CMP		X2, #'B' ;BEGIN
+		B.ne	190f ; UNTIL needs BEGIN
+
+		; I am in a BEGIN loop testing UNTIL
+
+		LDR		X1, [X16, #-8]
+		SUB		X16, X16, #8	
+		CMP		X1, #-1
+		B.eq	180f 	 
+
+		; not true
+		MOV		X15, X5	; back we go
+		RET
+
+		; true I am finishing
+180:
+		SUB		X14, X14, #8	
+		RET 
+
+ 
 
 duntilc:
 
 RET
 
-
+         ; : t3 BEGIN DUP 1 + 10 < WHILE DUP . CR REPEAT ;
 dwhilez: ; WHILE needs a foward branch to AGAIN
 
 
@@ -2116,12 +2137,11 @@ dwhilez: ; WHILE needs a foward branch to AGAIN
 		CMP		X1, #0
 		B.eq	180f 		; loop finishes
 
-		; I am finishing, skip forward to AGAIN
+		; I am finishing, skip forward to REPEAT
 
 
 
-		; loop continues
-		
+
 		RET 
 
 
@@ -2132,7 +2152,12 @@ dwhilez: ; WHILE needs a foward branch to AGAIN
 
 
 
-190:    ; WHILE needs BEGIN
+190:    ; UNTIL/AGAIN needs BEGIN
+
+		ADRP	X0, tcomer23@PAGE	
+		ADD		X0, X0, tcomer23@PAGEOFF
+    	BL		sayit
+
 		LDP		LR, X15, [SP], #16	
 		RET
 
@@ -5049,7 +5074,7 @@ tcomer22: .ascii "  ) ns \n "
 
 
 		.align 	8
-tcomer23: .ascii "BEGIN .. AGAIN error - AGAIN needs BEGIN.\n "
+tcomer23: .ascii "BEGIN .. AGAIN error - AGAIN/UNTIL needs BEGIN.\n "
 		.zero 16
 
 
