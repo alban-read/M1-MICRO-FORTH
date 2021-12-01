@@ -2074,12 +2074,14 @@ dmloopc:
 
 
 ; The INDEFINITE LOOPS
+; BEGIN stacks itself, AGAIN, UNTIL, REPEAT and LEAVE use that.
+;
 ; BEGIN ... AGAIN
 ; BEGIN ... f UNTIL
 ; BEGIN .. f WHILE .... REPEAT
 ;
-;
-
+; ONLY WHILE needs compile time assistance as it branches forward.
+; REPEAT is like AGAIN but fixes up WHILE at compile time.
 
 dbeginz: ; BEGIN runtime
 	; Stack begins IP
@@ -2094,7 +2096,6 @@ RET
 
 ; : t2 BEGIN 1+ DUP DUP . CR 10 >  UNTIL .' fini ' DROP ;
 duntilz:
-
 
 		LDP		X2, X5,  [X14, #-16] ; X5 is branch
 		CMP		X2, #'B' ;BEGIN
@@ -2138,8 +2139,6 @@ dwhilez: ; WHILE needs a foward branch to AGAIN
 		B.eq	180f 		; loop finishes
 
 		; I am finishing, skip forward to REPEAT
-
-
 
 
 		RET 
