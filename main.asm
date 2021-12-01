@@ -175,10 +175,8 @@
 	BL		X0halfpr
 
 	MOV		X0, X12
-	CMP		X0, #-1
-	B.eq	20f	
 	BL		X0prname
-20:
+
 	BL		ddotsz
 	
 	LDP		X1, X12, [SP], #16	
@@ -207,11 +205,8 @@
 	B.gt	999f
 
 	LDR		X2, [X0] 
-
-	CMP		X0, #-1
-	B.eq	20f	
 	BL		X0prname
-20:
+
 	BL		ddotsz
 	BL		ddotrz
 	
@@ -2168,7 +2163,7 @@ duntilc:
 
 	RET
 
-		; : t3 BEGIN 1+ DUP 10 < WHILE DUP . CR REPEAT ;
+		; : t3 BEGIN DUP 1 + 10 < WHILE DUP . CR REPEAT ;
 dwhilez: ; WHILE needs a foward branch to AGAIN
 
 
@@ -3826,7 +3821,6 @@ dlimited:
 	RET
 
 
-
 ; fast not traceable, otherwise the same as runintz below.
 
 fastrunintcz: ; interpret the list of tokens at word + 
@@ -5342,7 +5336,6 @@ tcomer24: .ascii "BEGIN .. WHILE REPEAT error - MISSING WHILE.\n "
 .align	8
 tcomer25: .ascii "BEGIN .. WHILE REPEAT error - MISSING BEGIN.\n "
 	.zero 16
-
 
 
 .align	8
