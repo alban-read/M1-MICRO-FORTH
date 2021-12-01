@@ -205,7 +205,16 @@
 	B.gt	999f
 
 	LDR		X2, [X0] 
+
+	LDRH    W1, [X15,#-2] 
+	CMP		W1,	16
+	B.gt	20f
+ 	ADRP	X0, literal_name@PAGE	
+	ADD		X0, X0, literal_name@PAGEOFF	
+	
+20:
 	BL		X0prname
+ 
 
 	BL		ddotsz
 	BL		ddotrz
@@ -5162,6 +5171,11 @@ dpage: .zero 4
 zstdin: .zero 16
 
 ;; text literals
+
+.align 8
+literal_name:
+.ascii  "* literal"
+	.zero 16
 
 .align 8
 
