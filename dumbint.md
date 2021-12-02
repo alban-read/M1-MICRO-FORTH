@@ -663,6 +663,59 @@ This is not compatible
 
 I do not expect to be able to compile ANSI FORTH, nor do I have some large source of ANSI code somewhere I can reuse.
 
+
+### Indefinite loops
+
+There are three distinct indefinite loops, each with its own structure.
+
+These loops can be nested, but not blended, do not mix UNTIL with AGAIN etc.
+
+
+
+
+#### infinite loop
+
+
+BEGIN ... f IF LEAVE THEN ... AGAIN 
+
+```FORTH
+: l2 BEGIN 1+ DUP 10 > IF LEAVE THEN DUP . CR AGAIN .' fini ' DROP ;
+```
+
+This is the most general and least useful loop; it can be used as an infinite loop, and could replace either loop below, it can also be replaced by one of the loops below, in less you need multiple exit points.
+
+BEGIN ... AGAIN 
+
+Will repeat forever.
+
+A BEGIN ... AGAIN loop may only be exited by LEAVE or the WHOLE word may EXIT
+
+
+#### While true loop
+
+BEGIN f WHILE ... REPEAT
+
+The loop repeats while the condition is true.
+
+
+```FORTH
+: l3 BEGIN  1 + DUP 10 < WHILE DUP . CR REPEAT ;
+```
+
+Is a loop with a condition at the front, it repeats while the condition is true.
+
+#### Loop until true
+
+BEGIN ... f UNTIL
+
+
+```FORTH
+: l4 BEGIN 1+ DUP DUP . CR 10 >  UNTIL .' fini ' DROP ;
+```
+
+Is a loop with the condition at the end. 
+
+
 ### The Token interpreter
 
 ARM code takes 32 bits, the register lengths are natively 64 bits.
@@ -676,26 +729,24 @@ An address based interpreter is smaller, but this one is not huge.
 
 
 ```ASM
- 
-10:		; next token
+10:	; next token
+	
+	.rept	16
 
-		.rept 	16
-		LDRH  W1, [X15, #2]!
+		LDRH	W1, [X15, #2]!
+		CBZ		X1, 90f
+	 
+		MADD	X1, X29, X1, X27
+		LDP		X0, X2, [X1]
+		CBZ		X2, 10b
+	
+		BLR		X2		; with X0 as data and X1 as address	
 
-		CMP   W1, #24 ; (END) 
-		B.eq  90f
+20:
+	.endr
 
-		MADD  X1, X29, X1, X27
+	b		10b
 
-		LDR   X2, [X1, #8]
-		LDR   X0, [X1]
-		CBZ   X2, 10b
-
-		BLR   X2 		; with X0 as data and X1 as address	 
-
-		.endr
-
-		b 		10b
 ```
 
 Discussion of the token interpreter
@@ -715,6 +766,8 @@ The main activity repeated for each token is between label 10 and the jump back 
 - The design impacts performance.
 
 - The details of which instructions to use and in what order impact performance.
+
+- using 0 for the end of word marker, and using CBZ helped.
 
 The use of a data pointer for each word passed in X0 seems useful, it allows words to run with an argument in the words header.
 
