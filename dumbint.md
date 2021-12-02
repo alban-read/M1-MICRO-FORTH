@@ -291,7 +291,7 @@ I think the core work needed is done and can now be extended.
 
 The whole experience has been completely interactive from the moment the interpreter first said OK to me.
 
-Did encounter some annoying bugs, rewrote the tracing function a couple of times, cursed the computer.
+Did encounter some annoying bugs, rewrote the tracing function a couple of times, cursed the computer, everything still needs work.
 
 - Typical stack juggling words implemented.
 

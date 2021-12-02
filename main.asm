@@ -2131,11 +2131,6 @@ dmloopc:
 ; REPEAT is like AGAIN but fixes up WHILE at compile time.
 
 dbeginz: ; BEGIN runtime
-	; Stack begins IP
-
-	LDP		X2, X5,  [X14, #-16] ; X5 is branch
-	CMP		X2, #'B' ;BEGIN
-	B.eq	190f
 
 	MOV		X2,  #'B' ;  BEGIN 
 	STP		X2,  X15, [X14], #16
@@ -2317,12 +2312,9 @@ dagainz:	; AGAIN
 	RET
 
 	
-190:	; continue - no BEGIN for our AGAIN.
+190:	; continue - on as LEAVE popped BEGIN
 
-	LDP		X2, X5,  [X14, #-16] ; X5 is branch
-	CMP		X2, #9 ;(WHILE)
-	MOV     X0, #-1
-	B.ne	190f
+	 
 
 
 	RET			
@@ -2331,11 +2323,34 @@ dagainz:	; AGAIN
 	
 
 dagainc:	; COMPILE AGAIN
+	 
+	STP		LR,  X12, [SP, #-16]!
+	
+	LDP		X1, X12,  [X14, #-16] ; X5 is branch
+	CMP		X1, #13 ; (LEAVE) we MAY have a leave to patch
+	B.ne 	20f
 
-	LDP		X2, X5,  [X14, #-16] ; X5 is branch
-	CMP		X2, #'B' ;BEGIN
+	; FIX UP (LEAVE)
+	SUB		X0, X15, X12	; dif between REPEAT/AGAIN and (LEAVE).
+	ADD		X0, X0, #2
+	STRH	W0, [X12]	; store that
+ 
+
+
+20:
+	CMP		X0, #'B' ; was that a BEGIN?
+	B.eq 	30f
+	
+	SUB		X14, X14, #16
+	LDP		X0, XZR,  [X14, #-16] ; X5 is branch
+	SUB		X14, X14, #16
+	CMP		X0, #'B' ; BEGIN - WE MUST HAVE BEGIN or error
 	B.ne	190f
 
+30:
+	MOV		X0, #0
+	LDP		LR, X12, [SP], #16	
+ 
 RET
 
 190:	; AGAIN needs BEGIN
@@ -2343,8 +2358,8 @@ RET
 	ADRP	X0, tcomer23@PAGE	
 	ADD		X0, X0, tcomer23@PAGEOFF
 	BL		sayit
+	LDP		LR, X12, [SP], #16	
 	MOV		X0, #-1
-
 	RET
 
 
@@ -2372,7 +2387,25 @@ dleavez:	; LEAVE
 
 dleavec:	; COMPILE LEAVE
 
-RET
+	 
+	MOV		X0, #13 ; (LEAVE)
+	STRH	W0, [X15] 
+	ADD		X15, X15, #2
+	MOV		X0, #4321
+	STRH	W0, [X15] ; dummy offset
+
+
+	MOV		X0, #13 ; (LEAVE)  
+	STP		X0,  X15, [X14], #16 
+	
+	MOV		X0, #0
+
+	RET
+
+190:
+	MOV		X0, #-1
+	RET
+ 
 
 
 
@@ -2487,6 +2520,7 @@ clean_last_word:
 	MOV		X1, #0
 	STP		X1, X1, [X0], #16
 	STP		X1, X1, [X0], #16
+	MOV		X1, #-1
 	STP		X1, X1, [X0], #16
 
 
@@ -5680,7 +5714,7 @@ dend:
 		makeword "($S)",  dslitSz, 0,  0				; 10
 		makeword "($L)",  dslitLz, 0,  0				; 11
 		makeword "(.')", dslitSzdot, 0,  0				; 12
-		makeword "(13)", 0, 0,  0						; 13
+		makeword "(LEAVE)", dleavez, 0,  0					; 13
 		makeword "(14)", 0, 0,  0						; 14
 		makeword "(15)", 0, 0,  0						; 15
 
@@ -5829,7 +5863,7 @@ kdict:
 		makeqvword 108
 
 
-		makeword "LEAVE", dleavez , dleavec, 0 
+		makeword "LEAVE", 0 , dleavec, 0 
 
 		makeword "LOOP", 0 , dloopc, 0 
 
