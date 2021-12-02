@@ -186,6 +186,9 @@
 	BL		X0prname
 
 	BL		ddotsz
+
+
+
 	
 	LDP		X1, X12, [SP], #16	
 	LDP		LR, X0, [SP], #16	
@@ -223,7 +226,9 @@
 	
 20:
 	BL		X0prname
- 
+
+ 	MOV		X0, X15
+	BL		X0prip
 
 	BL		ddotsz
 	BL		ddotrz
@@ -690,11 +695,25 @@ addrpr: ; prints int on top of stack in hex
 	RET
 
 
+
+
+X0prip:
+	MOV		X1, X0
+	ADRP	X0, tpradIP@PAGE		
+	ADD		X0, X0, tpradIP@PAGEOFF
+	save_registers
+	STP		X1, X0, [SP, #-16]!
+	BL		_printf		
+	ADD	SP, SP, #16 
+	restore_registers  
+	RET
+
+
 X0addrprln:
 	MOV	X1, X0
 	B		12f
 
-lnaddrpr: ; prints int on top of stack in hex	
+lnaddrpr: ; prints int on top of stack 
 	
 	LDR		X1, [X16, #-8]
 	SUB		X16, X16, #8	
@@ -2127,8 +2146,8 @@ dmloopc:
 ; BEGIN ... f UNTIL
 ; BEGIN .. f WHILE .... REPEAT
 ;
-; ONLY WHILE needs compile time assistance as it branches forwards.
-; REPEAT is like AGAIN but fixes up WHILE at compile time.
+; LEAVE (LEAVE) and WHILE (WHILE) branch.
+; AGAIN/REPEAT must fix up branch offsets.
 
 dbeginz: ; BEGIN runtime
 
@@ -2176,32 +2195,36 @@ duntilc:
 
 	RET
 
-		; : t3 BEGIN DUP 1 + 10 < WHILE DUP . CR REPEAT ;
-dwhilez: ; WHILE needs a foward branch to AGAIN
+		; : t3 BEGIN  1 + DUP 10 < WHILE DUP . CR REPEAT ;
+dwhilez: ; WHILE needs a foward branch to REPEAT
 
+	do_trace
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
-	CMP		X2, #'B' ;BEGIN
+	CMP		X2, #'B' ;BEGIN is left for REPEAT
 	B.ne	190f
 
 	; I am in a BEGIN loop testing while
 	
 	LDR		X1, [X16, #-8]
 	SUB		X16, X16, #8	
-	CMP		X1, #0
+	CMP		X1, #-1
 	B.eq	180f		; loop finishes
 
 	; skip forward to REPEAT
-	SUB		X14, X14, #16  ; we pop BEGIN now
+	do_trace
+ 
+
 	ADD		X15, X15, #2
 	LDRH	W5, [X15]
+	SUB		X5, X5, #2
 	ADD		X15, X15, X5 ; jump to REPEAT
 
 	RET 
 
 
 180:
- 
+ 	ADD		X15, X15, #2
 	RET
 
 
@@ -2254,36 +2277,36 @@ dwhilec: ; COMPILE (WHILE)
 
 drepeatz: ; REPEAT
 
-	; REPEAT should have BEGIN stacked
-
-	;LDP		X2, X5,  [X14, #-16] ; X5 is branch
-	;CMP		X2, #9 ;(WHILE)
-	;B.ne	190f
-	;SUB     X14, X14, #16 ; found and pop while
-			
+	do_trace
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
-	CMP		X2, #'B' ;(BEGIN)
-	B.ne	170f
+	CMP		X2, #'B' ;BEGIN
+	B.ne	190f
 
-	MOV		X15, X5	; back we go to BEGIN
+	MOV		X15, X5	; back we go
+ 
 	RET
 
 
 drepeatc:	; COMPILE REPEAT
 
-	LDP		X2, X5,  [X14, #-16] ; X5 is branch
-	CMP		X2, #9 ;(WHILE)
-	B.ne	190f
+
+	STP		LR,  X12, [SP, #-16]!
+
+	LDP		X1,  X12,  [X14, #-16]  
+	CMP		X1, #9 ; WHILE
+	B.ne 	20f
 
 	; FIX UP (WHILE)
-	SUB		X14, X14, #16 	; pop (WHILE)
-	SUB		X4, X15, X5		; dif between REPEAT and (WHILE).
-	ADD		X4, X4, #2
-	STRH	W4, [X5]	; store that
-	MOV		X0, #0
-	RET
+	SUB		X0, X15, X12 ; BEGIN - WHILE - REPEAT
+	ADD		X0, X0, #2
+	STRH	W0, [X12]	 ; store that
 
+30:
+	MOV		X0, #0
+	LDP		LR, X12, [SP], #16	
+ 
+RET
 
 
 170:	; Error - no BEGIN for our REPEAT.
@@ -2302,13 +2325,16 @@ drepeatc:	; COMPILE REPEAT
 
 
 ; : t2 BEGIN 1+ DUP 10 > IF LEAVE THEN DUP . CR AGAIN .' fini ' DROP ;
+
 dagainz:	; AGAIN
 
+	do_trace
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
 	CMP		X2, #'B' ;BEGIN
 	B.ne	190f
 
 	MOV		X15, X5	; back we go
+ 
 	RET
 
 	
@@ -2331,20 +2357,20 @@ dagainc:	; COMPILE AGAIN
 	B.ne 	20f
 
 	; FIX UP (LEAVE)
-	SUB		X0, X15, X12	; dif between REPEAT/AGAIN and (LEAVE).
+	SUB		X0, X15, X12 ; dif between REPEAT/AGAIN and (LEAVE).
 	ADD		X0, X0, #2
-	STRH	W0, [X12]	; store that
- 
+	STRH	W0, [X12]	 ; store that
+
 
 
 20:
-	CMP		X0, #'B' ; was that a BEGIN?
+	CMP		X0, #'B' ; was that a BEGIN we saw?
 	B.eq 	30f
 	
 	SUB		X14, X14, #16
 	LDP		X0, XZR,  [X14, #-16] ; X5 is branch
 	SUB		X14, X14, #16
-	CMP		X0, #'B' ; BEGIN - WE MUST HAVE BEGIN or error
+	CMP		X0, #'B' ; BEGIN - WE MUST HAVE a BEGIN or error
 	B.ne	190f
 
 30:
@@ -2364,42 +2390,77 @@ RET
 
 
 
-; LEAVE 
+; LEAVE (LEAVE) runtime
+; : t2 BEGIN 1+ DUP 10 > IF LEAVE THEN DUP . CR AGAIN .' fini ' DROP ;
+dleavez:	; just LEAVE the enclosing loop
+	STP		LR,  X5, [SP, #-16]!
+	do_trace
 
-dleavez:	; LEAVE
-
-	LDP		X2, X5,  [X14, #-16] ; X5 is branch
+	LDP		X2, XZR,  [X14, #-16] ; X5 is branch
 	CMP		X2, #'B' ;BEGIN
 	B.ne	190f
 
 	; I am in a BEGIN loop, pop it now and AGAIN will end
 	SUB		X14, X14, #16
+
+	; however I want to LEAVE right NOW not after one extra step.
+
+	LDRH	W0, [X15, #2]
+	ADD		X15, X15, X0 ; change IP
+
+	do_trace
+
+	LDP		LR, X5, [SP], #16	
 	RET
 
 
 190:	; not leaving a loop? leave whole word.
+	do_trace
+	LDP		LR, X5, [SP], #16	
 	LDP		LR, X15, [SP], #16	
 	RET
 
 
- 
+ ; LEAVE has to be careful
+ ; LEAVE may find itself inside an IF statement.
 
+dleavec:	; COMPILE LEAVE create branch slot, look out for IF
 
-dleavec:	; COMPILE LEAVE
-
-	 
 	MOV		X0, #13 ; (LEAVE)
 	STRH	W0, [X15] 
 	ADD		X15, X15, #2
 	MOV		X0, #4321
-	STRH	W0, [X15] ; dummy offset
+	STRH	W0, [X15] ; slot
 
+	LDP		X1, X2,  [X14, #-16]  
+	SUB		X14, X14, #16 ; pop
+	CMP		X1, #'B' ;BEGIN
+	B.eq	80f
+	CMP		X1, #3 ; (IF)
+	B.eq	90f
+	B  		100f
 
-	MOV		X0, #13 ; (LEAVE)  
+80: ; restack BEGIN
+	MOV		X0, #'B' ;  
+	STP		X0,  X2, [X14], #16 
+	B		100f
+
+90: ; STACK LEAVE UNDER (IF)
+	; (LEAVE)
+	MOV		X0, #13  
 	STP		X0,  X15, [X14], #16 
-	
-	MOV		X0, #0
+	; (IF)
+ 	MOV		X0, #3  
+	STP		X0,  X2, [X14], #16 
+	B 		180f
 
+100:
+	; just stack LEAVE
+	MOV		X0, #13 ; (LEAVE)  
+	STP		X0,  X15, [X14], #16
+
+180:	
+	MOV		X0, #0
 	RET
 
 190:
@@ -2427,7 +2488,18 @@ dhstorez:	; ( addr value -- )
 dhstorec:	; ( addr value -- )
 	RET
 
+plustorz:
 
+    LDR		X0, [X16, #-8] 
+	LDR		X1, [X16, #-16]
+
+ 
+	
+	LDR 	X2, [X0]
+	ADD		X1, X1, X2
+	STR		X1, [X0]
+	SUB		X16, X16, #16
+	RET
 
 
 dquotz:	; " 
@@ -3300,6 +3372,8 @@ dendifz:
 ; ENDIF	
 ; We are part of IF ..  ENDIF or IF .. ELSE  .. ENDIF
 ; We look for closest ELSE or IF by seeking the branch.
+
+ 
 
 dendifc:
 	
@@ -4433,7 +4507,15 @@ dinvertz:	; INVERT
 	RET
 
 
-dqmz: ; "?" if zero
+dqmz: ; "?"  print variable e.g. AT .
+
+	LDR		X0, [X16, #-8] 
+	SUB		X16, X16, #8
+	LDR		X0, [X0]
+	B		X0print
+
+
+
 	RET
 
 dqmc: ;  "?"  
@@ -4860,6 +4942,7 @@ ddotsz:
 
 dstrdotz:
 
+	do_trace
 
 	STP		LR,  XZR, [SP, #-16]!
 	
@@ -5271,6 +5354,12 @@ tpradd:	.ascii "%8ld "
 .align	8
 tpraddln:	.ascii "\n%8ld "
 	.zero 16
+
+
+.align	8
+tpradIP:	.ascii " IP[%8ld] "
+	.zero 16
+
 
 
 .align	8
@@ -6083,7 +6172,7 @@ zdict:
 		makeword ".S", ddotsz, 0 , 0
 		makeword ".'", dstrdotz, dstrdotc , 0
 		makeword "<>", dnoteqz, 0 , 0
-	
+		makeword "+!", plustorz, 0 , 0
 		
 
 
