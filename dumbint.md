@@ -74,7 +74,7 @@ Memory management is Static, really it is organized as a number of stacks and po
 
 The compiler uses literal pools, that is a deviation from most FORTH implementations, that use a single dictionary.
 
-A literal pool fits in better with the whole RISC, rigid alignment, fixed length words, load/store, seperate code and data, computer model we have going on post intel.
+A literal pool fits in better with the whole RISC concept, rigid alignment, fixed length words, load/store, seperate code and data.
 
 
 
@@ -88,7 +88,7 @@ Use 32bit values when 32 bit values will do.
 
 Use words or bytes where words or bytes will do.
 
-Support integer and decimal and matrix maths
+Support integer and floats and matrix maths
 
 Support connecting to C (as I need to talk to OS graphics library)
 
@@ -112,7 +112,7 @@ First 'compiled' word. (token compiled)
 5 test => 25 
 ```
 
-The compiler is compiling into a token list, tokens are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
+The compiler compiles words into a token list, tokens are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
 
 This inner interpreter is only a few instructions long, in runintz.
 
@@ -259,7 +259,7 @@ SEE WORD :4379973504 TEST
 
 #### Friday morning
 
-- Improved tracing, delegated tracing to run time words.
+- Improved tracing, delegated some tracing to run time words.
 
 - Improved design of LOOP
 
@@ -416,9 +416,9 @@ tokens: (example)
 
 The use of tokens with literal pools is a form of compression for the high level forth code, we do not want to use 64 bits for each word.
 
-The cost is the token lookup see NTH and the token expansion see ADDR.
+- The cost is the token lookup see NTH and the token expansion see ADDR.
 
-The token lookup is simplified by the dictionary headers being a fixed size and seperate from the token space.
+- The token lookup is simplified by the dictionary headers being a fixed size and seperate from the token space.
 
 You can use the decompiler SEE to look at words created by the token compiler.
 
@@ -496,9 +496,9 @@ TRON
 
 The concept is to write the application in assembler and script/test it
 
-the interpreter is a way to call words written in regular assembler, new words are added to the asm files in assembly.
+- The interpreter is a way to call words written in regular assembler, new words are added to the asm files in assembly.
 
-high level words are collections of word tokens, the tokens are converted to word addresses by the token interpreter, and the word at that address in the dictionary is then called.
+- High level words are collections of word tokens, the tokens are converted to word addresses by the token interpreter, and the word at that address in the dictionary is then called.
 
 
 
@@ -506,13 +506,15 @@ high level words are collections of word tokens, the tokens are converted to wor
  
 An implementation difference from typical FORTH is that literal values are stored in tables and not stored in the dictionary.
 
-In the token space the word is stored to look up the literal.
+- In the token space the word is stored to look up the literal.
 
-This makes the token space simpler, it is made up of 16 bit (half-word) tokens and nothing else.
+- This makes the token space simpler, it is made up of 16 bit (half-word) tokens and nothing else.
 
-In theory it should save space since a literal need only be defined once even if many words use it.
+- In theory it should save space since a literal need only be defined once even if many words use it.
 
-It also creates a program wide limit of 64000 instances of each thing.
+- It also creates a program wide limit of 64000 instances of each thing.
+
+- In theory this extra level of indirection should be slower
 
 This will require pools for various primitive types to be added, essentially anything longer than 16 bits needs to have a pool.
 
@@ -585,9 +587,6 @@ Ok
 
 Tracing does add overhead even if switched off.
 
-I plan to switch to either switch to a non tracing code path or simply create a version with 
-tracing ripped out.
-
 
 : TEST 10 1 DO CR 10 1 DO 35 EMIT LOOP LOOP ;
 
@@ -599,11 +598,11 @@ The words (DO) (DOER) (LOOP) (+LOOP) (-LOOP) are not normally displayed as they 
 
 The word ALLWORDS will display all the words, including words compiled by the compiler.
 
-The words are used by the compiler to construct loops and control stuctures.
+- The () words are used by the compiler to construct loops and control stuctures.
 
 The interpreter in this implementation, is straight assembler language.
 
-This provides a benefit that the compile only words can be tested in the interpreter, since in a sense FORTH is not active at that point.
+- This provides a benefit that the compile only words can be tested in the interpreter, since in a sense `FORTH` is not active at that point.
 
 e.g. 
 
@@ -616,7 +615,7 @@ Allowing (DO), I, J, K, and (LOOP) to be tested interactively.
 
 ### Compatability
 
-In general WORDS defined in the language should behave as they would in FORTH, unless that behaviour is so annoying, I had to change it.
+In general WORDS defined in the language should behave as they would in FORTH, unless I find that behaviour so annoying, I had to change it.
 
 
 
@@ -624,7 +623,7 @@ In general WORDS defined in the language should behave as they would in FORTH, u
 
 The LOOP control statement in FORTH does confusing things.
 
-In this implentation the DO .. LOOP is designed to do what any reasonable person would expect it to do, before they used FORTH. 
+In this program the DO .. LOOP is designed to do what a reasonable person would expect. 
 
 Normal loop
 
@@ -653,8 +652,8 @@ LOOP gets its sense of direction from DO or DOWNDO.
 
 Summary
 
-It is very clear if the LOOP counts up or down, and very obvious if a LOOP should end or not, if it includes the start and finish (it does).
-This LOOP is not at all likely to repeat 65536 times (or in this case billions of times ) by mistake.
+It is clear if the LOOP counts up or down,  obvious if a LOOP should end or not, and if it includes the start and finish (it does).
+This version of LOOP is not at all likely to repeat 65536 times (or in this case billions of times ) by mistake.
 
 This is not compatible 
 
@@ -664,11 +663,11 @@ I do not expect to be able to compile ANSI FORTH, nor do I have some large sourc
 
 ARM code takes 32 bits, the register lengths are natively 64 bits.
 
-I assume that using 64 bit addresses for an interpreter would pointlessly waste memory and suck away bandwidth, so I am using tokens instead of addresses.
+I guessed that using 64 bit addresses for an interpreter would pointlessly waste memory and suck away bandwidth, so I am using tokens instead of addresses.
 
-I assume this is also likely to be slower, I have not writen profiling WORDs yet.
+I guess this is also likely to be slower, which is a topic for profiling and testing.
 
-An address based interpreter is much smaller, but this is not huge.
+An address based interpreter is smaller, but this one is not huge.
 
 
 
@@ -701,17 +700,19 @@ This is small enough to discuss.
 
 The main activity repeated for each token is between label 10 and the jump back to 10.
 
-We increment IP, fetch the token,  multiply the token by 64 (the dictionary header), add to the dictionary base, this gets us the word address.
+- We increment IP, fetch the token,  multiply the token by 64 (the dictionary header), add to the dictionary base, this gets us the word address.
 
-It helps to know that X29 holds the address of the dictionary and X27 is #64 going into MADD.
+- It helps to know that X29 holds the address of the dictionary and X27 is #64 going into MADD.
 
-From that we collect the words code pointer, collect the words data pointer, call the word, the words code runs and returns.
+- From that we collect the words code pointer, collect the words data pointer, call the word, the words code runs and returns.
 
-This then repeats until the end of the word, it is a choice to compare the token with END or let END run and exit the function.
+- This then repeats until the end of the word, it is a choice to compare the token with END or let END run and exit the function.
 
-Not sure what is best, as no profiling is implemented yet.
+- The design impacts performance.
 
-The use of a data pointer for each word passed in X0 seems useful, it allows words to run with an argument.
+- The details of which instructions to use and in what order impact performance.
+
+The use of a data pointer for each word passed in X0 seems useful, it allows words to run with an argument in the words header.
 
 Sending each word its own address in X1 is more general.
 
@@ -754,11 +755,11 @@ Premature optimization may be the root of all evil.
 
 It is still important to measure your functions, as there are many ways to write the same thing.
 
-Added TIMING words to assess the speed of the application.
+- Added TIMING words to assess the speed of the application.
 
-These Tests show that the word token interpreter is very slow.
+- - These Tests show that the word token interpreter is very slow.
 
-Good, speeding it up will be very interesting.
+- - Good, speeding it up will be very interesting.
 
 TIMEIT test1
 
@@ -799,13 +800,15 @@ TIMEIT t1
 ```
 
 
+## WEEK 48 (of 2021)
+
 ### Speeding up the inner interpreter
 
 
 The FIB word in benchmarks is testing our procedure call speed.
 Calling a procedure involves looking up the token address and calling the words code.
 
-This interpreter is the primitive code for a high level word.
+- This interpreter is the primitive code that threads through a high level word.
 
 Initially the inner interpreter looks something like this :- 
 
@@ -929,23 +932,25 @@ dexitc: ; EXIT compiles end
 
 This does the same thing, minor changes to placement of instructions impacts the speed of this loop.
 
-I committed two more registers to the loop, one  X29 just to hold the value 64, and one X27 to hold the dictionary address, these speed up the MADD which replaced the shift and add in the first loop, because it was faster.
+- I committed two more registers to the loop, one  X29 just to hold the value 64, and one X27 to hold the dictionary address, these speed up the MADD which replaced the shift and add in the first loop, because it was faster.
 
-The major speed increase was unrolling the loop, unrolling the loop 8 times made a significant difference, sixteen times improved a little further, beyond that nothing.
+- The major speed increase was unrolling the loop, unrolling the loop 8 times made a significant difference, sixteen times improved a little further, beyond that nothing.
 
-Clearly any branch at all is a performance problem.
+- Clearly a branch can be a performance problem.
 
-I reorganized the dictionary so the two words the interpreter fetches from the word are close to each other, the data word, and code address.
+- I reorganized the dictionary so the two words the interpreter fetches from the word are close to each other, the data word, and code address.
 
-Using a LDP turns out to be slower in tests.
+- Using a load pair LDP turns out to be slower in some tests and faster in others, the exact arrangment of instructions matters.
 
-The tracing words, which look at X6 to see if we should print a trace also (being branches) slow down the loop.
+- The tracing words, which look at X6 to see if we should print a trace also (being branches) slow down the loop.
 
-I am suspicious that half word access is just slow, and of course expect the token access to be slower than a list of 64 bit addresses would be.
+- Note that Multiply and Add (MADD) is perfect for the address lookup, I assumed that shifting would be faster  MADD probably also just shifts for powers of 2, as it is as quick.
+
+- I am suspicious that half word access is just slow, and of course expect the token access to be slower than a list of 64 bit addresses would be.
 
 The interpreter is called by high level words.
 
-It is easy to switch the interpreter in a word, I have implemented a fast and tracable version and provided the words FASTER and TRACEABLE to switch between them.
+It is easy to switch the interpreter in a word, I have implemented a fast and tracable version and provided the words FASTER and TRACE to switch between them.
 
 e.g. 
 
@@ -956,7 +961,7 @@ Tells FIB to now use the fast untracable version, TRACEABLE does the opposite.
 
 The compiler also respects the state of TRON and TROFF, if tracing is on words are compiled as tracable.
 
-The speed difference between FASTER and TRACEABLE is small.
+The speed difference between FASTER and TRACEABLE words is small.
 
 Note the objective here is not to write a fast FIB, but to test the program. 
 
