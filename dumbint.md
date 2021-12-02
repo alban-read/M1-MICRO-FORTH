@@ -4,7 +4,7 @@ Inspired by FORTH, not a new invention, since only fools invent new languages.
 
 With .. tradeoffs..
 
-This was written from scratch, starting with a blank editor page in VS code, CLANG Assembler is used.
+This was written from scratch, starting with a blank editor page in VS code, CLANG Assembler is used, since that comes with the Apple developer kit.
 
 
 
@@ -84,7 +84,7 @@ A literal pool fits in better with the whole RISC concept, rigid alignment, fixe
 
 ### goals
 
-- Create an interactive environment open to introspection and exploration.
+- Create an interactive environment open to introspection, inspection and exploration.
 
 - Do not use 64 bit values all over the place just because it is a 64bit processor
 
@@ -308,41 +308,11 @@ Did encounter some annoying bugs, rewrote the tracing function a couple of times
 - Tracing WORDS works 
 
 - Decompiling WORDS works.
+ 
 
-TODO NEXT: Implement below
-
-I expect to do some work filling these gaps in over the next few weekends and some evenings.
-
-- Conditional (indefinite) loop words
-
-- add `<DOES` to fill in the compile time code; this will allow compiler helper words to be written using high level code.  
-
-- Floating point words.
-
-- Strings
-
-- Missing Common and Useful FORTH WORDS
-
-- Local variables
-
-TODO LATER: 
-
-- Profiling words (not too worried about speed presently) since I will use Assembler for anything that seems slow.
-
-- Benchmarks, curious how fast or slow this is.
-
-
-THEN (over this winter)
-
-- Integrate with a graphics window, using a C library.
-
-- Start writing Moonbugs with it.
-
-
+Plan: do whatever is interesting next.
 
 -----------------------------------------------------------------------
-
-
 
 ### Dictionary
 
@@ -430,7 +400,7 @@ You can use the decompiler SEE to look at words created by the token compiler.
 
 #### Decompiler
 
-If you are writing a compiler, it helps to see what is going on.
+If you are writing a compiler, it helps greatly to see what is going on.
 
 In FORTH the decompiler is traditionally called SEE.
 
