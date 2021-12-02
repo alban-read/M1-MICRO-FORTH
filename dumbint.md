@@ -23,23 +23,27 @@ create small machine code primitive words
 
  .. allow new words to be composed, mainly by concatenation.
 
-Get an interactive interpreter running from Day 1, and then build it out.
+- Get an interactive interpreter running from Day 1, and then build it out.
 
-The process is incremental, and interactive from the start, as soon as the outer text interpreter said OK, it was used to test the next features added.
+- The process is incremental, and interactive from the start, as soon as the outer text interpreter said OK, it was used to test the next features added.
 
-Use the computer against itself (Use the computer as a tool for using the computer).
+- Use the computer against itself (Use the computer as a tool for using the computer).
+
+- Assume nothing, measure and test.
+
+
 
 
 
 ### expedience
 
-It is ok to start by using some functions from the standard C library to get up and running.
+- It is ok to start by using some functions from the standard C library to get up and running.
 
-Later I may migrate to only use system calls and internal system functions.
+- Later I may migrate to only use system calls and internal system functions.
 
-ASCII text is used for function names and vaiables, not Unicode
+- ASCII text is used for function names and vaiables, not Unicode
 
-Unicode may be supported only for Unicode strings if they are added
+- Unicode may be supported only for Unicode strings if they are added
 
 
 ### Origin
@@ -80,22 +84,22 @@ A literal pool fits in better with the whole RISC concept, rigid alignment, fixe
 
 ### goals
 
-Create an interactive environment open to introspection and exploration.
+- Create an interactive environment open to introspection and exploration.
 
-Do not use 64 bit values all over the place just because it is a 64bit processor
+- Do not use 64 bit values all over the place just because it is a 64bit processor
 
-Use 32bit values when 32 bit values will do.
+- Use 32bit values when 32 bit values will do.
 
-Use words or bytes where words or bytes will do.
+- Use words or bytes where words or bytes will do.
 
-Support integer and floats and matrix maths
+- Support integer and floats and matrix maths
 
-Support connecting to C (as I need to talk to OS graphics library)
+- Support connecting to C (as I need to talk to OS graphics library)
 
 
 Use ASCII
 
-Support Strings of Unicode Runes in a safe and sensible way (later)
+- Support Strings of Unicode Runes in a safe and sensible way (later)
 
 
 ### Week off November 2021 : the big push, kick off.
