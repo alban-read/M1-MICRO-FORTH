@@ -766,7 +766,7 @@ Will time the word test1.
 
 Timing words provide the ability to experimentally improve the performance of the program.
 
-### Benchmark
+### Benchmarks
 
 
 ```FORTH
@@ -798,10 +798,14 @@ TIMEIT t1
  
 ```
 
-Which may be interesting.
+
+### Speeding up the inner interpreter
 
 
-The FIB word is testing procedure call speed, which is a test of looking up token addresses and calling the words in the token interpreter.
+The FIB word in benchmarks is testing our procedure call speed.
+Calling a procedure involves looking up the token address and calling the words code.
+
+This interpreter is the primitive code for a high level word.
 
 Initially the inner interpreter looks something like this :- 
 
@@ -957,3 +961,177 @@ The speed difference between FASTER and TRACEABLE is small.
 Note the objective here is not to write a fast FIB, but to test the program. 
 
 There is a fast FIB word (FFIB) just to make that point clear.
+
+
+### Tracing and stepping
+
+Tracing a word displays the high level word as it executes.
+
+Because each high level word refers to an interpreter, the interpreter the word uses can be changed with a command.
+
+To run a word as quickly as possible with no tracing select the fast interpreter.
+
+```FORTH
+
+FAST FIB
+
+```
+
+The word will run with no ability to display tracing information, it is faster than the tracing enabled interpreters below.
+
+
+To trace a word, you need to choose the tracing interpreter, this is the same as the fast interpreter but has tracing functions included.
+
+```FORTH
+
+TRACE FIB 
+
+```
+
+To use the stepping interpreter, that allows you to step through a word, one part at a time.
+Use the STEPPING interpreter
+
+```FORTH
+LIMIT FIB 
+```
+
+### Tracing a word
+
+A word is traced by selecting the tracing interpreter and also switching tracing on.
+
+```FORTH
+TRACE FIB TRON 9 FIB .
+```
+Will produce a trace of 9 FIB and display it.
+
+
+### Tracing many words
+
+If you TRON the next words compiled will have tracing enabled.
+
+Set TRON and then compile your words, they will all be traceable.
+
+
+
+### Step through a word a part at a time
+
+```FORTH 
+LIMIT FIB TRON 9 FIB 
+```
+
+Displays the first steps of 9 FIB 
+
+The command STEP will display the next steps
+
+The command STEPOUT will display steps until completion.
+
+The number of steps taken at a time defaults to 5, and is in the STEPPING variable.
+
+
+Example:
+
+```FORTH
+
+3 STEPPING ! // 3 steps at a time (default 5)
+
+
+: FIB ( n -- n1 )
+  DUP 1> IF
+  1- DUP 1- FIB SWAP FIB + THEN
+;
+
+LIMIT FIB
+
+
+TRON
+
+9 FIB
+
+
+4338753024 : [     0] FIB         S : [     9] : [     0] : [     0] 
+4337746208 : [   469] DUP         S : [     9] : [     9] : [     0] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [    -1] : [     9] : [     0] R : [     0] : [     0] : [     0] 
+Ok
+STEP
+
+4337746212 : [     3] (IF)        S : [    -1] : [     9] : [     0] R : [     0] : [     0] : [     0] 
+4337746214 : [    52] <- literal  S : [     9] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+4337746216 : [  1980] 1-          S : [     8] : [     0] : [     0] R : [     0] : [     0] : [     0] 
+Ok
+STEPOUT
+
+4337746218 : [   469] DUP         S : [     8] : [     8] : [     0] R : [     0] : [     0] : [     0] 
+4337746220 : [  1980] 1-          S : [     7] : [     8] : [     0] R : [     0] : [     0] : [     0] 
+4338753024 : [   607] FIB         S : [     7] : [     8] : [     0] 
+4337746208 : [   469] DUP         S : [     7] : [     7] : [     8] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [    -1] : [     7] : [     8] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [    -1] : [     7] : [     8] R : [     0] : [     0] : [     0] 
+4337746212 : [     3] (IF)        S : [    -1] : [     7] : [     8] R : [     0] : [     0] : [     0] 
+4337746214 : [    52] <- literal  S : [     7] : [     8] : [     0] R : [     0] : [     0] : [     0] 
+4337746216 : [  1980] 1-          S : [     6] : [     8] : [     0] R : [     0] : [     0] : [     0] 
+4337746218 : [   469] DUP         S : [     6] : [     6] : [     8] R : [     0] : [     0] : [     0] 
+4337746220 : [  1980] 1-          S : [     5] : [     6] : [     8] R : [     0] : [     0] : [     0] 
+4338753024 : [   607] FIB         S : [     5] : [     6] : [     8] 
+4337746208 : [   469] DUP         S : [     5] : [     5] : [     6] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [    -1] : [     5] : [     6] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [    -1] : [     5] : [     6] R : [     0] : [     0] : [     0] 
+4337746212 : [     3] (IF)        S : [    -1] : [     5] : [     6] R : [     0] : [     0] : [     0] 
+4337746214 : [    52] <- literal  S : [     5] : [     6] : [     8] R : [     0] : [     0] : [     0] 
+4337746216 : [  1980] 1-          S : [     4] : [     6] : [     8] R : [     0] : [     0] : [     0] 
+4337746218 : [   469] DUP         S : [     4] : [     4] : [     6] R : [     0] : [     0] : [     0] 
+4337746220 : [  1980] 1-          S : [     3] : [     4] : [     6] R : [     0] : [     0] : [     0] 
+4338753024 : [   607] FIB         S : [     3] : [     4] : [     6] 
+4337746208 : [   469] DUP         S : [     3] : [     3] : [     4] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [    -1] : [     3] : [     4] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [    -1] : [     3] : [     4] R : [     0] : [     0] : [     0] 
+4337746212 : [     3] (IF)        S : [    -1] : [     3] : [     4] R : [     0] : [     0] : [     0] 
+4337746214 : [    52] <- literal  S : [     3] : [     4] : [     6] R : [     0] : [     0] : [     0] 
+4337746216 : [  1980] 1-          S : [     2] : [     4] : [     6] R : [     0] : [     0] : [     0] 
+4337746218 : [   469] DUP         S : [     2] : [     2] : [     4] R : [     0] : [     0] : [     0] 
+4337746220 : [  1980] 1-          S : [     1] : [     2] : [     4] R : [     0] : [     0] : [     0] 
+4338753024 : [   607] FIB         S : [     1] : [     2] : [     4] 
+4337746208 : [   469] DUP         S : [     1] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [     0] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4337746210 : [  1999] 1>          S : [     0] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4337746212 : [     3] (IF)        S : [     0] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4337746212 : [     3] (IF)        S : [     1] : [     2] : [     4] R : [     0] : [     0] : [     0] 
+4337746230 : [  1632] THEN        S : [     1] : [     2] : [     4] R : [     0] : [     0] : [     0] 
+4337746230 : [  1632] THEN        S : [     1] : [     2] : [     4] R : [     0] : [     0] : [     0]
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
