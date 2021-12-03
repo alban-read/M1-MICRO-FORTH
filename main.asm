@@ -2641,11 +2641,9 @@ dleavec:	; COMPILE LEAVE create branch slot, look out for IF
 190:
 	MOV		X0, #-1
 	RET
- 
 
 
-
-;;;;;;;;;
+;;
 
 
 
@@ -5072,6 +5070,11 @@ ddotsz:
 
 ; executes .' using an inline literal lookup.
 
+
+; hash is used to look up literal strings.
+; I have to suspect that collisions might occur..
+; if there are enough string literals defined.
+
 .macro short_string_hash
 
 200:	; short string hash
@@ -5089,7 +5092,7 @@ ddotsz:
 
 	ADD		W0, W0, #1
 	MUL		W3, W2, W0
-	ADD		W1, 	W1, W3
+	ADD		W1, W1, W3
 	MUL		W2, W2, W7
 	SDIV	W4, W2, W8
 	ADD		W1, W1, W4
@@ -5112,7 +5115,7 @@ ddotsz:
 210:
 	LDR		X0, 	[X13, X3, LSL#3]
 	CBZ		X0, 220f
-	CMP		X0, X3 ; is this our hash?
+	CMP		X0, X3  ; is this our hash?
 	B.eq	800f	; already in table
 	ADD		X3, X3, #1
 	B		210b
@@ -6395,6 +6398,7 @@ zdict:
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
 
+		; cheap locals
 		makeword "_A@" , dlocaz, 0
 		makeword "_B@" , dlocbz, 0
 		makeword "_C@" , dloccz, 0
