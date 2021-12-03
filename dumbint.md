@@ -827,8 +827,7 @@ Timing words provide the ability to experimentally improve the performance of th
 
 : FIB ( n -- n1 )
   DUP 1> IF
-  1- DUP 1- FIB SWAP FIB + THEN
-;
+  1- DUP 1- FIB SWAP FIB + THEN ;
 
 : t1 25 0 DO 34 FIB LOOP ; // run many
 
