@@ -1175,13 +1175,22 @@ There is no sense in taking a local address. So you can read and write to them.
 
 _A! and _A@ write/read from local A.
 
-On entry to a word these are all zero.
+On entry to a word these are all set to zero.
 
-A word can use them freely, the exist for the words lifetime.
+A word can use them freely, they exist only for the words lifetime.
 
 There is a stack of locals; the size means words nested 250 levels deep can use them.
 
 Beyond that, for example in a deeply recursive function, locals become invalid, due to the fixed size locals stack.
+
+
+The command line is level 0, it has 'local' variables also.
+
+Each word has its own local variables as it runs.
+
+When stepping into LIMITed word, you can interact with local variables at the words level.
+
+When the word completes you will be back at level 0.
 
 
 

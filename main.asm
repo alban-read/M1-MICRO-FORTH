@@ -1200,7 +1200,8 @@ init:
 
 	BL  announce
 	BL  dotwords
-input:	BL  chkoverflow
+input:	
+	BL  chkoverflow
 	BL  chkunderflow
 	BL  sayok
 	BL  resetword
@@ -1264,6 +1265,10 @@ short_words:
 	LDRB	W0, [X22]
 	CMP		W0, #':'	; do we enter the compiler ?
 	B.eq	enter_compiler
+
+	CMP		W0, #';'	; do we exit the compiler ?
+	B.eq	exit_compiler
+
 
 	; check if we need to enter the compiler loop.
 	LDRB	W0, [X22]
@@ -1448,8 +1453,8 @@ try_next_word:	; try next word in dictionary
 
 compile_words:
 
-	MOV		X2,  #'!'  
-	STP		X2,  X2, [X14], #16
+	MOV		X0,  #'!'  
+	STP		X0,  X0, [X14], #16
 
 	MOV		X4, #0
 
@@ -1474,6 +1479,7 @@ compile_next_word:
 	B.eq	exit_compiler_no_words
 
 	BL		start_point
+
 	CMP		W0, #';'	; do we exit the compiler now ?
 	B.eq	exit_compiler
 
@@ -1540,9 +1546,10 @@ find_word_token:
 
 	; a reason the compiler is very small is 
 	; that words help compile themselves which happens here
-
+	STP		X5, X6, [SP, #-16]!
 	STP		X3, X4, [SP, #-16]!
 	STP		X28, X16, [SP, #-16]!
+
 	LDR		X0, [X28] ; data
 	MOV		X1, X28
 
@@ -1553,6 +1560,7 @@ find_word_token:
 	
 	LDP		X28, X16, [SP]
 	LDP		X3, X4, [SP]
+	LDP		X5, X6, [SP]
 
 	; words that assist the compiler must return 0, or -1 in X0 for status
 
@@ -1758,7 +1766,7 @@ exit_compiler_word_exists:
 	B		input ;  
 
 exit_compiler_no_words:
-	SUB		X14, X14, #16
+
 	; we ran out of words in this line.
 	reset_data_stack
 	BL  resetword
@@ -3655,11 +3663,11 @@ dzbranchz_notrace:
 	LDRH	W0, [X15, #2]	; offset to endif
 	SUB		W0, W0, #32		; avoid confusion 
 
-	do_trace
+ 
 	SUB		X0, X0, #2
 	ADD		X15, X15, X0	; change IP
 
-	do_trace
+ 
 
 	RET
 
@@ -4135,16 +4143,19 @@ fastrunintcz: ; interpret the list of tokens at word +
 fastrunintz:; interpret the list of tokens at X0
 	; until (END)
 
-	; SAVE IP 
-	STP		LR,  X15, [SP, #-16]!
-	SUB		X15, X0, #2
-	MOV		X29, #64
-
 	; zero locals
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
+
+
+	; SAVE IP 
+	STP		LR,  X15, [SP, #-16]!
+	SUB		X15, X0, #2
+	MOV		X29, #64
+
+	
 
 	; unrolling the loop here x16 makes this a lot faster, 
 10:	; next token
@@ -4160,15 +4171,20 @@ fastrunintz:; interpret the list of tokens at X0
 	
 		BLR		X2		; with X0 as data and X1 as address	
 
-20:
 	.endr
 
 	b		10b
 
 
+90:
+	LDP		LR, X15, [SP], #16	
+	SUB		X26, X26, #64
+	RET
+
 
 ; only run the word for STEPPING steps.
 ; allow word to be tested a few steps at a time. 
+; 
 
 stepoutz:
 
@@ -4186,8 +4202,7 @@ limitrunintz:; interpret the list of tokens at X0
 	; SAVE IP 
 
 	SUB		X15, X0, #2
-
-
+	 
 step_in_runz: ; take more steps
 
 	ADRP	X8, step_limit@PAGE	
@@ -4204,7 +4219,7 @@ step_away:
 
 
 	SUB     X25, X25, #1
-	CBZ		X25, 90f
+	CBZ		X25, 80f
 	LDRH	W1, [X15, #2]!
 	CBZ		X1, 90f
 	
@@ -4218,6 +4233,10 @@ step_away:
 	do_trace
 
 	b		10b
+
+80: 
+	LDP		LR, XZR, [SP], #16	
+	RET
 
 90:
 	SUB		X26, X26, #64
@@ -4237,7 +4256,7 @@ runintcz: ; interpret the list of tokens at word +
 
 	; over ride X0 to compile time token address
 
-	LDR		X0, [X1, #40]		; compile mode tokens
+	LDR		X0, [X1, #32]		; compile mode tokens
 
 
 runintz:; interpret the list of tokens at X0
@@ -4252,7 +4271,6 @@ runintz:; interpret the list of tokens at X0
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
 	SUB		X15, X0, #2
-	
 	MOV		X29, #64
 
 	; unrolling the loop here x16 makes this a lot faster, 
