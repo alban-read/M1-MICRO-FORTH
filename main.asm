@@ -243,7 +243,7 @@
 
 .align 8
 
-ver:	.double 0.439
+ver:	.double 0.534
 tver:	.ascii  "Version %2.2f\n"
 	.zero	4
 
@@ -534,29 +534,23 @@ udivz:	; div tos by 2os leaving result tos - ??? not clear this is correct.
 	RET
 
 
-
 emitz:	; output tos as char
-	
 	LDR		X1, [X16, #-8]
 	SUB		X16, X16, #8
 
 	
 12:	MOV		X0, X1 
 
-X0emit:	save_registers
- 
+X0emit:	
+	save_registers
 	BL		_putchar	
-	
 	restore_registers
 	RET
 
 
 emitchz:	; output X0 as char
 	save_registers
-
- 
 	BL		_putchar	
-	
 	restore_registers
 	RET
 
@@ -695,9 +689,7 @@ addrpr: ; prints int on top of stack in hex
 	RET
 
 
-
-
-X0prip:
+X0prip: ; print IP
 	MOV		X1, X0
 	ADRP	X0, tpradIP@PAGE		
 	ADD		X0, X0, tpradIP@PAGEOFF
@@ -709,7 +701,7 @@ X0prip:
 	RET
 
 
-X0addrprln:
+X0addrprln: ; print address
 	MOV	X1, X0
 	B		12f
 
@@ -791,8 +783,6 @@ word2number:	; converts ascii at word to 32bit number
 
 
 
-
-
 dsleepz: ; sleep	
 	
 	LDR		X0, [X16, #-8]
@@ -805,7 +795,6 @@ dsleepz: ; sleep
 	ADD		SP, SP, #16 
 	restore_registers  
 	RET
-
 
 
 
@@ -850,7 +839,6 @@ collectword:  ; byte ptr in x23, x22
 
 	MOV		W1, #0
 
-
 10:	LDRB	W0, [X23], #1
 	CMP		W0, #32
 	b.eq	90f
@@ -887,6 +875,8 @@ collectword:  ; byte ptr in x23, x22
 95:	LDP		LR, X16, [SP], #16
 	RET
 
+
+
 	; announciate version
 announce:	
 	
@@ -902,6 +892,7 @@ announce:
 	restore_registers
 	RET
 
+
 	; exit the program
 finish: 
 	MOV		X0, #0
@@ -910,7 +901,6 @@ finish:
 	RET
 
  
-
 get_word: ; get word from zword into x22
 	ADRP	X22, zword@PAGE		
 	ADD		X22, X22, zword@PAGEOFF
@@ -1182,7 +1172,6 @@ init:
 	;
 	;
 
-
 	BL  announce
 	BL  dotwords
 input:	BL  chkoverflow
@@ -1336,6 +1325,7 @@ finish_list: ; we did not find a defined word.
 
 
 decimal_number:
+
 	; OR the word may be a floating point decimal number
 	; TODO check for floating point and convert it.
 	; from here we are no longer interpreting the line.
@@ -1466,7 +1456,7 @@ find_word_token:
 	LDR		X21, [X28, #48] ; name field
 	ADD		X0, X28, #48
 	
-	CMP		X21, #0	
+	CMP		X21, #0	; no word found
 	B.eq	try_compiling_literal	
 
 	CMP		X21, #-1		
@@ -1492,8 +1482,7 @@ find_word_token:
 	STRH	W1, [X15]
 
 
-	; if the word has a compile time action, we call it.
-
+	; if the word has a compile time action, we will call it.
 
 	; check word type and skip if not primitive.
 	; is this necessary?
@@ -1529,6 +1518,7 @@ find_word_token:
 	STP		X28, X16, [SP, #-16]!
 	LDR		X0, [X28] ; data
 	MOV		X1, X28
+
 	; compile time functions can change X14, X15
 
 	BLR		X2	;; call function X0 =data, X1=address
@@ -1621,11 +1611,7 @@ try_compiling_literal:
 	ADD		X15, X15, #2
 	STRH	W1, [X15]	; value
 	ADD		X15, X15, #2
-
-
-
 	B		compile_next_word
-
 
 
 25:	; long word
@@ -1635,7 +1621,6 @@ try_compiling_literal:
 	ADRP	X1, quadlits@PAGE	
 	ADD		X1, X1, quadlits@PAGEOFF
 	MOV		X3, XZR
-
 
 10:
 	LDR		X2, [X1]
@@ -1660,7 +1645,6 @@ try_compiling_literal:
 	STRH	W3, [X15]	; value
 	ADD		X15, X15, #2
 
-
 	B		compile_next_word
 
 80:
@@ -1671,9 +1655,22 @@ try_compiling_literal:
 
 	B		compile_next_word
 
-30:	; exit number
+30:	; exit number means word not found/not number
 
-	B		exit_compiler
+	B		exit_compiler_unrecognized
+
+
+; word not recognized
+exit_compiler_unrecognized:
+
+	BL	saylb
+	BL	sayword
+	BL	sayrb
+	BL	saynotfound
+	BL	saycr
+	reset_data_stack
+	BL	clean_last_word
+	B	input ; back to immediate mode
 
 
 ; literal pool  is full.
@@ -1729,9 +1726,7 @@ exit_compiler_no_words:
 	B	compile_next_word
 
 
-
-exit_compiler:
-
+exit_compiler: ; NORMAL success exit
 	
 	MOV		X0, #0 ; EXIT
 	STRH	W0, [X15]
@@ -1770,7 +1765,6 @@ not_compiling:
 	BL		sayword
 	BL		sayrb
 	BL		saynotfound
-	
 	B		advance_word
 
 
@@ -1780,9 +1774,6 @@ exit_program:
 	BL		_exit
 	
 	;brk #0xF000
-
-
-
 	
 190:	
 	RET
@@ -1792,7 +1783,7 @@ exit_program:
 ; Return stack
 ; The word execution uses the machine stack pointer
 ; So the return stack is NOT actually used for return addresses
-; 
+; it is used to stack LOOP addresses
 
 dtorz:
 	LDR		X0, [X16, #-8]	
@@ -1905,8 +1896,6 @@ ddowndoerz:
 	STP		X2,  X12, [X14], #16
 	STP		X0,  X1,  [X14], #16
 
-	
-
 	; Check my arguments
 	CMP		X0, X1
 	B.gt	skip_do_loop
@@ -1968,7 +1957,6 @@ do_loop_arguments:
 	ADD		X0, X0, tcomer20@PAGEOFF
 	BL		sayit	
 	LDP		LR, X15, [SP], #16	; unwind word
-
 
 
 200:
@@ -2146,7 +2134,7 @@ dmloopc:
 ; BEGIN ... f UNTIL
 ; BEGIN .. f WHILE .... REPEAT
 ;
-; LEAVE (LEAVE) and WHILE (WHILE) branch.
+; LEAVE (LEAVE) and WHILE (WHILE) use a branch.
 ; AGAIN/REPEAT must fix up branch offsets.
 
 dbeginz: ; BEGIN runtime
@@ -2167,7 +2155,8 @@ dbeginc: ; COMPILE BEGIN
  
 
 ; : t2 BEGIN 1+ DUP DUP . CR 10 >  UNTIL .' fini ' DROP ;
-duntilz:
+
+duntilz: ; UNTIL runtime
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
 	CMP		X2, #'B' ;BEGIN
@@ -2240,7 +2229,6 @@ dwhilez: ; WHILE needs a foward branch to REPEAT
 	RET
 
 
-RET
 
 dwhilec: ; COMPILE (WHILE)
 
@@ -2340,8 +2328,6 @@ dagainz:	; AGAIN
 	
 190:	; continue - on as LEAVE popped BEGIN
 
-	 
-
 
 	RET			
 	
@@ -2360,8 +2346,6 @@ dagainc:	; COMPILE AGAIN
 	SUB		X0, X15, X12 ; dif between REPEAT/AGAIN and (LEAVE).
 	ADD		X0, X0, #2
 	STRH	W0, [X12]	 ; store that
-
-
 
 20:
 	CMP		X0, #'B' ; was that a BEGIN we saw?
@@ -3421,6 +3405,12 @@ dendifc:
 	RET			
 
 200:
+	RET
+
+
+
+
+
 delsez:
 	RET
 
@@ -3686,6 +3676,7 @@ dtimeitz: ; time the next work
 	BL		start_point
 
 120:
+
 	LDR		X21, [X28, #48] ; name field
 
 	CMP		X21, #0		; end of list?
@@ -3995,8 +3986,6 @@ stepoutz:
 
 limitrunintz:; interpret the list of tokens at X0
 
-
-
 	trace_show_word		
 
 	; SAVE IP 
@@ -4005,8 +3994,6 @@ limitrunintz:; interpret the list of tokens at X0
 
 
 step_in_runz: ; take more steps
-
-	
 
 	ADRP	X8, step_limit@PAGE	
 	ADD		X8, X8, step_limit@PAGEOFF
@@ -4021,7 +4008,6 @@ step_away:
 10:	; next token
 
 
-	
 	SUB     X25, X25, #1
 	CBZ		X25, 90f
 	LDRH	W1, [X15, #2]!
@@ -4223,7 +4209,6 @@ dbreakc: ;
 	RET
 
 
-
 dplusz: ; +
 	LDR		X0, [X16, #-8]
 	LDR		X1, [X16, #-16]
@@ -4233,11 +4218,8 @@ dplusz: ; +
 	RET
 
 
-
 dplusc: ; 
 	RET
-
-
 
 dorz: ; OR
 	
@@ -4247,7 +4229,6 @@ dorz: ; OR
 
 dorc: ; 
 	RET
-
 
 
 ddropz: ;  
@@ -4304,7 +4285,6 @@ drotz: ;
 
 drotc: ;	
 	RET		
-
 
 
 doverz: ;
@@ -4374,7 +4354,6 @@ lessthanz:
 
 dltc: ;  "<"  
 	RET		
-
 
 dequalzz:	; 0=
 
@@ -4453,7 +4432,6 @@ dnoteqz:	; <>
 
 
 
-
 dequz: ; "=" 
 	
 equalz:
@@ -4494,8 +4472,6 @@ greaterthanz:
 
 dgtc: ;  ">"  
 	RET		
-
-
 
 
 dinvertz:	; INVERT
@@ -5803,7 +5779,7 @@ dend:
 		makeword "($S)",  dslitSz, 0,  0				; 10
 		makeword "($L)",  dslitLz, 0,  0				; 11
 		makeword "(.')", dslitSzdot, 0,  0				; 12
-		makeword "(LEAVE)", dleavez, 0,  0					; 13
+		makeword "(LEAVE)", dleavez, 0,  0				; 13
 		makeword "(14)", 0, 0,  0						; 14
 		makeword "(15)", 0, 0,  0						; 15
 
