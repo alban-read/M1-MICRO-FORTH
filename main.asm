@@ -1542,11 +1542,9 @@ find_word_token:
 	LDR		X2, [X28, #24]
 	CBZ		X2, skip_compile_time
 
-
-
 	; a reason the compiler is very small is 
 	; that words help compile themselves which happens here
-	STP		X5, X6, [SP, #-16]!
+	STP		X5, X7, [SP, #-16]!
 	STP		X3, X4, [SP, #-16]!
 	STP		X28, X16, [SP, #-16]!
 
@@ -1560,7 +1558,7 @@ find_word_token:
 	
 	LDP		X28, X16, [SP]
 	LDP		X3, X4, [SP]
-	LDP		X5, X6, [SP]
+	LDP		X5, X7, [SP]
 
 	; words that assist the compiler must return 0, or -1 in X0 for status
 
