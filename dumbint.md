@@ -605,6 +605,17 @@ Normal loop
 : t0 10 1 DO I . CR LOOP ;
 ```
 
+You can leave a loop early with (one) leave statement
+
+```FORTH
+
+: t9 10 1 DO I . CR I 7 = IF .' <- seven' LEAVE THEN LOOP .'   it ended' ;
+
+```
+
+Multiple leave statements are not supported inside a loop.
+
+
 
 Sanity is aided by the addition of DOWNDO (inspired by PASCAL) and -LOOP
 
@@ -693,7 +704,7 @@ times inside a LOOP body, this is one of the more tedious features of the FORTH 
 
 It is also an unstructured programming feature in my view.
 
-The current implementation here is limited for the moment to one LEAVE inside a BEGIN .. AGAIN loop.
+The current implementation here is limited for the moment to one LEAVE inside a BEGIN .. AGAIN or DO LOOP loop.
 
 
 

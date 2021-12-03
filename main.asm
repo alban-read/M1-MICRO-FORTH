@@ -488,6 +488,30 @@ mulz:	; mul tos with 2os leaving result tos
 	SUB		X16, X16, #8
 	RET
 
+
+dstarslshz: ; famous */ but only 64 bit not using 128 intermediate
+
+	LDR		X1, [X16, #-8]
+	LDR		X2, [X16, #-16]
+	LDR		X3, [X16, #-24]
+	SUB		X16, X16, #24
+	MUL		X0, X3, X2
+	SDIV	X0, X0, X1
+	STR		X0, [X16], #8
+	RET
+
+ dstarslshzmod: ; */MOD
+	LDP 	X1, X2,  [X16, #-16]  
+	LDR		X3, [X16, #-24]
+	SUB		X16, X16, #24
+	MUL		X0, X3, X2
+	SDIV	X0, X0, X1
+	MSUB	X3, X2, X3, X0 
+	STR		X0, [X16], #8
+	STR		X3, [X16], #8
+	RET
+		
+
 andz:	; and tos with 2os leaving result tos
 	LDR		X1, [X16, #-8]
 	LDR		X2, [X16, #-16]
@@ -1347,6 +1371,9 @@ enter_compiler:
 	BL		empty_wordQ
 	B.eq	exit_compiler_word_empty 
 
+
+
+
 create_word: 
 
 	BL		start_point
@@ -1421,9 +1448,13 @@ try_next_word:	; try next word in dictionary
 
 compile_words:
 
+	MOV		X2,  #'!'  
+	STP		X2,  X2, [X14], #16
+
 	MOV		X4, #0
 
 compile_next_word:
+
 
 	
 	; is the dictonary word full
@@ -1658,7 +1689,7 @@ try_compiling_literal:
 
 ; word not recognized
 exit_compiler_unrecognized:
-
+	SUB		X14, X14, #16
 	BL	saylb
 	BL	sayword
 	BL	sayrb
@@ -1671,7 +1702,7 @@ exit_compiler_unrecognized:
 
 ; literal pool  is full.
 exit_compiler_pool_full:
-
+	SUB		X14, X14, #16
 	reset_data_stack
 	BL		clean_last_word
 	ADRP	X0, poolfullerr@PAGE	
@@ -1681,7 +1712,7 @@ exit_compiler_pool_full:
 	B		input ; back to immediate mode
 
 exit_compiler_compile_time_err:
-	
+	SUB		X14, X14, #16
 	reset_data_stack
 	BL		clean_last_word
 	; compile time function returned error
@@ -1691,7 +1722,18 @@ exit_compiler_compile_time_err:
 	B		input ; back to immediate mode
 
 
+exit_compiler_unbalanced_loops:
+	BL		clean_last_word
+	reset_data_stack
+	ADRP	X0, tcomer30@PAGE	
+	ADD		X0, X0, tcomer30@PAGEOFF
+	BL		sayit
+	B		input ; back to immediate mode
+
+
+
 exit_compiler_word_empty:
+	SUB		X14, X14, #16
 	reset_data_stack
 	; : was followed by nothing which is an error.
 	ADRP	X0, tcomer1@PAGE	
@@ -1701,6 +1743,7 @@ exit_compiler_word_empty:
 	
 
 exit_compiler_word_full:
+	SUB		X14, X14, #16
 	; TODO reset new  word, and stack
 	reset_data_stack
 	BL		clean_last_word
@@ -1709,11 +1752,13 @@ exit_compiler_word_full:
 
 
 exit_compiler_word_exists:
+	SUB		X14, X14, #16
 	reset_data_stack
 	BL		err_word_exists
 	B		input ;  
 
 exit_compiler_no_words:
+	SUB		X14, X14, #16
 	; we ran out of words in this line.
 	reset_data_stack
 	BL  resetword
@@ -1724,6 +1769,17 @@ exit_compiler_no_words:
 
 exit_compiler: ; NORMAL success exit
 	
+
+	LDP		X0, X1,  [X14, #-16]  
+	CMP		X0, '!'
+	B.ne	exit_compiler_unbalanced_loops
+	CMP		X1, '!'
+	B.ne	exit_compiler_unbalanced_loops
+	SUB		X14, X14, #16
+
+	
+
+
 	MOV		X0, #0 ; EXIT
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
@@ -1814,9 +1870,8 @@ dratz:
 ; Not compliant with standard FORTH.
 ;
 
-
 ; DO .. LOOP, +LOOP uses the return stack.
-
+; LEAVE does an immediate early exit
 
 ; #21DOER 
 ; checks arguments
@@ -1965,14 +2020,6 @@ do_loop_arguments:
 	LDP		LR, X12, [SP], #16
 	RET
 
-; : TEST 10 1 DO I . SPACE LOOP 102 . CR ;
-; : TEST2 10 1 DO I . SPACE 10 1 DO 35 EMIT LOOP SPACE LOOP ;
-; : TEST3 10 1 DO I . SPACE 10 1 DO 35 EMIT LOOP LOOP ;
-; : TEST4 10 1 DO I . SPACE 10 1 DO 35 EMIT LOOP LOOP 36 EMIT ;
-; : TEST5 10 1 DO I . 5 2 DO  SPACE J . SPACE LOOP LOOP;
-; : TEST6 10 1 DO I . SPACE LOOP ;
-; : TEST7 10 1 DO I . 50 20 DO  SPACE J . SPACE LOOP CR LOOP 65 EMIT ;
-
 
 .macro loop_vars
 	LDP		X0, X1,  [X14, #-16]
@@ -2073,16 +2120,6 @@ loops_end:  ; loop end
 	
 	SUB		X14, X14, #32 ; unstack loop value
 	
-	; possible optimization
-	;ADD		X15, X15, #2
-	;LDRH	W0, [X15] ; sniff ahead
-	;CMP		W0, #19
-	;B.eq	dlooperz
-	;CMP		W0, #18
-	;B.eq	dmlooperz
-	;CMP	W0, #17
-	;B.eq	dplooperz
-	;SUB		X15, X15, #2 
 
 
 	RET
@@ -2113,19 +2150,39 @@ ddownerc:
 dloopc:
 	MOV	X0, #19
 	STRH W0, [X15] ; replace code
+
+	LDP		X1, X12,  [X14, #-16] ; X5 is branch
+	CMP		X1, #13 ; (LEAVE) we MAY have a leave to patch
+	B.ne 	20f
+
+	SUB		X0, X15, X12 ; dif between REPEAT/AGAIN and (LEAVE).
+	ADD		X0, X0, #2
+	STRH	W0, [X12]	 ; store that
+	SUB		X14, X14, #16
+20:
+
 	RET
 	
 	
 dploopc: 
 	MOV	X0, #17
 	STRH W0, [X15] ; replace code
+
 	RET
 
 	
 dmloopc: 
 	MOV	X0, #18
 	STRH W0, [X15] ; replace code
+
 	RET
+
+
+
+
+
+
+
 
 
 
@@ -2382,7 +2439,15 @@ dleavez:	; just LEAVE the enclosing loop
 	STP		LR,  X5, [SP, #-16]!
 	do_trace
 
-	LDP		X2, XZR,  [X14, #-16] ; X5 is branch
+	LDP		X2, XZR,  [X14, #-16]  
+	LDP		X1, XZR,  [X14, #-32]  
+	CMP		X1, #20 ; LOOP
+	B.eq	100f
+	CMP		X1, #21 ; LOOP
+	B.eq	100f
+	CMP		X1, #22 ; LOOP
+	B.eq	100f
+
 	CMP		X2, #'B' ;BEGIN
 	B.ne	190f
 
@@ -2398,6 +2463,15 @@ dleavez:	; just LEAVE the enclosing loop
 
 	LDP		LR, X5, [SP], #16	
 	RET
+
+
+100: ; LOOP exit
+
+	SUB		X14, X14, #32
+	LDRH	W0, [X15, #2]
+	ADD		X15, X15, X0 ; change IP
+	RET
+
 
 
 190:	; not leaving a loop? leave whole word.
@@ -5472,6 +5546,12 @@ tcomer25: .ascii "BEGIN .. WHILE REPEAT error - MISSING BEGIN.\n "
 
 
 .align	8
+tcomer30: .ascii "Error: BEGIN or DO loops are not terminated "
+	.zero 16
+
+
+
+.align	8
 tforget: .ascii "\nForgeting last_word word: "
 	.zero 16
 
@@ -6090,6 +6170,8 @@ ydict:
 zdict:
 
 		makeemptywords 30
+		makeword "*/", dstarslshz, 0,  10
+		makeword "*/MOD", dstarslshzmod, 0,  10
 		makeword "1-DUP1-", fibtest, 0,  10
 		makeword "10", dconstz, dconstc,  10
 		makeword "11", dconstz, dconstc,  11
