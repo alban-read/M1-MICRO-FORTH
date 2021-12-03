@@ -266,6 +266,14 @@ getline:
 	restore_registers
 	RET
 
+cls:
+dpagez:
+	ADRP	X0, clear_screen@PAGE	
+	ADD		X0, X0, clear_screen@PAGEOFF
+	B		sayit
+
+
+
 		; Ok prompt
 sayok:	
 	ADRP	X0, tok@PAGE	
@@ -1197,7 +1205,7 @@ init:
 	; start of outer interpreter/compiler
 	;
 	;
-
+	BL  cls
 	BL  announce
 	BL  dotwords
 input:	
@@ -5785,6 +5793,9 @@ word_desc12: .ascii "\t\tPRIM COMP"
 word_desc13: .ascii "\nError: Null access."
 	.zero 16
 
+.align 8
+clear_screen:
+	.byte 27,'[','2','J',27,'[','H',0
 
 
 .align	8
@@ -6213,7 +6224,8 @@ ndict:
 	
 odict:
 		makeemptywords 62
-
+ 
+		makeword "PAGE", dpagez, 0, 0
 		makevarword "PAD", zpad
 
 		makeword "PRINT", print, 0, 0

@@ -299,7 +299,7 @@ Did encounter some annoying bugs, rewrote the tracing function a couple of times
 
 - Interpreter works.
 
-- Compiler works.
+- Compiler (not native) works.
 
 - Variables and Constants work.
 
@@ -643,6 +643,18 @@ This version of LOOP is not at all likely to repeat 65536 times (or in this case
 This is not compatible 
 
 I do not expect to be able to compile ANSI FORTH, nor do I have some large source of ANSI code somewhere I can reuse.
+
+
+#### Loop variables
+
+Refreshingly FORTH supports named access to the loop indexes.
+
+Suprised that they do not just expect users to snarf them off the return stack using stack juggling words.
+
+I, J, K, are the index for this loop, the loop above and the loop above that (in the same word). So they are relative to your depth in a nested scenario.
+
+
+
 
 
 ### Indefinite loops
@@ -1169,20 +1181,22 @@ STEPOUT
 
 Words have access to values on the stack and access to global variables.
 
-There are also 8 locals _A .. _H available while a word runs
+Juggling the stack can be painful sometimes, it is nice to have somewhere else to keep temporaty values.
 
-There is no sense in taking a local address. So you can read and write to them.
+There are  8 locals _A .. _H available to a word while a word runs
+
+There is no sense in taking a local address. 
+So words are provided to read and write to them.
 
 _A! and _A@ write/read from local A.
 
 On entry to a word these are all set to zero.
 
-A word can use them freely, they exist only for the words lifetime.
+A word can use them freely, they exist only for the words lifetime, every time the word starts they are cleared.
 
 There is a stack of locals; the size means words nested 250 levels deep can use them.
 
 Beyond that, for example in a deeply recursive function, locals become invalid, due to the fixed size locals stack.
-
 
 The command line is level 0, it has 'local' variables also.
 
@@ -1191,6 +1205,10 @@ Each word has its own local variables as it runs.
 When stepping into LIMITed word, you can interact with local variables at the words level.
 
 When the word completes you will be back at level 0.
+
+These are expensive in the sense that they use a register and a pool of memory but should be as cheap to use as any other variable. I assumed clearing these would slow the interpreter down; it got randomly faster instead.
+
+
 
 
 
