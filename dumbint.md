@@ -1166,6 +1166,23 @@ STEPOUT
 
 
 
+### Local variables
+
+Words have access to values on the stack and access to global variables.
+
+There are also 8 locals _A .. _H available while a word runs
+
+There is no sense in taking a local address. So you can read and write to them.
+
+_A! and _A@ write/read from local A.
+
+On entry to a word these are all zero.
+
+A word can use them freely, the exist for the words lifetime.
+
+There is a stack of locals; the size means words nested 250 levels deep can use them.
+
+Beyond that, for example in a deeply recursive function, locals become invalid, due to the fixed size locals stack.
 
 
 

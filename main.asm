@@ -15,6 +15,7 @@
 
 ;; related to the interpreter
 ; X16 is the data stack
+; X26 is the locals stack
 ; X15 is the interpreter pointer/dictionary pointer
 ; X14 is the return stack
 ; X13  
@@ -72,7 +73,7 @@
 .endm
 
 .macro restore_registers_not_stack  
-	LDP	LR, XZR, [SP], #16
+	LDP		LR, XZR, [SP], #16
 	LDP		X14, X15, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 .endm
@@ -1185,6 +1186,11 @@ init:
 	ADD		X0, X0, rsp@PAGEOFF
 	LDR		X14, [X0]  ;; <-- return stack pointer to X14
 
+	ADRP	X26, lsp@PAGE		
+	ADD		X26, X26, lsp@PAGEOFF
+ 
+
+
 	;  disable tracing, X6 = 0
 	MOV		X6, #0
 
@@ -1264,8 +1270,6 @@ short_words:
 	CMP		W0, #']'	; do we enter the compiler ?
 	B.eq	enter_compiler
 
-
-
 fw1:
 	BL		start_point	
 
@@ -1340,7 +1344,6 @@ finish_list: ; we did not find a defined word.
 	B		advance_word
 
 	
-
 30:	; exit number
 
 
@@ -1370,9 +1373,6 @@ enter_compiler:
 	BL		get_word
 	BL		empty_wordQ
 	B.eq	exit_compiler_word_empty 
-
-
-
 
 create_word: 
 
@@ -1777,9 +1777,6 @@ exit_compiler: ; NORMAL success exit
 	B.ne	exit_compiler_unbalanced_loops
 	SUB		X14, X14, #16
 
-	
-
-
 	MOV		X0, #0 ; EXIT
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
@@ -1862,6 +1859,118 @@ dratz:
 	STR		X0, [X16], #8
 	RET
 
+
+fetchspz: ; fetch stack pointer to stack
+	MOV     X0, X16
+	STR		X0, [X16], #8
+	RET
+
+fetchrpz: ; fetch stack pointer to stack
+	MOV     X0, X14
+	STR		X0, [X16], #8
+	RET
+
+
+; locals
+; local stack indexed by X26
+; 0..  7 A
+; 8.. 15 B
+; 16..23 C
+; 24..39
+; 40..47
+; 48..55
+; 56..63
+;
+;
+
+
+
+dlocaz:	; LOCAL A
+	LDR		X0, [X26, #-64]	
+	STR		X0, [X16], #8
+	RET
+
+dlocasz: 
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-64]
+	RET
+
+
+dlocbz:	; LOCAL B
+	LDR		X0, [X26, #-8]	
+	STR		X0, [X16], #8
+	RET
+
+dlocbsz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-8]
+	RET
+
+dloccz:	; LOCAL C
+	LDR		X0, [X26, #-16]	
+	STR		X0, [X16], #8
+	RET
+
+dloccsz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-16]
+	RET
+
+
+dlocdz:	; LOCAL D
+	LDR		X0, [X26, #-24]	
+	STR		X0, [X16], #8
+	RET
+
+dlocdsz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-24]
+	RET
+
+
+dlocez:	; LOCAL E
+	LDR		X0, [X26, #-32]	
+	STR		X0, [X16], #8
+	RET
+
+
+dlocesz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-32]
+	RET
+
+
+dlocfz:	; LOCAL F
+	LDR		X0, [X26, #-48]	
+	STR		X0, [X16], #8
+	RET
+
+dlocfsz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-40]
+	RET
+
+dlocgz:	; LOCAL G
+	LDR		X0, [X26, #-48]	
+	STR		X0, [X16], #8
+	RET
+
+dlocgsz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-48]
+	RET
+
+
+dlochz:	; LOCAL H
+	LDR		X0, [X26, #-56]	
+	STR		X0, [X16], #8
+	RET
+
+
+dlochsz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-56]
+	RET
 
 
 
@@ -4031,6 +4140,12 @@ fastrunintz:; interpret the list of tokens at X0
 	SUB		X15, X0, #2
 	MOV		X29, #64
 
+	; zero locals
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+
 	; unrolling the loop here x16 makes this a lot faster, 
 10:	; next token
 	
@@ -4063,7 +4178,11 @@ stepoutz:
 limitrunintz:; interpret the list of tokens at X0
 
 	trace_show_word		
-
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	
 	; SAVE IP 
 
 	SUB		X15, X0, #2
@@ -4101,6 +4220,7 @@ step_away:
 	b		10b
 
 90:
+	SUB		X26, X26, #64
 	LDP		LR, XZR, [SP], #16	
 	RET
 
@@ -4108,6 +4228,7 @@ step_away:
 	LDP		LR, XZR, [SP], #16
 	MOV		X15, #0
 98:
+	SUB		X26, X26, #64
 	RET
 
 ; traceable version
@@ -4123,6 +4244,10 @@ runintz:; interpret the list of tokens at X0
 	; until (END) #24
 
 	trace_show_word		
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
 
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
@@ -4155,17 +4280,20 @@ dendz:	; EXIT interpreter - called by exit
 
 90:
 	LDP		LR, X15, [SP], #16	
+	SUB		X26, X26, #64
 	RET
 
 
 
 dexitz: ; EXIT
 	LDP		LR, X15, [SP], #16	
+	SUB		X26, X26, #64
 	RET
 
 dexitc: ; EXIT compiles end
 	MOV		X0, #0 ; (EXIT)
 	STRH	W0, [X15]
+	SUB		X26, X26, #128
 	RET
 
 
@@ -5668,6 +5796,16 @@ token_space_top:
 	.zero 16
 
 
+
+; this is the locals stack
+; words get their own 8 locals nested up to 250 levels deep
+; locals are zero on entry, and exist only while a word runs.
+
+.align  8
+lsp:	 
+.zero	16384
+
+
 ; this is the data stack
 .align  8
 sps:	.zero 8*8	
@@ -6021,10 +6159,14 @@ kdict:
 		makeword "LONG$", dvaraddz, dvaraddc,  long_strings
 
 		makeword "LITBASE", dvaraddz, dvaraddc,  quadlits
+
+
+
 	
 ldict:
 		makeemptywords 61
 
+	
 		makeword "MOD", dmodz, dmodc, 0	
 
 		makeemptywords 68
@@ -6079,6 +6221,7 @@ qdict:
 
 		makeword "R>", dfromrz , dfromrc, 0 
 		makeword "R@", dratz , 0, 0 
+		makeword "RP@", fetchrpz , 0, 0 
 
 		makeqvword 114
 		makeword "R", dvaraddz, dvaraddc,  8 * 82 + ivars	
@@ -6096,6 +6239,7 @@ rdict:
 		makeword "SLEEP", dsleepz , 0, 0 
 		makeword "SPACES", spacesz , spacesc, 0 
 		makeword "SPACE", emitchz , emitchc, 32
+	 	makeword "SP@", fetchspz , 0, 0 
 		makevarword "SP", dsp
 		makeword "SEE", dseez , 0, 0 
 
@@ -6234,6 +6378,25 @@ zdict:
 		makeword ".'", dstrdotz, dstrdotc , 0
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
+
+		makeword "_A@" , dlocaz, 0
+		makeword "_B@" , dlocbz, 0
+		makeword "_C@" , dloccz, 0
+		makeword "_D@" , dlocdz, 0
+		makeword "_E@" , dlocez, 0
+		makeword "_F@" , dlocfz, 0
+		makeword "_G@" , dlocgz, 0
+		makeword "_H@" , dlochz, 0
+	 
+		makeword "_A!" , dlocasz, 0
+		makeword "_B!" , dlocbsz, 0
+		makeword "_C!" , dloccsz, 0
+		makeword "_D!" , dlocdsz, 0
+		makeword "_E!" , dlocesz, 0
+		makeword "_F!" , dlocfsz, 0
+		makeword "_G!" , dlocgsz, 0
+		makeword "_H!" , dlochsz, 0
+
 		
 
 

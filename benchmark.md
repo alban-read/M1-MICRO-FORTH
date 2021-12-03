@@ -3,10 +3,7 @@
 // Tests measure speed
 // FIB measures the inner interprers call overhead really well.
 
-: FIB ( n -- n1 )
-  DUP 1> IF
-  1- DUP 1- FIB SWAP FIB + THEN
-;
+: FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ;
 
 : t1 25 0 DO 34 FIB LOOP ; // run many
 
