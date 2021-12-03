@@ -1,7 +1,6 @@
 ### Benchmark
 
-// Tests show that the interpreter is very slow.
-// Good, speeding it up will be interesting.
+// Tests measure speed
 // FIB measures the inner interprers call overhead really well.
 
 : FIB ( n -- n1 )
@@ -11,10 +10,8 @@
 
 : t1 25 0 DO 34 FIB LOOP ; // run many
 
- 
 
 TIMEIT t1
-
 
 // 27th November 2021
 TIMEIT t1

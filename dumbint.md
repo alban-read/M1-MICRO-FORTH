@@ -626,7 +626,7 @@ LOOP gets its sense of direction from DO or DOWNDO.
 
 Summary
 
-It is clear if the LOOP counts up or down,  obvious if a LOOP should end or not, and if it includes the start and finish (it does).
+It is clear if the LOOP counts up or down, obvious if a LOOP should end or not, and if it includes the start and finish (it does).
 This version of LOOP is not at all likely to repeat 65536 times (or in this case billions of times ) by mistake.
 
 This is not compatible 
@@ -641,9 +641,7 @@ There are three distinct indefinite loops, each with its own structure.
 These loops can be nested, but not blended, do not mix UNTIL with AGAIN etc.
 
 
-
-
-#### infinite loop
+#### The infinite loop
 
 
 BEGIN ... f IF LEAVE THEN ... AGAIN 
@@ -661,7 +659,7 @@ Will repeat forever.
 A BEGIN ... AGAIN loop may only be exited by LEAVE or the WHOLE word may EXIT
 
 
-#### While true loop
+#### The While true loop
 
 BEGIN f WHILE ... REPEAT
 
@@ -674,7 +672,7 @@ The loop repeats while the condition is true.
 
 Is a loop with a condition at the front, it repeats while the condition is true.
 
-#### Loop until true
+#### The Loop until true
 
 BEGIN ... f UNTIL
 
@@ -684,6 +682,20 @@ BEGIN ... f UNTIL
 ```
 
 Is a loop with the condition at the end. 
+
+
+#### Limitations and deviations of indefinite loops
+
+LEAVE is an especially annoying standard FORTH feature.
+
+It requires immediate early termination of the current loop, and in the spec can appear many
+times inside a LOOP body, this is one of the more tedious features of the FORTH compiler, which is otherwise simple.
+
+It is also an unstructured programming feature in my view.
+
+The current implementation here is limited for the moment to one LEAVE inside a BEGIN .. AGAIN loop.
+
+
 
 
 ### The Token interpreter
@@ -993,6 +1005,13 @@ The speed difference between FASTER and TRACEABLE words is small.
 Note the objective here is not to write a fast FIB, but to test the program. 
 
 There is a fast FIB word (FFIB) just to make that point clear.
+
+
+#### Adding indefinite loops
+
+- Added versions of the FORTH indefinite loops.
+- Added tracing with stepping, fixing various issues with tracing as they arose. 
+
 
 
 ### Tracing and stepping

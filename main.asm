@@ -19,11 +19,11 @@
 ; X14 is the return stack
 ; X13  
 ; X12 is the tertiary pointer
-; X6  is the tracing register
+; X6  is the tracing ON/OFF register
 
 ;; X27 dend (start of dictionary)
-;; X28 dictionary - current word.
-;; X29 the value 64.
+;; X28 dictionary - current word header in the dictionary searcj=h
+;; X29 the value 64. (perhaps wasteful)
 
 ;; X22 word (text)
 ;; X23 also used for text
@@ -83,8 +83,7 @@
 ; contain the name of a word, the runtime and compile time functions
 ; and a small ammount of data for the functions use.
 
- 
- 
+
 ; data 		(argument for runtime)
 ; runtime	function address when running
 ; data		(argument for compile time)
@@ -184,12 +183,9 @@
 	
 20:
 	BL		X0prname
-
 	BL		ddotsz
 
 
-
-	
 	LDP		X1, X12, [SP], #16	
 	LDP		LR, X0, [SP], #16	
 999:
@@ -1804,6 +1800,12 @@ dfromrz:
 
 dfromrc:
 	RET
+
+dratz:
+	LDR		X0, [X14, #-8]
+	STR		X0, [X16], #8
+	RET
+
 
 
 
@@ -5996,6 +5998,7 @@ qdict:
 		makeword "ROT", drotz , drotc, 0 
 
 		makeword "R>", dfromrz , dfromrc, 0 
+		makeword "R@", dratz , 0, 0 
 
 		makeqvword 114
 		makeword "R", dvaraddz, dvaraddc,  8 * 82 + ivars	
