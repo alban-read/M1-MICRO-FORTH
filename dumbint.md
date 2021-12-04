@@ -6,6 +6,7 @@ With .. tradeoffs..
 
 This was written from scratch, starting with a blank editor page in VS code, CLANG Assembler is used, since that comes with the Apple developer kit.
 
+I liked 1980s micro computers, and I feel like it should be possible to have fun with a computer still.
 
 
 ### purpose
@@ -1181,12 +1182,12 @@ STEPOUT
 
 Words have access to values on the stack and access to global variables.
 
-Juggling the stack can be painful sometimes, it is nice to have somewhere else to keep temporaty values.
+Juggling the stack can be painful sometimes, it is nice to have somewhere else to keep temporary values.
 
 There are  8 locals _A .. _H available to a word while a word runs
 
-There is no sense in taking a local address. 
-So words are provided to read and write to them.
+There is no sense in taking a locals address, it floats on a stack.
+So words are only provided to read and write to them.
 
 _A! and _A@ write/read from local A.
 
@@ -1196,7 +1197,7 @@ A word can use them freely, they exist only for the words lifetime, every time t
 
 There is a stack of locals; the size means words nested 250 levels deep can use them.
 
-Beyond that, for example in a deeply recursive function, locals become invalid, due to the fixed size locals stack.
+Beyond that, for example in a deeply recursive function, locals become invalid, due to the fixed size stack.
 
 The command line is level 0, it has 'local' variables also.
 
@@ -1207,6 +1208,39 @@ When stepping into LIMITed word, you can interact with local variables at the wo
 When the word completes you will be back at level 0.
 
 These are expensive in the sense that they use a register and a pool of memory but should be as cheap to use as any other variable. I assumed clearing these would slow the interpreter down; it got randomly faster instead.
+
+
+
+### STRINGs
+
+I have always found FORTH strings dreadful and crash prone, almost as bad as C.
+
+People always mocked BASIC but at least it knew what text was.
+
+This implementation supports literal strings 
+
+```FORTH
+
+.' This is how to print a string '
+
+
+```
+These can be printed or they can be created and return an address.
+
+```FORTH
+
+S' This is a string object' TYPEZ
+
+```
+
+Strings in this implementation are ASCII, limited to 255 charachters, stored in a literal pool, and zero terminated.
+
+The entire system is based on C, which uses zero terminated strings, standard FORTHS uses counted strings, which may be more sensible, but are not useful.
+
+I hope to add some sane and safe words for strings that do common and useful things.
+
+
+
 
 
 

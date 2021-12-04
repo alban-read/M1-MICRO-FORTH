@@ -4930,8 +4930,6 @@ tendivz:
 
 
 longlitit: ; COMPILE X0 into word as short or long lit
-	 
- 
 
 	; X0 is our literal 
 
@@ -4946,7 +4944,7 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
 	STRH	W1, [X15]	; value
-	;ADD		X15, X15, #2
+
 	; short literal done
  
 	RET
@@ -4976,14 +4974,12 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	; free slot found, store lit and return value
 
 	STR		X0, [X1]
-
 	MOV		X0, #2 ; #LITL
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
 	STRH	W3, [X15]	; value = index
-	;ADD		X15, X15, #2
+
 	; long literal created and stored
- 
 	RET
 
 
@@ -4994,14 +4990,8 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	ADD		X15, X15, #2
 	MOV		X1, X3
 	STRH	W1, [X15]	; value = index
-;	ADD		X15, X15, #2
 	LDP		LR, X0, [SP], #16
- 
 	RET
-
-
-
-
 
 
 stackit: ; push x0 to stack.
