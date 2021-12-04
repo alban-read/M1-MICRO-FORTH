@@ -2890,6 +2890,24 @@ dseez:
 
 	; anotate the data word
 
+
+	ADRP	X2, darrayaddz@PAGE		
+	ADD		X2, X2, darrayaddz@PAGEOFF
+	LDR		X0, [X28, #8]
+	CMP		X0, X2
+	B.ne	12060f
+
+	ADRP	X0, word_desc14@PAGE		
+	ADD		X0, X0, word_desc14@PAGEOFF
+	BL		sayit
+
+	LDR		X0, [X28, 32]
+	BL		X0halfpr
+
+	B		12095f
+
+12060:
+
 	ADRP	X2, dconstz@PAGE		
 	ADD		X2, X2, dconstz@PAGEOFF
 	LDR		X0, [X28, #8]
@@ -3467,6 +3485,459 @@ dcreatvz:
 
 dcreatvc:
 	RET
+
+
+;;; ARRAY 1 dimensional cells
+
+;; ( n -- address )
+darrayaddz: ; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #3 ; full word 8 bytes
+	ADD		X1, X0, X2 ; data + index 
+	STR		X1, [X16, #-8]	; address of data
+	RET
+
+darrayaddz_index_error:
+	STR		XZR, [X16, #-8]	; null.. trapped by ! and @
+	ADRP	X0, tcomer32@PAGE	
+	ADD		X0, X0, tcomer32@PAGEOFF
+	B		sayit
+	
+
+	RET
+
+dcreatarray:
+
+	save_registers_not_stack
+
+	BL		advancespaces
+	BL		collectword
+	BL		get_word
+	BL		empty_wordQ
+	B.eq	300f
+
+
+	BL		start_point
+
+100:	; find free word and start building it
+
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f			; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+	; undefined so build the word here
+
+	; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+
+	; copy text for name over
+	LDR		X0, [X22]
+	STR		X0, [X28, #48]
+	ADD		X22, X22, #8
+	LDR		X0, [X22]
+	STR		X0, [X28, #56]
+
+	; variable code
+	ADRP	X1, darrayaddz@PAGE	; high level word.	
+	ADD		X1, X1, darrayaddz@PAGEOFF
+	STR		X1, [X28, #8]
+
+	ADD		X1, X28, #32
+	STR		X1, [X28]
+
+	; set array size from tos.
+	LDR		X0, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X0, [X28, #32] ; array size 
+
+	; ALLOT X0 cells of memory
+	ADRP	X12, allot_ptr@PAGE	
+	ADD		X12, X12, allot_ptr@PAGEOFF
+	LDR		X1, [X12] ; pointer to memory 
+	LSL		X0, X0, #3	; x 8
+	ADD		X0, X1, X0 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
+	STR		X0, [X12]	; bump pointer
+	STR		X0, [X28]	; word points to alloted data
+
+	ADRP	X12, allot_limit@PAGE	
+	ADD		X12, X12, allot_limit@PAGEOFF
+	CMP		X0, X12
+	B.gt	allot_memory_full
+	
+
+B		300f
+
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+	restore_registers_not_stack
+	RET
+
+; WORD 32 bit array
+
+;; ( n -- address )
+dWarrayaddz: ; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #2 ;  word 4 bytes
+	ADD		X1, X0, X2 ; data + index 
+	STR		X1, [X16, #-8]	; address of data
+	RET
+
+dWarrayaddz_index_error:
+	STR		XZR, [X16, #-8]	; null.. trapped by ! and @
+	ADRP	X0, tcomer32@PAGE	
+	ADD		X0, X0, tcomer32@PAGEOFF
+	B		sayit
+	RET
+
+
+
+dWcreatarray:
+
+	save_registers_not_stack
+
+	BL		advancespaces
+	BL		collectword
+	BL		get_word
+	BL		empty_wordQ
+	B.eq	300f
+
+
+	BL		start_point
+
+
+100:	; find free word and start building it
+
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f			; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+; undefined so build the word here
+
+	; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+
+	; copy text for name over
+	LDR		X0, [X22]
+	STR		X0, [X28, #48]
+	ADD		X22, X22, #8
+	LDR		X0, [X22]
+	STR		X0, [X28, #56]
+
+	
+	; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+
+	; copy text for name over
+	LDR		X0, [X22]
+	STR		X0, [X28, #48]
+	ADD		X22, X22, #8
+	LDR		X0, [X22]
+	STR		X0, [X28, #56]
+
+
+	; variable code
+	ADRP	X1, dWarrayaddz@PAGE	; high level word.	
+	ADD		X1, X1, dWarrayaddz@PAGEOFF
+	STR		X1, [X28, #8]
+
+	ADD		X1, X28, #32
+	STR		X1, [X28]
+
+	; set array size from tos.
+	LDR		X0, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X0, [X28, #32] ; array size 
+
+	; ALLOT X0 cells of memory
+	ADRP	X12, allot_ptr@PAGE	
+	ADD		X12, X12, allot_ptr@PAGEOFF
+	LDR		X1, [X12] ; pointer to memory 
+	LSL		X0, X0, #2	; x 4
+	ADD		X0, X1, X0 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
+	STR		X0, [X12]	; bump pointer
+	STR		X0, [X28]	; word points to alloted data
+
+	ADRP	X12, allot_limit@PAGE	
+	ADD		X12, X12, allot_limit@PAGEOFF
+	CMP		X0, X12
+	B.gt	allot_memory_full
+	
+
+B		300f
+
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+	restore_registers_not_stack
+	RET
+
+
+
+
+; HALF WORD 16 bit array
+
+;; ( n -- address )
+dHWarrayaddz: ; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #1 ;  HW 2 BYTES
+	ADD		X1, X0, X2 ; data + index 
+	STR		X1, [X16, #-8]	; address of data
+	RET
+
+dHWarrayaddz_index_error:
+	STR		XZR, [X16, #-8]	; null.. trapped by ! and @
+	ADRP	X0, tcomer32@PAGE	
+	ADD		X0, X0, tcomer32@PAGEOFF
+	B		sayit
+	RET
+
+
+dHWcreatarray:
+
+	save_registers_not_stack
+
+	BL		advancespaces
+	BL		collectword
+	BL		get_word
+	BL		empty_wordQ
+	B.eq	300f
+
+
+	BL		start_point
+
+
+100:	; find free word and start building it
+
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f			; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+; undefined so build the word here
+
+; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+
+	; copy text for name over
+	LDR		X0, [X22]
+	STR		X0, [X28, #48]
+	ADD		X22, X22, #8
+	LDR		X0, [X22]
+	STR		X0, [X28, #56]
+
+	; variable code
+	ADRP	X1, dHWarrayaddz@PAGE	; high level word.	
+	ADD		X1, X1, dHWarrayaddz@PAGEOFF
+	STR		X1, [X28, #8]
+
+	ADD		X1, X28, #32
+	STR		X1, [X28]
+
+	; set array size from tos.
+	LDR		X0, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X0, [X28, #32] ; array size 
+
+ 
+	; ALLOT X0 cells of memory
+	ADRP	X12, allot_ptr@PAGE	
+	ADD		X12, X12, allot_ptr@PAGEOFF
+	LDR		X1, [X12] ; pointer to memory 
+	LSL		X0, X0, #1	; x 2
+	ADD		X0, X1, X0 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
+	STR		X0, [X12]	; bump pointer
+	STR		X0, [X28]	; word points to alloted data
+
+	ADRP	X12, allot_limit@PAGE	
+	ADD		X12, X12, allot_limit@PAGEOFF
+	CMP		X0, X12
+	B.gt	allot_memory_full
+	
+
+B		300f
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+	restore_registers_not_stack
+	RET
+
+
+
+
+; BYTE 8 bit array
+
+
+
+
+;; ( n -- address )
+dCarrayaddz: ; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	ADD		X1, X0, X2 ; data + index 
+	STR		X1, [X16, #-8]	; address of data
+	RET
+
+dCarrayaddz_index_error:
+	STR		XZR, [X16, #-8]	; null.. trapped by ! and @
+	ADRP	X0, tcomer32@PAGE	
+	ADD		X0, X0, tcomer32@PAGEOFF
+	B		sayit
+	RET
+
+
+
+dCcreatarray:
+
+	save_registers_not_stack
+
+	BL		advancespaces
+	BL		collectword
+	BL		get_word
+	BL		empty_wordQ
+	B.eq	300f
+
+
+	BL		start_point
+
+
+100:	; find free word and start building it
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f			; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+
+; undefined so build the word here
+
+; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+
+	; copy text for name over
+	LDR		X0, [X22]
+	STR		X0, [X28, #48]
+	ADD		X22, X22, #8
+	LDR		X0, [X22]
+	STR		X0, [X28, #56]
+
+	; variable code
+	ADRP	X1, dCarrayaddz@PAGE	; high level word.	
+	ADD		X1, X1, dCarrayaddz@PAGEOFF
+	STR		X1, [X28, #8]
+
+	ADD		X1, X28, #32
+	STR		X1, [X28]
+
+
+	; set array size from tos.
+	LDR		X0, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X0, [X28, #32] ; array size 
+
+
+	; ALLOT X0 bytes  of memory
+	ADRP	X12, allot_ptr@PAGE	
+	ADD		X12, X12, allot_ptr@PAGEOFF
+	LDR		X1, [X12] ; pointer to memory 
+	ADD		X0, X1, X0 
+	STR		X0, [X12]	; bump pointer
+	STR		X0, [X28]	; word points to alloted data
+
+	ADRP	X12, allot_limit@PAGE	
+	ADD		X12, X12, allot_limit@PAGEOFF
+	CMP		X0, X12
+	B.gt	allot_memory_full
+
+
+	B		300f
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+	restore_registers_not_stack
+	RET
+
 
 
 dtickz: ; ' - get address of NEXT words data field
@@ -4761,9 +5232,6 @@ dqmz: ; "?"  print variable e.g. AT .
 	SUB		X16, X16, #8
 	LDR		X0, [X0]
 	B		X0print
-
-
-
 	RET
 
 dqmc: ;  "?"  
@@ -4791,6 +5259,15 @@ atz: ;  ( address -- n ) fetch var.
 	STR		X0, [X16, #-8]
 	RET
 
+
+
+dwatz:
+	LDR		X0, [X16, #-8] 	
+	CBZ		X0, itsnull
+	LDR		W0, [X0]
+	STR		W0, [X16, #-8]
+	RET
+
 itsnull: ; error word_desc13
 	MOV		X0, #0
 	STR		X0, [X16, #-8]
@@ -4812,6 +5289,15 @@ storz:  ; ( n address -- )
 	STR		X1, [X0]
 	SUB		X16, X16, #16
 	RET
+
+wstorz:  ; ( n address -- )
+	LDR		X0, [X16, #-8] 
+	LDR		X1, [X16, #-16]
+	CBZ		X0, itsnull2
+	STR		W1, [X0]
+	SUB		X16, X16, #16
+	RET
+
 
 
 hwatz: ;  ( address -- n ) fetch var.
@@ -5868,6 +6354,84 @@ ddelz:	; del (127)
 ddelc:	; del (127)
 	RET
 
+; ALLOT extra memory to a variable
+; 0 VARIABLE test  200 ALLOT: test
+; 
+allotoz: 
+
+10:		; ALLOT the memory allocation
+
+	LDR		X0, [X16, #-8]		; CELLS
+	SUB		X16, X16, #8
+	ADRP	X12, allot_ptr@PAGE	
+	ADD		X12, X12, allot_ptr@PAGEOFF
+	LDR		X1, [X12] ; pointer to memory 
+	LSL		X0, X0, #3	; x 8
+	ADD		X0, X1, X0 
+	STR		X0, [X12]	; bump pointer
+	MOV		X3, X0		; save to update variable pointer
+	ADRP	X12, allot_limit@PAGE	
+	ADD		X12, X12, allot_limit@PAGEOFF
+	CMP		X0, X12
+	B.gt	allot_memory_full
+
+
+100:	
+	save_registers
+	
+	BL		advancespaces
+	BL		collectword
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f			; not found 
+	CMP		X21, #-1		; undefined entry in list?
+	b.eq	170f
+
+	; check word
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+
+	; found word, update memory address for word,
+
+	MOV		X0, X28  
+	STR		X3, [X28] ; variable now has ALLOT address
+
+	restore_registers
+
+	B		stackit
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	; error out 
+ 
+	restore_registers
+
+	MOV 	X0, #-1
+	RET
+
+
+allot_memory_full: ; display err
+
+	ADRP	X0, tcomer31@PAGE	
+	ADD		X0, X0, tcomer31@PAGEOFF
+	B		sayit
+	
+	
+
+
 .data 
 
 ; variables
@@ -6088,6 +6652,16 @@ tcomer30: .ascii "Error: BEGIN or DO loops are not terminated "
 	.zero 16
 
 
+.align	8
+tcomer31: .ascii "\nError: ALLOT MEMORY FULL "
+	.zero 16
+
+
+
+.align	8
+tcomer32: .ascii "\nError: ARRAY index invalid."
+	.zero 16
+
 
 .align	8
 tforget: .ascii "\nForgeting last_word word: "
@@ -6176,6 +6750,13 @@ word_desc12: .ascii "\t\tPRIM COMP"
 word_desc13: .ascii "\nError: Null access."
 	.zero 16
 
+
+.align	8
+word_desc14: .ascii "\t\t1 DIMENSION ARRAY OF 8 BYTE CELLS"
+	.zero 16
+
+
+
 .align 8
 clear_screen:
 	.byte 27,'[','2','J',27,'[','H',0
@@ -6220,12 +6801,13 @@ lsp:
 
 .align 	8
 
+
 allot_ptr:		.quad	allot_space
 				.zero 	32
 allot_space:	;  allotable bytes
 				.zero	128*1024
 allot_limit:	; allotments went too far
-
+				.zero 	32		
 
 
 ; this is the data stack
@@ -6457,7 +7039,9 @@ hashdict:
 
 		makeword "ALLWORDS", alldotwords , 0, 0 
 
-		makeword "ALLOT", allotz , 0, 0 
+		makeword "ALLOT:", allotoz , 0, 0 
+
+		makeword "ARRAY", dcreatarray , 0, 0 
 
 		makeword "ADDR" , daddrz, daddrc, 0
 
@@ -6487,6 +7071,9 @@ adict:
 bdict:
 		makeemptywords 80
 		makeword "CHAR", 	dcharz, dcharc, 0
+
+
+		makeword "CARRAY", dCcreatarray , 0, 0 
 		makeword "C@", 		catz, 0, 0
 		makeword "C!", 		cstorz, 0, 0
 		makeword "CONSTANT", dcreatcz , dcreatcc, 0
@@ -6538,9 +7125,8 @@ fdict:
 		makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
 gdict:
 		makeemptywords 78
-
+		makeword "HWARRAY", dHWcreatarray , 0, 0 
 		makeword "HW!", dhstorez, dhstorec,  0
-
 		makeword "HW@", dhatz, dhatc, 0
 
 
@@ -6708,7 +7294,7 @@ udict:
 	
 vdict:
 		makeemptywords 48
-
+		makeword "WARRAY", dWcreatarray , 0, 0 
 		makeword "WORDS", dotwords , 0, 0 
 		makeword "WHILE", 0 , dwhilec, 0 
 	

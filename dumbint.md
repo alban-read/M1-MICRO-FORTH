@@ -42,9 +42,6 @@ create small machine code primitive words
 - Assume nothing, measure and test.
 
 
-
-
-
 ### expedience
 
 - It is ok to start by using some functions from the standard C library to get up and running.
@@ -63,12 +60,9 @@ Greenspans 10th rule
 Any sufficiently complicated C or Fortran program contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Common Lisp.
 
 
-
 Albans Nth rule
 
 Any sufficiently simple assembly language program contains a half-arsed implementation of FORTH.
-
-
 
 
 #### Memory management
@@ -1111,75 +1105,60 @@ The command STEPOUT will display steps until completion.
 The number of steps taken at a time defaults to 5, and is in the STEPPING variable.
 
 
-Example:
+Example TRACING
 
 ```FORTH
-
-3 STEPPING ! // 3 steps at a time (default 5)
-
 
 : FIB ( n -- n1 )
   DUP 1> IF
   1- DUP 1- FIB SWAP FIB + THEN
 ;
 
-LIMIT FIB
+TRACE FIB TRON 3 FIB .
+
+4306181696 : [     0] FIB         S : [     3] : [     2] : [    13] 
+4305175584 : [   470] DUP          IP[4305175584] S : [     3] : [     3] : [     2] R : [     0] : [     0] : [     0] 
+4305175586 : [  2009] 1>           IP[4305175586] S : [    -1] : [     3] : [     2] R : [     0] : [     0] : [     0] 
+4305175588 : [     3] (IF)         IP[4305175588] S : [    -1] : [     3] : [     2] R : [     0] : [     0] : [     0] 
+4305175590 : [    52] <- literal   IP[4305175590] S : [     3] : [     2] : [    13] R : [     0] : [     0] : [     0] 
+4305175592 : [  1988] 1-           IP[4305175592] S : [     2] : [     2] : [    13] R : [     0] : [     0] : [     0] 
+4305175594 : [   470] DUP          IP[4305175594] S : [     2] : [     2] : [     2] R : [     0] : [     0] : [     0] 
+4305175596 : [  1988] 1-           IP[4305175596] S : [     1] : [     2] : [     2] R : [     0] : [     0] : [     0] 
+4306181696 : [   608] FIB         S : [     1] : [     2] : [     2] 
+4305175584 : [   470] DUP          IP[4305175584] S : [     1] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4305175586 : [  2009] 1>           IP[4305175586] S : [     0] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4305175588 : [     3] (IF)         IP[4305175588] S : [     0] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4305175606 : [  1638] THEN         IP[4305175606] S : [     1] : [     2] : [     2] R : [     0] : [     0] : [     0] 
+4305175598 : [   608] FIB          IP[4305175598] S : [     1] : [     2] : [     2] R : [     0] : [     0] : [     0] 
+4305175600 : [  1569] SWAP         IP[4305175600] S : [     2] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4306181696 : [   608] FIB         S : [     2] : [     1] : [     2] 
+4305175584 : [   470] DUP          IP[4305175584] S : [     2] : [     2] : [     1] R : [     0] : [     0] : [     0] 
+4305175586 : [  2009] 1>           IP[4305175586] S : [    -1] : [     2] : [     1] R : [     0] : [     0] : [     0] 
+4305175588 : [     3] (IF)         IP[4305175588] S : [    -1] : [     2] : [     1] R : [     0] : [     0] : [     0] 
+4305175590 : [    52] <- literal   IP[4305175590] S : [     2] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4305175592 : [  1988] 1-           IP[4305175592] S : [     1] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4305175594 : [   470] DUP          IP[4305175594] S : [     1] : [     1] : [     1] R : [     0] : [     0] : [     0] 
+4305175596 : [  1988] 1-           IP[4305175596] S : [     0] : [     1] : [     1] R : [     0] : [     0] : [     0] 
+4306181696 : [   608] FIB         S : [     0] : [     1] : [     1] 
+4305175584 : [   470] DUP          IP[4305175584] S : [     0] : [     0] : [     1] R : [     0] : [     0] : [     0] 
+4305175586 : [  2009] 1>           IP[4305175586] S : [     0] : [     0] : [     1] R : [     0] : [     0] : [     0] 
+4305175588 : [     3] (IF)         IP[4305175588] S : [     0] : [     0] : [     1] R : [     0] : [     0] : [     0] 
+4305175606 : [  1638] THEN         IP[4305175606] S : [     0] : [     1] : [     1] R : [     0] : [     0] : [     0] 
+4305175598 : [   608] FIB          IP[4305175598] S : [     0] : [     1] : [     1] R : [     0] : [     0] : [     0] 
+4305175600 : [  1569] SWAP         IP[4305175600] S : [     1] : [     0] : [     1] R : [     0] : [     0] : [     0] 
+4306181696 : [   608] FIB         S : [     1] : [     0] : [     1] 
+4305175584 : [   470] DUP          IP[4305175584] S : [     1] : [     1] : [     0] R : [     0] : [     0] : [     0] 
+4305175586 : [  2009] 1>           IP[4305175586] S : [     0] : [     1] : [     0] R : [     0] : [     0] : [     0] 
+4305175588 : [     3] (IF)         IP[4305175588] S : [     0] : [     1] : [     0] R : [     0] : [     0] : [     0] 
+4305175606 : [  1638] THEN         IP[4305175606] S : [     1] : [     0] : [     1] R : [     0] : [     0] : [     0] 
+4305175602 : [   608] FIB          IP[4305175602] S : [     1] : [     0] : [     1] R : [     0] : [     0] : [     0] 
+4305175604 : [  2081] +            IP[4305175604] S : [     1] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4305175602 : [   608] FIB          IP[4305175602] S : [     1] : [     1] : [     2] R : [     0] : [     0] : [     0] 
+4305175604 : [  2081] +            IP[4305175604] S : [     2] : [     2] : [    13] R : [     0] : [     0] : [     0]   2
+
+ 
 
 
-TRON
-
-9 FIB
-
-
-4338753024 : [     0] FIB         S : [     9] : [     0] : [     0] 
-4337746208 : [   469] DUP         S : [     9] : [     9] : [     0] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [    -1] : [     9] : [     0] R : [     0] : [     0] : [     0] 
-Ok
-STEP
-
-4337746212 : [     3] (IF)        S : [    -1] : [     9] : [     0] R : [     0] : [     0] : [     0] 
-4337746214 : [    52] <- literal  S : [     9] : [     0] : [     0] R : [     0] : [     0] : [     0] 
-4337746216 : [  1980] 1-          S : [     8] : [     0] : [     0] R : [     0] : [     0] : [     0] 
-Ok
-STEPOUT
-
-4337746218 : [   469] DUP         S : [     8] : [     8] : [     0] R : [     0] : [     0] : [     0] 
-4337746220 : [  1980] 1-          S : [     7] : [     8] : [     0] R : [     0] : [     0] : [     0] 
-4338753024 : [   607] FIB         S : [     7] : [     8] : [     0] 
-4337746208 : [   469] DUP         S : [     7] : [     7] : [     8] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [    -1] : [     7] : [     8] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [    -1] : [     7] : [     8] R : [     0] : [     0] : [     0] 
-4337746212 : [     3] (IF)        S : [    -1] : [     7] : [     8] R : [     0] : [     0] : [     0] 
-4337746214 : [    52] <- literal  S : [     7] : [     8] : [     0] R : [     0] : [     0] : [     0] 
-4337746216 : [  1980] 1-          S : [     6] : [     8] : [     0] R : [     0] : [     0] : [     0] 
-4337746218 : [   469] DUP         S : [     6] : [     6] : [     8] R : [     0] : [     0] : [     0] 
-4337746220 : [  1980] 1-          S : [     5] : [     6] : [     8] R : [     0] : [     0] : [     0] 
-4338753024 : [   607] FIB         S : [     5] : [     6] : [     8] 
-4337746208 : [   469] DUP         S : [     5] : [     5] : [     6] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [    -1] : [     5] : [     6] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [    -1] : [     5] : [     6] R : [     0] : [     0] : [     0] 
-4337746212 : [     3] (IF)        S : [    -1] : [     5] : [     6] R : [     0] : [     0] : [     0] 
-4337746214 : [    52] <- literal  S : [     5] : [     6] : [     8] R : [     0] : [     0] : [     0] 
-4337746216 : [  1980] 1-          S : [     4] : [     6] : [     8] R : [     0] : [     0] : [     0] 
-4337746218 : [   469] DUP         S : [     4] : [     4] : [     6] R : [     0] : [     0] : [     0] 
-4337746220 : [  1980] 1-          S : [     3] : [     4] : [     6] R : [     0] : [     0] : [     0] 
-4338753024 : [   607] FIB         S : [     3] : [     4] : [     6] 
-4337746208 : [   469] DUP         S : [     3] : [     3] : [     4] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [    -1] : [     3] : [     4] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [    -1] : [     3] : [     4] R : [     0] : [     0] : [     0] 
-4337746212 : [     3] (IF)        S : [    -1] : [     3] : [     4] R : [     0] : [     0] : [     0] 
-4337746214 : [    52] <- literal  S : [     3] : [     4] : [     6] R : [     0] : [     0] : [     0] 
-4337746216 : [  1980] 1-          S : [     2] : [     4] : [     6] R : [     0] : [     0] : [     0] 
-4337746218 : [   469] DUP         S : [     2] : [     2] : [     4] R : [     0] : [     0] : [     0] 
-4337746220 : [  1980] 1-          S : [     1] : [     2] : [     4] R : [     0] : [     0] : [     0] 
-4338753024 : [   607] FIB         S : [     1] : [     2] : [     4] 
-4337746208 : [   469] DUP         S : [     1] : [     1] : [     2] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [     0] : [     1] : [     2] R : [     0] : [     0] : [     0] 
-4337746210 : [  1999] 1>          S : [     0] : [     1] : [     2] R : [     0] : [     0] : [     0] 
-4337746212 : [     3] (IF)        S : [     0] : [     1] : [     2] R : [     0] : [     0] : [     0] 
-4337746212 : [     3] (IF)        S : [     1] : [     2] : [     4] R : [     0] : [     0] : [     0] 
-4337746230 : [  1632] THEN        S : [     1] : [     2] : [     4] R : [     0] : [     0] : [     0] 
-4337746230 : [  1632] THEN        S : [     1] : [     2] : [     4] R : [     0] : [     0] : [     0]
 
 
 ```
@@ -1218,6 +1197,63 @@ When the word completes you will be back at level 0.
 
 These are expensive in the sense that they use a register and a pool of memory but should be as cheap to use as any other variable. I assumed clearing these would slow the interpreter down; it got randomly faster instead.
 
+
+
+### VARIABLES
+
+I J K - dedicated to DO LOOP only.
+
+A..H, L..Z global variables
+
+_A.._H local variables for each word executing.
+
+Declare global variables with initial value
+
+10 VARIABLE fred 
+
+Display a variable 
+
+
+SEE fred
+
+or 
+
+fred ?
+
+
+Read a variables value
+
+H @  fred @
+
+Write to a variable
+
+10 h ! 
+
+would set h to 10
+
+### ARRAYS
+
+Declare with size and name
+
+12 ARRAY test 
+
+Access with name and index
+
+1000 2 test !
+
+reads as set index 2 of test to 1000
+
+Fetch values from ARRAY with name and index
+
+2 test @ 
+
+Should read index 2 of test
+
+ARRAYS are given space from the ALLOT stack.
+The space used is static and not recoverable, it is not a heap.
+
+ARRAY allocates 64 bit cells to the array.
+Use other words for smaller cells.
 
 
 ### STRINGs
