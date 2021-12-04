@@ -2889,6 +2889,59 @@ dseez:
 
 
 	; anotate the data word
+	ADRP	X2, dCarrayaddz@PAGE		
+	ADD		X2, X2, dCarrayaddz@PAGEOFF
+	LDR		X0, [X28, #8]
+	CMP		X0, X2
+	B.ne	12040f
+
+	ADRP	X0, word_desc17@PAGE		
+	ADD		X0, X0, word_desc17@PAGEOFF
+	BL		sayit
+
+	LDR		X0, [X28, 32]
+	BL		X0halfpr
+
+	B		12095f
+
+12030:
+
+	ADRP	X2, dHWarrayaddz@PAGE		
+	ADD		X2, X2, dHWarrayaddz@PAGEOFF
+	LDR		X0, [X28, #8]
+	CMP		X0, X2
+	B.ne	12040f
+
+	ADRP	X0, word_desc16@PAGE		
+	ADD		X0, X0, word_desc16@PAGEOFF
+	BL		sayit
+
+	LDR		X0, [X28, 32]
+	BL		X0halfpr
+
+	B		12095f
+
+
+12040:
+
+	ADRP	X2, dWarrayaddz@PAGE		
+	ADD		X2, X2, dWarrayaddz@PAGEOFF
+	LDR		X0, [X28, #8]
+	CMP		X0, X2
+	B.ne	12050f
+
+	ADRP	X0, word_desc15@PAGE		
+	ADD		X0, X0, word_desc15@PAGEOFF
+	BL		sayit
+
+	LDR		X0, [X28, 32]
+	BL		X0halfpr
+
+	B		12095f
+
+
+
+12050:
 
 
 	ADRP	X2, darrayaddz@PAGE		
@@ -3518,8 +3571,6 @@ dcreatarray:
 	BL		get_word
 	BL		empty_wordQ
 	B.eq	300f
-
-
 	BL		start_point
 
 100:	; find free word and start building it
@@ -3531,7 +3582,7 @@ dcreatarray:
 	B.eq	290b
 
 	CMP		X1, #0		; end of list?
-	B.eq	280f			; not found 
+	B.eq	280f		; not found 
 	CMP		X1, #-1		; undefined entry in list?
 	b.ne	260f
 
@@ -3625,13 +3676,9 @@ dWcreatarray:
 	BL		get_word
 	BL		empty_wordQ
 	B.eq	300f
-
-
 	BL		start_point
 
-
 100:	; find free word and start building it
-
 
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
@@ -3650,28 +3697,12 @@ dWcreatarray:
 	ADD		X1, X1, last_word@PAGEOFF
 	STR		X28, [X1]
 
-
 	; copy text for name over
 	LDR		X0, [X22]
 	STR		X0, [X28, #48]
 	ADD		X22, X22, #8
 	LDR		X0, [X22]
 	STR		X0, [X28, #56]
-
-	
-	; this is now the last_word word being built.
-	ADRP	X1, last_word@PAGE		
-	ADD		X1, X1, last_word@PAGEOFF
-	STR		X28, [X1]
-
-
-	; copy text for name over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
-
 
 	; variable code
 	ADRP	X1, dWarrayaddz@PAGE	; high level word.	
@@ -5290,7 +5321,7 @@ storz:  ; ( n address -- )
 	SUB		X16, X16, #16
 	RET
 
-wstorz:  ; ( n address -- )
+dwstorz:  ; ( n address -- )
 	LDR		X0, [X16, #-8] 
 	LDR		X1, [X16, #-16]
 	CBZ		X0, itsnull2
@@ -6756,6 +6787,18 @@ word_desc14: .ascii "\t\t1 DIMENSION ARRAY OF 8 BYTE CELLS"
 	.zero 16
 
 
+.align	8
+word_desc15: .ascii "\t\t1 DIMENSION ARRAY OF 4 BYTE CELLS"
+	.zero 16
+
+.align	8
+word_desc16: .ascii "\t\t1 DIMENSION ARRAY OF 2 BYTE CELLS"
+	.zero 16
+
+
+.align	8
+word_desc17: .ascii "\t\t1 DIMENSION ARRAY OF BYTES"
+	.zero 16
 
 .align 8
 clear_screen:
@@ -7293,11 +7336,14 @@ udict:
 		makeword "V", dvaraddz, dvaraddc,  8 * 86 + ivars	
 	
 vdict:
+
 		makeemptywords 48
 		makeword "WARRAY", dWcreatarray , 0, 0 
 		makeword "WORDS", dotwords , 0, 0 
 		makeword "WHILE", 0 , dwhilec, 0 
-	
+		makeword "W!", dwstorz , 0, 0 
+		makeword "W@", dwatz , 0, 0 
+
 		makeqvword 119
 		makeword "W", dvaraddz, dvaraddc,  8 * 87 + ivars	
 		

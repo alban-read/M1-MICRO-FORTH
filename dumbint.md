@@ -1199,6 +1199,22 @@ These are expensive in the sense that they use a register and a pool of memory b
 
 
 
+#### TYPES
+
+Reflect machine types.
+
+The stacks tend to contain 64 bit values, these may hold byte, word, halfword, or quad word contents.
+
+Values are accessed from memory using
+
+@ and ! 			64 bit 
+W@ and W! 			32 bit
+HW@ and HW! 		16 bit
+C@ and C! 			8 bit
+
+
+
+
 ### VARIABLES
 
 I J K - dedicated to DO LOOP only.
@@ -1249,11 +1265,20 @@ Fetch values from ARRAY with name and index
 
 Should read index 2 of test
 
-ARRAYS are given space from the ALLOT stack.
+ARRAYS are taking space from the ALLOT stack.
 The space used is static and not recoverable, it is not a heap.
+
 
 ARRAY allocates 64 bit cells to the array.
 Use other words for smaller cells.
+
+Other arrays include
+
+WARRAY (4 bytes)
+
+HWARRAY (2 bytes)
+
+CARRAY (1 bytes)
 
 
 ### STRINGs
