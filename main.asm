@@ -30,6 +30,8 @@
 ;; X23 also used for text
 
 
+
+
  .macro reset_data_stack
 	ADRP	X1, sp1@PAGE		
 	ADD		X1, X1, sp1@PAGEOFF
