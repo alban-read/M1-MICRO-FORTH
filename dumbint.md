@@ -1,4 +1,7 @@
-## dumb [as an especially dumb rock] interpeter
+
+## DumbInt
+
+## Dumb [as an especially dumb rock] Int as in interpeter
 
 Inspired by FORTH, not a new invention, since only fools invent new languages.
 
@@ -6,7 +9,13 @@ With .. tradeoffs..
 
 This was written from scratch, starting with a blank editor page in VS code, CLANG Assembler is used, since that comes with the Apple developer kit.
 
-I liked 1980s micro computers, and I feel like it should be possible to have fun with a computer still.
+I liked 1980s micro computers, I feel like it should be possible to have fun with a computer still.
+
+Since this is inspired by FORTH I include this disclaimer, DumbInt is not FORTH, there are two commercial vendors of high quality optimizing native code FORTH compilers, if you need a high quality compiler for commercial reasons please contact them and purchase one.
+
+The FORTHS I remember fondly ran on microcomputers in the 1980s.
+
+There are many things about FORTH that I actively dislike or that are just tedious to implement.
 
 
 ### purpose
@@ -1235,11 +1244,11 @@ S' This is a string object' TYPEZ
 
 Strings in this implementation are ASCII, limited to 255 charachters, stored in a literal pool, and zero terminated.
 
-The entire system is based on C, which uses zero terminated strings, standard FORTHS uses counted strings, which may be more sensible, but are not useful.
+The entire operating system is based on C, (Objective C) etc, which uses zero terminated strings, standard FORTHS uses counted strings, which may be more sensible, but are not useful.
 
 I hope to add some sane and safe words for strings that do common and useful things.
 
-
+I have bought into the whole modern strings are immutable objects belief system.
 
 
 
