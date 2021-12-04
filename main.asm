@@ -1690,6 +1690,9 @@ try_compiling_literal:
 
 80:
 	; found the literal
+
+	MOV		X0, #2 ; #LITL
+	STRH	W0, [X15]
 	MOV		X1, X3
 	STRH	W1, [X15]	; value
 	ADD		X15, X15, #2
@@ -3525,7 +3528,7 @@ dtickz: ; ' - get address of NEXT words data field
 
 
 
-dcharz: ; char - stack char
+dcharz: ; char - stack char code while interpreting
 
 10:	LDRB	W0, [X23]
 	CMP		W0, #32
@@ -3556,9 +3559,7 @@ dcharc: ; char - convert Char to small lit while compiling.
 
 20:	
 	STRH	W0, [X15]	; value
-
 	ADD		X23, X23, #1
- 
 
 	MOV 	X0, #0
 
@@ -4927,6 +4928,82 @@ tendivz:
 	RET
 
 
+
+longlitit: ; COMPILE X0 into word as short or long lit
+	 
+ 
+
+	; X0 is our literal 
+
+	; halfword numbers ~32k
+	MOV		X3, #4000
+	LSL		X3, X3, #3  
+	MOV		X1, x0
+	CMP		X0, X3 
+	B.gt	25f  ; too big to be
+
+	MOV		X0, #1 ; #LITS
+	STRH	W0, [X15]
+	ADD		X15, X15, #2
+	STRH	W1, [X15]	; value
+	;ADD		X15, X15, #2
+	; short literal done
+ 
+	RET
+
+25:	; long word
+	; we need to find or create this in the literal pool.
+
+
+	ADRP	X1, quadlits@PAGE	
+	ADD		X1, X1, quadlits@PAGEOFF
+	MOV		X3, XZR
+
+10:
+	LDR		X2, [X1]
+	CMP		X2, X0
+	B.eq	80f
+
+	CMP		X2, #-1  
+	B.eq	70f
+	CMP		X2, #-2 ; end of pool ERROR  
+	B.eq	exit_compiler_pool_full
+	ADD		X3, X3, #1
+	ADD		X1, X1, #8
+	B		10b	
+70:
+	; literal not present 
+	; free slot found, store lit and return value
+
+	STR		X0, [X1]
+
+	MOV		X0, #2 ; #LITL
+	STRH	W0, [X15]
+	ADD		X15, X15, #2
+	STRH	W3, [X15]	; value = index
+	;ADD		X15, X15, #2
+	; long literal created and stored
+ 
+	RET
+
+
+80:
+	; found the literal
+	MOV		X0, #2 ; #LITL
+	STRH	W0, [X15]
+	ADD		X15, X15, #2
+	MOV		X1, X3
+	STRH	W1, [X15]	; value = index
+;	ADD		X15, X15, #2
+	LDP		LR, X0, [SP], #16
+ 
+	RET
+
+
+
+
+
+
 stackit: ; push x0 to stack.
 
 	STR		X0, [X16], #8
@@ -4967,7 +5044,10 @@ dlitc: ; compile address of variable
 
 
 dlitlz: ; next cell has address of quad literal, held in pool
-	LDRH	W0, [X15], #2
+	
+	ADD		X15, X15, #2	
+	LDRH	W0, [X15] 
+ 
 	ADRP	X1, quadlits@PAGE	
 	ADD		X1, X1, quadlits@PAGEOFF
 	LDR		X0, [X1, X0, LSL #3]
@@ -5181,7 +5261,7 @@ ddotsz:
 210:
 	LDR		X0, 	[X13, X3, LSL#3]
 	CBZ		X0, 220f
-	CMP		X0, X3  ; is this our hash?
+	CMP		X2, X0  ; is this our hash? 2 not 0
 	B.eq	800f	; already in table
 	ADD		X3, X3, #1
 	B		210b
@@ -5294,6 +5374,134 @@ dstrdotz:
 
 
 
+dstrstksz: ; runtime S" .. " stash and return address
+
+
+	do_trace
+
+	STP		LR,  XZR, [SP, #-16]!
+	
+	clear_string_buffer
+
+	MOV		W1, #0
+
+10:	LDRB	W0, [X23], #1
+	CMP		W0, #39 ; '
+	b.eq	200f
+	STRB	W0, [X22], #1
+	ADD		W1, W1, #1
+	B.ne	10b
+
+
+200:
+
+	; short string hash
+
+	MOV		X22, X8
+	MOV		W7, #53					
+	MOV		X8, #51721
+	MOVK	X8, #15258, LSL #16		
+	MOV		W1, #0					
+	MOV		W2, #1					
+
+205:
+	LDRB	W0, [X22], #1
+	CBZ		W0,  208f
+
+	ADD		W0, W0, #1
+	MUL		W3, W2, W0
+	ADD		W1, W1, W3
+	MUL		W2, W2, W7
+	SDIV	W4, W2, W8
+	ADD		W1, W1, W4
+	ADD		X22, X22, #1
+	B		205b
+
+208:	
+	MOV		X2, X1 ; X2 = HASH
+
+	ADRP	X8, short_strings_hash@PAGE		
+	ADD		X13, X8, short_strings_hash@PAGEOFF
+	
+	MOV		X3, #0	; position in table		
+	
+210:
+	LDR		X0, [X13, X3, LSL#3]
+	CBZ		X0, 220f
+	CMP		X2, X0  ; is this our hash? 2 not 0
+	B.eq	800f	; already in table
+	ADD		X3, X3, #1
+	B		210b
+
+220:	
+	STR		X2, [X13, X3, LSL#3]		; store hash
+
+	MOV		X0, X3
+	LSL		X0, X0, #6
+
+	ADRP	X8, string_buffer@PAGE		
+	ADD		X8, X8, string_buffer@PAGEOFF
+	MOV		X22, X8
+
+	ADRP	X8, short_strings@PAGE		
+	ADD		X13, X8, short_strings@PAGEOFF
+	ADD		X13, X13, X0 ; string base + n * 64
+	MOV		X2,  X13
+
+	; copy from string buffer to string
+	.rept 16
+		LDP		X0, X1, [X22], #16
+		STP		X0, X1, [X13], #16
+	.endr
+	
+	LDP		LR, X15, [SP], #16	
+	MOV		X0, X2
+	B 		stackit
+
+
+800: 	; already in table
+
+	MOV		X0, X3
+	LSL		X0, X0, #6
+
+	ADRP	X8, string_buffer@PAGE		
+	ADD		X8, X8, string_buffer@PAGEOFF
+	MOV		X22, X8
+
+	ADRP	X8, short_strings@PAGE		
+	ADD		X13, X8, short_strings@PAGEOFF
+	ADD		X13, X13, X0 ; string base + n * 64
+	MOV		X0,  X13
+
+	LDP		LR, X15, [SP], #16	
+	B 		stackit
+
+
+770:	; err string too long.
+
+	MOV		X0, #-1	
+
+	LDP		LR, X15, [SP], #16	
+	B 		stackit
+	;; TODO
+	
+	RET
+
+
+780:	; hash table full
+	MOV		X0, #-2
+	LDP		LR, X15, [SP], #16	
+	B 		stackit
+	;; TODO
+
+	RET
+
+
+
+
+
+
+
 ; compiles string into the string literal pool.
 ; compiles string literal token and value into word.
 dstrdotc:
@@ -5375,9 +5583,134 @@ dstrdotc:
 	LDP		LR, XZR, [SP], #16	
 	RET
 
-990:	MOV		X0, #0
+990:	
+	MOV		X0, #0
 	LDP		LR, XZR, [SP], #16	
 	RET
+
+
+
+dstrstksc: ; compile literal that returns its address.
+
+
+	do_trace
+
+	STP		LR,  XZR, [SP, #-16]!
+	
+	clear_string_buffer
+
+	MOV		W1, #0
+
+10:	LDRB	W0, [X23], #1
+	CMP		W0, #39 ; '
+	b.eq	200f
+	STRB	W0, [X22], #1
+	ADD		W1, W1, #1
+	B.ne	10b
+
+
+200:
+
+	; short string hash
+
+	MOV		X22, X8
+	MOV		W7, #53					
+	MOV		X8, #51721
+	MOVK	X8, #15258, LSL #16		
+	MOV		W1, #0					
+	MOV		W2, #1					
+
+205:
+	LDRB	W0, [X22], #1
+	CBZ		W0,  208f
+
+	ADD		W0, W0, #1
+	MUL		W3, W2, W0
+	ADD		W1, W1, W3
+	MUL		W2, W2, W7
+	SDIV	W4, W2, W8
+	ADD		W1, W1, W4
+	ADD		X22, X22, #1
+	B		205b
+
+
+
+208:	
+	MOV		X2, X1 ; X2 = HASH
+
+	ADRP	X8, short_strings_hash@PAGE		
+	ADD		X13, X8, short_strings_hash@PAGEOFF
+	
+	MOV		X3, #0	; position in table		
+	
+210:
+	LDR		X0, [X13, X3, LSL#3]
+	CBZ		X0, 220f
+	CMP		X2, X0  ; is this our hash? 2 not 0
+	B.eq	800f	; already in table
+	ADD		X3, X3, #1
+	B		210b
+
+
+220:	
+	STR		X2, [X13, X3, LSL#3]		; store hash
+
+	MOV		X0, X3
+	LSL		X0, X0, #6
+
+	ADRP	X8, string_buffer@PAGE		
+	ADD		X8, X8, string_buffer@PAGEOFF
+	MOV		X22, X8
+
+	ADRP	X8, short_strings@PAGE		
+	ADD		X13, X8, short_strings@PAGEOFF
+	ADD		X13, X13, X0 ; string base + n * 64
+	MOV		X2,  X13
+
+	; copy from string buffer to string
+	.rept 16
+		LDP		X0, X1, [X22], #16
+		STP		X0, X1, [X13], #16
+	.endr
+	
+	MOV		X0, X2
+	BL		longlitit
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+800: 	; already in table
+
+	MOV		X0, X3
+	LSL		X0, X0, #6
+
+	ADRP	X8, string_buffer@PAGE		
+	ADD		X8, X8, string_buffer@PAGEOFF
+	MOV		X22, X8
+
+	ADRP	X8, short_strings@PAGE		
+	ADD		X13, X8, short_strings@PAGEOFF
+	ADD		X13, X13, X0 ; string base + n * 64
+	MOV		X0,  X13
+	BL 		longlitit
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+
+770:	; err string too long.
+
+	MOV		X0, #-1	
+
+	BL 		longlitit
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+
+780:	; hash table full
+	MOV		X0, #-2
+	BL 		longlitit
+	LDP		LR, XZR, [SP], #16	
+	RET
+
 
 
 ; print a short literal string, inline literal
@@ -6319,6 +6652,7 @@ qdict:
 rdict:
 
 		makeemptywords 50
+		makeword "S'", dstrstksz , dstrstksc, 0 
 		makeword "STEPOUT", stepoutz , 0, 0 
 	 	makeword "STEP", step_in_runz , 0, 0 
 		makevarword "STEPPING", step_limit
