@@ -6583,8 +6583,6 @@ kdict:
 
 		makeword "LITBASE", dvaraddz, dvaraddc,  quadlits
 
-
-
 	
 ldict:
 		makeemptywords 61
