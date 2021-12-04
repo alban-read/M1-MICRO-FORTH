@@ -3523,6 +3523,49 @@ dtickz: ; ' - get address of NEXT words data field
 	RET
 
 
+
+
+dcharz: ; char - stack char
+
+10:	LDRB	W0, [X23]
+	CMP		W0, #32
+	ADD		X23, X23, #1
+	B.eq	10b
+	B		stackit
+
+ 
+ 
+dcharc: ; char - convert Char to small lit while compiling.
+	
+	MOV		W0, #1 ; #LITS
+	STRH	W0, [X15]
+	ADD		X15, X15, #2
+
+ 10:	
+ 	LDRB	W0, [X23], #1
+	CMP		W0, #32
+	b.eq	10b
+	CMP		W0, #10
+	B.eq	20f
+	CMP		W0, #12
+	B.eq	20f
+	CMP		W0, #13
+	B.eq	20f
+	CMP		W0, #0
+	B.eq	20f
+
+20:	
+	STRH	W0, [X15]	; value
+
+	ADD		X23, X23, #1
+ 
+
+	MOV 	X0, #0
+
+	RET
+ 
+
+
 ; control flow
 ; condition IF .. ELSE .. ENDIF 
 
@@ -4868,6 +4911,21 @@ dndivz:
 dndivc:
 	RET
 
+tentimez:
+	LDR		X1, [X16, #-8]
+	LSL		X0, X1, #1
+	ADD		X0, X0, X1, LSL#3
+	STR		X0, [X16, #-8]
+	RET
+
+tendivz:
+	LDR		X1, [X16, #-8]
+	MOV		X0, #205
+	MUL		X0, X1, X0
+	LSR     X0, X0, #11
+	STR		X0, [X16, #-8]
+	RET
+
 
 stackit: ; push x0 to stack.
 
@@ -6092,6 +6150,7 @@ adict:
 
 bdict:
 		makeemptywords 80
+		makeword "CHAR", 	dcharz, dcharc, 0
 		makeword "C@", 		catz, 0, 0
 		makeword "C!", 		cstorz, 0, 0
 		makeword "CONSTANT", dcreatcz , dcreatcc, 0
@@ -6382,6 +6441,8 @@ zdict:
 		makeword "8/", dndivz , 0, 3
 
 
+		makeword "10*", tentimez , 0, 0
+		makeword "10/", tendivz , 0, 0
 		makeword "16-", dnsubz , 0, 4
 		makeword "16+", dnplusz , 0, 4 
 		makeword "16*", dnmulz , 0, 4

@@ -8,6 +8,12 @@
 : t1 25 0 DO 34 FIB LOOP ; // run many
 
 
+: FAC DUP 1> IF DUP 1- FAC * ELSE DROP 1 ENDIF ;
+
+
+: t2 100 FAC ;
+
+
 TIMEIT t1
 
 // 27th November 2021
