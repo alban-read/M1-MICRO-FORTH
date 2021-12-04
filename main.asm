@@ -6200,7 +6200,7 @@ here:
 
 	
 token_space:
-	.zero	64*1024*2
+	.zero	128*1024*2
 
 token_space_top:
 
@@ -6214,7 +6214,16 @@ token_space_top:
 
 .align  8
 lsp:	 
-.zero	16384
+				.zero	16*1024
+
+.align 	8
+
+allot_ptr:		.quad	allot_space
+				.zero 	32
+allot_space:	;  allotable bytes
+				.zero	128*1024
+allot_limit:	; allotments went too far
+
 
 
 ; this is the data stack
@@ -6445,6 +6454,8 @@ hashdict:
 		makeemptywords 84
 
 		makeword "ALLWORDS", alldotwords , 0, 0 
+
+		makeword "ALLOT", allotz , 0, 0 
 
 		makeword "ADDR" , daddrz, daddrc, 0
 
