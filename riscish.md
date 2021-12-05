@@ -1,7 +1,5 @@
 
-## DumbInt
-
-## Dumb [as an especially dumb rock] Int as in interpeter
+## RISCISH 4TH like interpreter
 
 Inspired by FORTH, not a new invention, since only fools invent new languages.
 
@@ -11,16 +9,17 @@ This was written from scratch, starting with a blank editor page in VS code, CLA
 
 I liked 1980s micro computers, I feel like it should be possible to have fun with a computer still.
 
-Since this is inspired by FORTH I include this disclaimer, DumbInt is not FORTH, there are two commercial vendors of high quality optimizing native code FORTH compilers, if you need a high quality compiler for commercial reasons please contact them and purchase one.
+Since this is inspired by FORTH I include this disclaimer, This is not FORTH, there are two commercial vendors of high quality optimizing native code standards based FORTH compilers, if you need a high quality compiler for commercial reasons please contact them and purchase one.
 
 The FORTHS I remember fondly ran on microcomputers in the 1980s, and were often not standard, they were limited by things like processor speed and memory space, and number of possible colours on the screen, if there were any colours.
+
 
 There are many things about standard FORTH that I actively dislike or that are just tedious to implement.
 
 
 ### purpose
 
-Learn ARM64, have some fun, create useful things.
+Learn ARM64, have some fun, create useful things, perhaps.
 
 
 ### approach
@@ -33,11 +32,11 @@ create small machine code primitive words
 
  .. allow new words to be composed, mainly by concatenation.
 
-- Get an interactive interpreter running from Day 1, and then build it out.
+- Get a simple interactive interpreter running then build it out.
 
-- The process is incremental, and interactive from the start, as soon as the outer text interpreter said OK, it was used to test the next features added.
+-  process is incremental, and interactive from the start, as soon as the outer text interpreter said OK, it was used to test the next features added.
 
-- Use the computer against itself (Use the computer as a tool for using the computer).
+- Computer Judo: Use the computer against itself (Use the computer as a tool for using the computer).
 
 - Assume nothing, measure and test.
 
@@ -69,18 +68,16 @@ Any sufficiently simple assembly language program contains a half-arsed implemen
 
 None.
 
-Memory management is Static, really it is organized as a number of stacks and pools.
+Memory management is Static, memory is organized as a number of stacks and pools.
 
 - The program contains a few tables of fixed sizes.
 
 - If you blow past a limit you will get an error message.
 
-- If your program exceeds a limit, just change that limit and rebuild.
+- If your program exceeds a limit, just change that limit and rebuild it.
 
 
 ### Memory - literal pools
-
-The compiler uses literal pools, that is a deviation from most FORTH implementations, that use a single dictionary.
 
 A literal pool fits in better with the whole RISC concept, rigid alignment, fixed length words, load/store, seperate code and data.
 
@@ -103,224 +100,21 @@ A literal pool fits in better with the whole RISC concept, rigid alignment, fixe
 
 Use ASCII
 
-- Support Strings of Unicode Runes in a safe and sensible way (later)
+- Support Strings of Unicode Runes in a safe and sensible way (much later)
 
 
-### Week off November 2021 : the big push, kick off.
 
-I took a week off (leave/PTO) to work on whatever I liked and spent time on this.
+### Aspire to Safety 
 
-#### Tuesday 16th November 2021
+Standard FORTH is chronically unsafe, mistakes lead to crashes, words just manipulate blocks of bytes, it is a hazardous experience.
 
-First 'compiled' word. (token compiled)
+I would like this implemention to be a little bit safer where possible.
 
-```FORTH
-: test DUP * . ;
 
-5 test => 25 
-```
-
-The compiler compiles words into a token list, tokens are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
-
-This inner interpreter is only a few instructions long, in runintz.
-
-It is more complicated than typical threaded FORTH because of the token expansion, and due to the words data being passed over in X0.  
-
-For runintz the data is the address of the tokens.
-
-The functions are all 'called', rather than jumping through next.
-
-I feel this might make it easier to change the compiler to use subroutine threading later.
-
-
-#### Wednesday Morning
-
-Implemented IF and ENDIF allowing conditional logic.
-
-If the stack is 0 IF skips to ENDIF
-
-```FORTH
-
-: TEST IF CR 65 EMIT ENDIF 66 EMIT ;
-```
-
-At compile time IF compiles (IF)) with a slot for the offset.
-
-At compile time ENDIF compiles a value into the offset of the matching zbranch or branch.
-
-ENDIF should skip compiling itself, it shows up below due to a bug, at runtime ENDIF is a NOOP.
-
-e.g. 
-
-
-```FORTH
-
-1 TEST => 
-AB 
-     
-0 TEST => B
-
-
-SEE TEST
-SEE WORD :4340062016 TEST        
-       0 :4339055954 		^TOKENS 
-       8 :4338935500 		PRIM RUN
-      16 :       0 		ARGUMENT 2
-      24 :       0 		PRIM COMP
-      32 :       0 		Extra DATA 1
-      40 :       0 		Extra DATA 2
-      48 :TEST        		NAME
-		TOKEN COMPILED FAST
-
-4339055954 : [     3] (IF)        
-4339055956 : [    46] *
-4339055958 : [   374] CR          
-4339055960 : [     1] #LITS       
-4339055962 : [    65] *
-4339055964 : [   547] EMIT        
-4339055966 : [   546] ENDIF       
-4339055968 : [     1] #LITS       
-4339055970 : [    66] *
-4339055972 : [   547] EMIT        
-4339055974 : [     0] (NULL)      
-4339055976 : END OF LIST
- 
-```
-
-
- 
-
-At runtime (IF), and (ELSE) adds the offset to the IP (X15) or not, depending on the value on the stack.
-
-
-
-Added ELSE as in 
-
-IF ... ELSE  ... ENDIF 
-
-```FORTH
-: TEST IF CR 65 EMIT ELSE CR 66 EMIT ENDIF 67 EMIT ;
-```
-
-e.g. 
-
-1 TEST => AC
-0 TEST => BC 
-
-I first added SEE to help me add ELSE.
-
-At compile time :-
-ELSE looks for IF
-ENDIF looks for ELSE or IF.
-
-
-```FORTH
-SEE TEST
-SEE WORD :4379973504 TEST        
-       0 :4378967328 		^TOKENS 
-       8 :4378846924 		PRIM RUN
-      16 :       0 		ARGUMENT 2
-      24 :       0 		PRIM COMP
-      32 :       0 		Extra DATA 1
-      40 :       0 		Extra DATA 2
-      48 :TEST        		NAME
-		TOKEN COMPILED FAST
-
-4378967328 : [     3] (IF)        
-4378967330 : [    48] *
-4378967332 : [   374] CR          
-4378967334 : [     1] #LITS       
-4378967336 : [    65] *
-4378967338 : [   547] EMIT        
-4378967340 : [     4] (ELSE)      
-4378967342 : [    46] *
-4378967344 : [   374] CR          
-4378967346 : [     1] #LITS       
-4378967348 : [    66] *
-4378967350 : [   547] EMIT        
-4378967352 : [   546] ENDIF       
-4378967354 : [     1] #LITS       
-4378967356 : [    67] *
-4378967358 : [   547] EMIT        
-4378967360 : [     0] (NULL)      
-4378967362 : END OF LIST
-```
-
-
-
-#### Thursday morning
-
-- Fixed a mysterious error.
-
-- Added a little (not a lot of) safety to variable access.
-
-- Added some tests and fixed nested IF ..
-
-- Fixed a spurious and annoying error.
-
-- Start with the return stack, for loops.
-
-- Implemented and tested words for LOOP
-
-= Updated tracing to not crash.
-
-
-#### Friday morning
-
-- Improved tracing, delegated some tracing to run time words.
-
-- Improved design of LOOP
-
-- Improved SEE, distributed tracing, made trace a macro.
-
-
-#### Saturday morning
-
-- Added .S .R for tracing the stack.
-
-- Fixed issues with LOOP.
-
-- Fixed issues with IF caused by fixing issues with LOOP.
-
-
-
-#### Sunday morning
-
-Created token space, shrunk word headers, compiler now compiles into token space.
-
-
-#### Week off conclusiom
-
-I think the core work needed is done and can now be extended.
-
-The whole experience has been completely interactive from the moment the interpreter first said OK to me.
-
-Did encounter some annoying bugs, rewrote the tracing function a couple of times, cursed the computer, everything still needs work.
-
-- Typical stack juggling words implemented.
-
-- Integer maths.
-
-- Interpreter works.
-
-- Compiler (not native) works.
-
-- Variables and Constants work.
-
-- Compiler supports fixed loops and conditional code.
-
-- Tracing WORDS works 
-
-- Decompiling WORDS works.
- 
-
-Plan: do whatever is interesting next.
-
------------------------------------------------------------------------
 
 ### Dictionary
 
-A dictionary provides a way to name objects.
+A dictionary provides words as a way to name objects.
 
 The dictionary contains word headers, these contain a pointer to a function and a small amount of data uses as function arguments.
 
@@ -348,26 +142,28 @@ Standard FORTH splits a dictionary into many vocabularies, I am not doing this, 
 
 
 
-#### Compiled word
+#### Compiled words
 
-A 'compiled' word is simply a list of tokens, some of which are branch instructions to control the flow.
+All words are functions, many are implemented in native code.
 
-The header points to a list of tokens in the seperate token space.
+A 'compiled' or high level word is simply a list of tokens, some of which are branch instructions to control the flow.
 
-Some words take the next token as an inline argument, things like branch addresses and literals.
+The word header points to a list of tokens in token space.
 
-When a compiled word runs it calls the token interpreter with the address of its tokens.
+Some words take in the next token as an inline argument, things like branch addresses and literals.
 
-The token interpeter expands tokens to addresses and calls the words which may also be interpreted or which may be native (primitive) functions.
+As a compiled word starts it first calls the token interpreter with the address of its tokens.
 
-X15 is the IP pointing at the next token, which can be modified by words, this is persisted in DP.
+The token interpeter expands tokens to addresses and calls the functions.
 
-The word is run to completion by the token interpreter, which returns to the command line.
+X15 is the IP pointing at the next token, which can be modified by words.
+
+A word is run to completion by the token interpreter, which returns, eventually all words stop running and the control returns to the outer interpreters command line.
 
 
-When typing commands in the outer interpreter command line, and when compiling new words, the token interpreter is NOT even running, the outer interpreter and token compiler are written in Assembler (objecive learn ARM64, not learn FORTH), this provides some benefits to the design.
+When typing commands in the outer interpreters command line, and when compiling new words, the token interpreter is NOT even running, the outer interpreter and the token compiler are written in Assembler (objecive learn ARM64, not learn FORTH), this provides some benefits to the design.
 
-This makes the token interpeter highly inspectable, I plan to add single stepping for example.
+This makes the token interpeter highly inspectable, and easy to support tracing and single stepping etc.
 
 
 ```FORTH
@@ -401,14 +197,39 @@ The use of tokens with literal pools is a form of compression for the high level
 You can use the decompiler SEE to look at words created by the token compiler.
 
 
+### State
+
+Standard FORTH has over the decades struggled with state, is the FORTH compiling or is it interpreting,  how do you control words that behave differently when interpreted, when compiling, or having been compiled.
+
+In this implemenation, the interpreter always finds and executes a words run time code, normally the compiler also compiles a token for the same run time code into a word.
+
+Some times the run time code, is not suitable for compilation at all, so other steps are necessary.
+
+The compiler always runs a words compile time code if that exists.
+The word being compiled is responsible for how it is compiled.
+Often a word when being compiled, will compile literals it needs and compile the token for the function it needs to be executed from the compiled words.
+
+The words that are compiled into compiled codes, for special purposes are named with round brackets, like this `(thing)` because the user is not meant to run them from the command line, they are not listed by WORDS.
+
+So there are essentially three types of code here.
+
+Run time code; always run by the interpreter.
+
+Compile time code, always run by the compiler.
+
+Compiled code, code and data that is created at compile time.
+
+It is not necessary for a word to know what state it is in, the correct function is run.
+
 
 #### Decompiler
 
-If you are writing a compiler, it helps greatly to see what is going on.
+While you are writing a compiler, it helps greatly to see what is going on.
 
 In FORTH the decompiler is traditionally called SEE.
 
-Often it tries to return the source code of the word, not here, I am more interested in what the compiler did, and how each word is layed out in memory, I do have the source of the word already..
+SEE in this implementation shows the layout of words, to help debug the compiler.
+
 
 ```FORTH
 : TEST IF 65 EMIT ELSE 66 EMIT ENDIF 67 EMIT ;
@@ -447,7 +268,7 @@ SEE WORD :4302952320 TEST
 
 ```
 
-SEE displays the words header; and then for high level words, it also looks at the token space the word points at.
+SEE displays the words header; and then for high level words, it also displays the compiled tokens.
 
 As you can see the decompiler is aimed at displaying the tokens layout in memory, geared towards helping me write and test the compiler, rather than re-creating source code.
 
@@ -456,7 +277,7 @@ The compiler lays down things like tokens for branch instructions and instructio
 
 This shows the word and word type.
 
-A literal is marked with a * 
+A literal is marked with a <-- literal 
 
 A token is displayed in brackets.
 
@@ -593,13 +414,14 @@ Allowing (DO), I, J, K, and (LOOP) to be tested interactively.
 
 ### Compatability
 
-In general WORDS defined in the language should behave as they would in FORTH, unless I find that behaviour so annoying, I had to change it.
+In general WORDS defined in the language should behave as they would behave in standard FORTH, unless I find that behaviour so annoying, or hard to implement it, I had to change it.
+
+I prefer the underlying philosophy of FORTH to its commitee standardized versions, but standards are still useful.
 
 
+### LOOP words 
 
-### LOOP Improvements 
-
-The LOOP control statement in FORTH does confusing things.
+The LOOP control statement in standard FORTH does confusing things.
 
 In this program the DO .. LOOP is designed to do what a reasonable person would expect. 
 
@@ -618,7 +440,6 @@ You can leave a loop early with (one) leave statement
 ```
 
 Multiple leave statements are not supported inside a loop.
-
 
 
 Sanity is aided by the addition of DOWNDO (inspired by PASCAL) and -LOOP
@@ -656,8 +477,6 @@ Refreshingly FORTH supports named access to the loop indexes.
 Suprised that they do not just expect users to snarf them off the return stack using stack juggling words.
 
 I, J, K, are the index for this loop, the loop above and the loop above that (in the same word). So they are relative to your depth in a nested scenario.
-
-
 
 
 
@@ -727,6 +546,10 @@ The current implementation here is limited for the moment to one LEAVE inside a 
 
 ### The Token interpreter
 
+The compiler compiles to tokens, not to machine code.
+
+Something still needs to interpret the tokens in the compiled code.
+
 ARM code takes 32 bits, the register lengths are natively 64 bits.
 
 I guessed that using 64 bit addresses for an interpreter would pointlessly waste memory and suck away bandwidth, so I am using tokens instead of addresses.
@@ -758,7 +581,7 @@ An address based interpreter is smaller, but this one is not huge.
 
 ```
 
-Discussion of the token interpreter
+### Discussion of the token interpreter
 
 This is small enough to discuss.
 
@@ -782,38 +605,13 @@ The use of a data pointer for each word passed in X0 seems useful, it allows wor
 
 Sending each word its own address in X1 is more general.
 
+#### Are interpreters slow?
 
+Yes, they are, while the speed of various interpetive techniques varies, interpreters are always slow compared to running even badly compiled machine code. 
 
-## History
+Generating machine code is also hard work for the programmer, also an interesting way to learn a new architecture in detail.
 
-## WEEK 47 (of 2021)
-
-Improved tracing of words, added initial word entry to trace.
-
-Formalized X1 as parameter to words, containing the address of current word.
-
-Useful to look up any details stored in the words header.
-
-Added DEPTH to check stack depth, led to a fix of underflow check.
-
-Added depth check to (DOER) avoiding infinite loops when there are not two arguments.
-
-
-### IF 
-
-Updated to use the return stack during compilation.
-
-IF          ---         ELSE                          --- ENDIF
-
-Stack                 Read Location                   Read location 
-Location              Update (IF)                     Update (ELSE)
-
-Seeking around the word, seemed less reliable.
-
-Added the timing words, ran a benchmark, did some work on making the interpreter less slow.
-
-
-
+Some designs of interpreters are slower than others, even implementations of the same design will vary a lot, benchmarks and tests are needed when writing even a simple interpreter like this one.
 
 ### Timing words
 
@@ -864,173 +662,6 @@ TIMEIT t1
  
 ```
 
-
-## WEEK 48 (of 2021)
-
-### Speeding up the inner interpreter
-
-
-The FIB word in benchmarks is testing our procedure call speed.
-Calling a procedure involves looking up the token address and calling the words code.
-
-- This interpreter is the primitive code that threads through a high level word.
-
-Initially the inner interpreter looks something like this :- 
-
-
-```ASM
-
-
-runintz:; interpret the list of tokens at X0
-		; until (END) #24
-
-		; SAVE IP 
-
-		STP   LR,  X15, [SP, #-16]!
-
-		MOV   X15, X0
- 		ADRP  X12, dend@PAGE	
-		ADD   X12, X12, dend@PAGEOFF
-		SUB   X15, X15, #2
-		
-10:		; next token
-		ADD   X15, X15, #2
-		LDRH  W1,  [X15]
-
-		CMP   W1, #24 ; (END) 
-		B.eq  90f
- 
-		LSL   W1, W1, #6	    ;  TOKEN*64 
-		ADD   X1, X1, X12     ; + dend
-	 
-		 
-		LDR   X0, [X1]		; words data
-		LDR   X1, [X1, #24]	; words code
-
-	 	CBZ   X1, dontcrash
- 
-		STP   LR,  X12, [SP, #-16]!
-		BLR   X1 		
-		LDP   LR, X12, [SP], #16	
-
-
-		CBZ   X6, 10b
-
-		do_trace
-		 
-
-dontcrash: ; treat 0 as no-op
-
-		B		10b
-90:
-		; restore IP
-dexitz:		 
-		LDP   LR, X15, [SP], #16	
-	 
-		RET
-
-```
-
-
-The current version has evolved to look like this, based on tests.
-
-
-```ASM
-
-
-runintz:; interpret the list of tokens at X0
-		; until (END) #24
-
-		trace_show_word		
-
-		; SAVE IP 
-		STP	   LR,  X15, [SP, #-16]!
-		SUB	   X15, X0, #2
-		
-		MOV     X29, #64
-
-		; unrolling the loop here x16 makes this a lot faster,
-10:		; next token
-
-		.rept 	16
-		LDRH  W1, [X15, #2]!
-
-		CMP   W1, #24 ; (END) 
-		B.eq  90f
-
-		MADD  X1, X29, X1, X27
-
-		LDR   X2, [X1, #8]
-		LDR   X0, [X1]
-		CBZ   X2, 10b
-
-		BLR   X2 		; with X0 as data and X1 as address	 
-
-		
-		; this is why we are a little slower.
-		do_trace
-
-		.endr
-
-		b 		10b
-		  
-90:
-		LDP   LR, X15, [SP], #16	
-		RET
-
-
-dexitz: ; EXIT
-	
-	      RET
-
-dexitc: ; EXIT compiles end
-
-		MOV   X0, #5 ; (EXIT)
-		STRH  W0, [X15]
-		RET
-
-
-
-
-```
-
-
-This does the same thing, minor changes to placement of instructions impacts the speed of this loop.
-
-- I committed two more registers to the loop, one  X29 just to hold the value 64, and one X27 to hold the dictionary address, these speed up the MADD which replaced the shift and add in the first loop, because it was faster.
-
-- The major speed increase was unrolling the loop, unrolling the loop 8 times made a significant difference, sixteen times improved a little further, beyond that nothing.
-
-- Clearly a branch can be a performance problem.
-
-- I reorganized the dictionary so the two words the interpreter fetches from the word are close to each other, the data word, and code address.
-
-- Using a load pair LDP turns out to be slower in some tests and faster in others, the exact arrangment of instructions matters.
-
-- The tracing words, which look at X6 to see if we should print a trace also (being branches) slow down the loop.
-
-- Note that Multiply and Add (MADD) is perfect for the address lookup, I assumed that shifting would be faster  MADD probably also just shifts for powers of 2, as it is as quick.
-
-- I am suspicious that half word access is just slow, and of course expect the token access to be slower than a list of 64 bit addresses would be.
-
-The interpreter is called by high level words.
-
-It is easy to switch the interpreter in a word, I have implemented a fast and tracable version and provided the words FASTER and TRACE to switch between them.
-
-e.g. 
-
-```FORTH
-FASTER FIB
-```
-Tells FIB to now use the fast untracable version, TRACEABLE does the opposite.
-
-The compiler also respects the state of TRON and TROFF, if tracing is on words are compiled as tracable.
-
-The speed difference between FASTER and TRACEABLE words is small.
-
-Note the objective here is not to write a fast FIB, but to test the program. 
-
-There is a fast FIB word (FFIB) just to make that point clear.
 
 
 #### Adding indefinite loops
@@ -1293,9 +924,6 @@ This is intended to be a safe type specific way to fill an array.
 
 
 
-
-
-
 ### STRINGs
 
 I have always found FORTH strings dreadful and crash prone, almost as bad as C.
@@ -1318,7 +946,7 @@ S' This is a string object' TYPEZ
 
 ```
 
-Strings in this implementation are ASCII, limited to 255 charachters, stored in a literal pool, and zero terminated.
+Strings in this implementation are ASCII, limited to 255 chars, stored in a literal pool, and zero terminated.
 
 The entire operating system is based on C, (Objective C) etc, which uses zero terminated strings, standard FORTHS uses counted strings, which may be more sensible, but are not useful.
 
@@ -1326,36 +954,462 @@ I hope to add some sane and safe words for strings that do common and useful thi
 
 I have bought into the whole modern strings are immutable objects belief system.
 
+None the less, Strings are clearly related to arrays of chars, PASCAL taught us that much.
 
 
 
 
 
 
+### Timeline
+
+
+### Week off November 2021 : the big push, kick off.
+
+I took a week off (leave/PTO) to work on whatever I liked and spent time on this.
+
+I have an interesting job, it can become all-consuming if I am not careful.
+
+Then what would I do one day, when it sadly ends.
+
+It is important to take time off, and do work for yourself, whatever you enjoy.
+
+
+
+#### Tuesday 16th November 2021
+
+First 'compiled' word. (token compiled)
+
+```FORTH
+: test DUP * . ;
+
+5 test => 25 
+```
+
+
+The compiler compiles words into a token list, tokens are still interpreted, but unlike the outer interpreter they are no longer parsed from text.
+
+This inner interpreter is only a few instructions long, in runintz.
+
+It is more complicated than typical threaded FORTH because of the token expansion, and due to the words data being passed over in X0.  
+
+For runintz the data is the address of the tokens.
+
+The functions are all 'called', rather than jumping through next.
+
+I feel this might make it easier to change the compiler to use subroutine threading later.
+
+
+#### Wednesday Morning
+
+Implemented IF and ENDIF allowing conditional logic.
+
+If the stack is 0 IF skips to ENDIF
+
+```FORTH
+
+: TEST IF CR 65 EMIT ENDIF 66 EMIT ;
+```
+
+At compile time IF compiles (IF)) with a slot for the offset.
+
+At compile time ENDIF compiles a value into the offset of the matching zbranch or branch.
+
+ENDIF should skip compiling itself, it shows up below due to a bug, at runtime ENDIF is a NOOP.
+
+
+
+e.g. 
+
+
+```FORTH
+
+1 TEST => 
+AB 
+     
+0 TEST => B
+
+
+SEE TEST
+SEE WORD :4340062016 TEST        
+       0 :4339055954 		^TOKENS 
+       8 :4338935500 		PRIM RUN
+      16 :       0 		ARGUMENT 2
+      24 :       0 		PRIM COMP
+      32 :       0 		Extra DATA 1
+      40 :       0 		Extra DATA 2
+      48 :TEST        		NAME
+		TOKEN COMPILED FAST
+
+4339055954 : [     3] (IF)        
+4339055956 : [    46] *
+4339055958 : [   374] CR          
+4339055960 : [     1] #LITS       
+4339055962 : [    65] *
+4339055964 : [   547] EMIT        
+4339055966 : [   546] ENDIF       
+4339055968 : [     1] #LITS       
+4339055970 : [    66] *
+4339055972 : [   547] EMIT        
+4339055974 : [     0] (NULL)      
+4339055976 : END OF LIST
+ 
+```
+
+
+At runtime (IF), and (ELSE) adds the offset to the IP (X15) or not, depending on the value on the stack.
+
+
+
+Added ELSE as in 
+
+IF ... ELSE  ... ENDIF 
+
+```FORTH
+: TEST IF CR 65 EMIT ELSE CR 66 EMIT ENDIF 67 EMIT ;
+```
+
+e.g. 
+
+1 TEST => AC
+0 TEST => BC 
+
+I first added SEE to help me add ELSE.
+
+At compile time :-
+ELSE looks for IF
+ENDIF looks for ELSE or IF.
+
+
+```FORTH
+SEE TEST
+SEE WORD :4379973504 TEST        
+       0 :4378967328 		^TOKENS 
+       8 :4378846924 		PRIM RUN
+      16 :       0 		ARGUMENT 2
+      24 :       0 		PRIM COMP
+      32 :       0 		Extra DATA 1
+      40 :       0 		Extra DATA 2
+      48 :TEST        		NAME
+		TOKEN COMPILED FAST
+
+4378967328 : [     3] (IF)        
+4378967330 : [    48] *
+4378967332 : [   374] CR          
+4378967334 : [     1] #LITS       
+4378967336 : [    65] *
+4378967338 : [   547] EMIT        
+4378967340 : [     4] (ELSE)      
+4378967342 : [    46] *
+4378967344 : [   374] CR          
+4378967346 : [     1] #LITS       
+4378967348 : [    66] *
+4378967350 : [   547] EMIT        
+4378967352 : [   546] ENDIF       
+4378967354 : [     1] #LITS       
+4378967356 : [    67] *
+4378967358 : [   547] EMIT        
+4378967360 : [     0] (NULL)      
+4378967362 : END OF LIST
+```
+
+
+
+#### Thursday morning
+
+- Fixed a mysterious error.
+
+- Added a little (not a lot of) safety to variable access.
+
+- Added some tests and fixed nested IF ..
+
+- Fixed a spurious and annoying error.
+
+- Start with the return stack, for loops.
+
+- Implemented and tested words for LOOP
+
+- Updated tracing to not crash.
+
+
+
+#### Friday morning
+
+- Improved tracing, delegated some tracing to run time words.
+
+- Improved design of LOOP
+
+- Improved SEE, distributed tracing, made trace a macro.
+
+
+#### Saturday morning
+
+- Added .S .R for tracing the stack.
+
+- Fixed issues with LOOP.
+
+- Fixed issues with IF caused by fixing issues with LOOP.
+
+
+
+#### Sunday morning
+
+Created token space, shrunk word headers, compiler now compiles into token space.
+
+
+#### Week off conclusio
 
 
 
 
 
 
+#### Saturday morning
+
+- Added .S .R for tracing the stack.
+
+- Fixed issues with LOOP.
+
+- Fixed issues with IF caused by fixing issues with LOOP.
+
+
+
+#### Sunday morning
+
+Created token space, shrunk word headers, compiler now compiles into token space.
+
+
+#### Week off conclusiom
+
+I think the core work needed is done and can now be extended.
+
+The whole experience has been completely interactive from the moment the interpreter first said OK to me.
+
+Did encounter some annoying bugs, rewrote the tracing function a couple of times, cursed the computer, everything still needs work.
+
+- Typical stack juggling words implemented.
+
+- Integer maths.
+
+- Interpreter works.
+
+- Compiler (not native) works.
+
+  
+- Variables and Constants work.
+
+- Compiler supports fixed loops and conditional code.
+
+- Tracing WORDS works 
+
+- Decompiling WORDS works.
+ 
+
+Plan: do whatever is interesting next.
+
+-----------------------------------------------------------------------
+
+
+
+
+## History
+
+## WEEK 47 (of 2021)
+
+Improved tracing of words, added initial word entry to trace.
+
+Formalized X1 as parameter to words, containing the address of current word.
+
+Useful to look up any details stored in the words header.
+
+Added DEPTH to check stack depth, led to a fix of underflow check.
+
+Added depth check to (DOER) avoiding infinite loops when there are not two arguments.
 
 
 
 
 
+### IF 
+
+Updated to use the return stack during compilation.
+
+IF          ---         ELSE                          --- ENDIF
+
+Stack                 Read Location                   Read location 
+Location              Update (IF)                     Update (ELSE)
+
+Seeking around the word, seemed less reliable.
+
+Added the timing words, ran a benchmark, did some work on making the interpreter less slow.
 
 
 
 
+## WEEK 48 (of 2021)
+
+### Speeding up the inner interpreter
+
+
+The FIB word in benchmarks is testing our procedure call speed.
+Calling a procedure involves looking up the token address and calling the words code.
+
+- This interpreter is the primitive code that threads through a high level word.
+
+Initially the inner interpreter looks something like this :- 
 
 
 
 
+```ASM
+
+
+runintz:; interpret the list of tokens at X0
+		; until (END) #24
+
+		; SAVE IP 
+
+		STP   LR,  X15, [SP, #-16]!
+
+		MOV   X15, X0
+ 		ADRP  X12, dend@PAGE	
+		ADD   X12, X12, dend@PAGEOFF
+		SUB   X15, X15, #2
+		
+10:		; next token
+		ADD   X15, X15, #2
+		LDRH  W1,  [X15]
+
+		CMP   W1, #24 ; (END) 
+		B.eq  90f
+ 
+		LSL   W1, W1, #6	    ;  TOKEN*64 
+		ADD   X1, X1, X12     ; + dend
+	 
+		 
+		LDR   X0, [X1]		; words data
+		LDR   X1, [X1, #24]	; words code
+
+	 	CBZ   X1, dontcrash
+ 
+		STP   LR,  X12, [SP, #-16]!
+		BLR   X1 		
+		LDP   LR, X12, [SP], #16	
+
+
+		CBZ   X6, 10b
+
+		do_trace
+		 
+
+dontcrash: ; treat 0 as no-op
+
+		B		10b
+90:
+		; restore IP
+dexitz:		 
+		LDP   LR, X15, [SP], #16	
+	 
+		RET
+
+```
+
+
+The current version has evolved to look like this, based on tests.
+
+
+```ASM
+
+
+runintz:; interpret the list of tokens at X0
+		; until (END) #24
+
+		trace_show_word		
+
+		; SAVE IP 
+		STP	   LR,  X15, [SP, #-16]!
+		SUB	   X15, X0, #2
+		
+		MOV     X29, #64
+
+		; unrolling the loop here x16 makes this a lot faster,
+10:		; next token
+
+		.rept 	16
+		LDRH  W1, [X15, #2]!
+
+		CMP   W1, #24 ; (END) 
+		B.eq  90f
+
+		MADD  X1, X29, X1, X27
+
+		LDR   X2, [X1, #8]
+		LDR   X0, [X1]
+		CBZ   X2, 10b
+
+		BLR   X2 		; with X0 as data and X1 as address	 
+
+		
+		; this is why we are a little slower.
+		do_trace
+
+		.endr
+
+		b 		10b
+		  
+90:
+		LDP   LR, X15, [SP], #16	
+		RET
+
+
+dexitz: ; EXIT
+	
+	      RET
+
+dexitc: ; EXIT compiles end
+
+		MOV   X0, #5 ; (EXIT)
+		STRH  W0, [X15]
+		RET
 
 
 
 
+```
 
+This does the same thing, minor changes to placement of instructions impacts the speed of this loop.
 
+- I committed two more registers to the loop, one  X29 just to hold the value 64, and one X27 to hold the dictionary address, these speed up the MADD which replaced the shift and add in the first loop, because it was faster.
 
+- The major speed increase was unrolling the loop, unrolling the loop 8 times made a significant difference, sixteen times improved a little further, beyond that nothing.
 
+- Clearly a branch can be a performance problem.
+
+- I reorganized the dictionary so the two words the interpreter fetches from the word are close to each other, the data word, and code address.
+
+- Using a load pair LDP turns out to be slower in some tests and faster in others, the exact arrangment of instructions matters.
+
+- The tracing words, which look at X6 to see if we should print a trace also (being branches) slow down the loop.
+
+- Note that Multiply and Add (MADD) is perfect for the address lookup, I assumed that shifting would be faster  MADD probably also just shifts for powers of 2, as it is as quick.
+
+- I am suspicious that half word access is just slow, and of course expect the token access to be slower than a list of 64 bit addresses would be.
+
+The interpreter is called by high level words.
+
+It is easy to switch the interpreter in a word, I have implemented a fast and tracable version and provided the words FASTER and TRACE to switch between them.
+
+e.g. 
+
+```FORTH
+FASTER FIB
+```
+Tells FIB to now use the fast untracable version, TRACEABLE does the opposite.
+
+The compiler also respects the state of TRON and TROFF, if tracing is on words are compiled as tracable.
+
+The speed difference between FASTER and TRACEABLE words is small.
+
+Note the objective here is not to write a fast FIB, but to test the program. 
+
+There is a fast FIB word (FFIB) just to make that point clear.
