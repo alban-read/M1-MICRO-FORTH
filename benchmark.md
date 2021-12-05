@@ -33,9 +33,9 @@ TIMEIT t1
 
 8190 FLAGS EFLAG ! 
 
-: set-flags 8190 0 DO 1 I FLAGS C! LOOP ;
+ 
 
-: PRIMES  ( -- n )  set-flags 0 3  EFLAG @ 0 FLAGS
+: PRIMES  ( -- n )  1 FILLARRAY FLAGS 0 3  EFLAG @ 0 FLAGS
   DO   I C@
        IF  DUP I + DUP EFLAG @ <
            IF    EFLAG @ SWAP
@@ -52,3 +52,7 @@ TIMEIT t1
 
 // 432 ms Sat 4th December
 // t2 10357  : ms to run ( 103577  ) ns 
+
+// After adding FILLARRAY word.
+// t2 7895  : ms to run ( 78951  ) ns 
+
