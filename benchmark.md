@@ -25,3 +25,30 @@ FASTER FIB // not traceable
 TIMEIT t1
 3864  : ms to run ( 38647  ) ns 
  
+// PRIME
+
+8192 CARRAY FLAGS   
+
+0 VARIABLE EFLAG 
+
+8190 FLAGS EFLAG ! 
+
+: set-flags 8190 0 DO 1 I FLAGS C! LOOP ;
+
+: PRIMES  ( -- n )  set-flags 0 3  EFLAG @ 0 FLAGS
+  DO   I C@
+       IF  DUP I + DUP EFLAG @ <
+           IF    EFLAG @ SWAP
+                 DO  0 I C! DUP  +LOOP
+           ELSE  DROP  THEN  SWAP 1+ SWAP
+           THEN  2+
+       LOOP  DROP ;
+
+: BENCHMARK  0 1000 0 DO  PRIMES NIP  LOOP ;
+
+: t2 25 0 DO 8190 FLAGS EFLAG ! BENCHMARK LOOP ;
+
+
+
+// 432 ms Sat 4th December
+// t2 10357  : ms to run ( 103577  ) ns 
