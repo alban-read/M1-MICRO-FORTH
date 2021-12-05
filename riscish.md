@@ -111,12 +111,11 @@ Standard FORTH is chronically unsafe, mistakes lead to crashes, words just manip
 I would like this implemention to be a little bit safer where possible.
 
 
-
 ### Dictionary
 
-A dictionary provides words as a way to name objects.
+A dictionary provides us with words as a way to name objects.
 
-The dictionary contains word headers, these contain a pointer to a function and a small amount of data uses as function arguments.
+The dictionary contains word headers, these contain a pointer to a function and a small amount of data each word uses as function arguments.
 
 A header has a pointer to the words two functions (runtime and compile time), and space for small quantities of data belonging to the word.
 
@@ -146,7 +145,7 @@ Standard FORTH splits a dictionary into many vocabularies, I am not doing this, 
 
 All words are functions, many are implemented in native code.
 
-A 'compiled' or high level word is simply a list of tokens, some of which are branch instructions to control the flow.
+A 'compiled' or high level word is simply a list of tokens, some of which are branch instructions to control the flow, some are literals that push data to the stack.
 
 The word header points to a list of tokens in token space.
 
@@ -163,7 +162,7 @@ A word is run to completion by the token interpreter, which returns, eventually 
 
 When typing commands in the outer interpreters command line, and when compiling new words, the token interpreter is NOT even running, the outer interpreter and the token compiler are written in Assembler (objecive learn ARM64, not learn FORTH), this provides some benefits to the design.
 
-This makes the token interpeter highly inspectable, and easy to support tracing and single stepping etc.
+This makes the compiled token interpeter highly inspectable, and easy to support tracing and single stepping etc.
 
 
 ```FORTH
@@ -222,9 +221,21 @@ Compiled code, code and data that is created at compile time.
 It is not necessary for a word to know what state it is in, the correct function is run.
 
 
+### The Compiler
+
+This is just a loop that runs inside the interpreter loop, its job is to run the compiler code found in any words it is compiling.
+
+This makes it very small and simple, the compiler because it reaches out to words to do the work, can be built up in small steps, it is obviously naturally extensible.
+
+The only thing the compiler does for itself, is look up words, and recognize numbers that it compiles as literals, that is all it does.
+
+This simplicity is one of the very remarkable things about FORTH.
+
+
+
 #### Decompiler
 
-While you are writing a compiler, it helps greatly to see what is going on.
+While you are writing a compiler, it helps greatly to see what it is doing.
 
 In FORTH the decompiler is traditionally called SEE.
 
@@ -291,21 +302,23 @@ TRON
 ```
 
 
-### More primitive
+###  Primitive
 
-The concept is to write the application in assembler and script/test it
+The concept is to write the application in assembler and script/test it using an interpreter.
 
-- The interpreter is a way to call words written in regular assembler, new words are added to the asm files in assembly.
+- The interpreter is a way to call words written in regular assembler, new primitive (machine code) words are written in assembly language and added to the ASM file.
 
 - High level words are collections of word tokens, the tokens are converted to word addresses by the token interpreter, and the word at that address in the dictionary is then called.
+
+- The only thing a computer ever runs is machine code, the rest is all just data.
 
 
 
 #### LITERALs
  
-An implementation difference from typical FORTH is that literal values are stored in tables and not stored in the dictionary.
+An implementation difference from typical FORTH is that compiled literal values are stored in tables and not stored in the dictionary.
 
-- In the token space the word is stored to look up the literal.
+- In the token space a token is stored to look up the literal.
 
 - This makes the token space simpler, it is made up of 16 bit (half-word) tokens and nothing else.
 
@@ -543,7 +556,6 @@ The current implementation here is limited for the moment to one LEAVE inside a 
 
 
 
-
 ### The Token interpreter
 
 The compiler compiles to tokens, not to machine code.
@@ -613,6 +625,12 @@ Generating machine code is also hard work for the programmer, also an interestin
 
 Some designs of interpreters are slower than others, even implementations of the same design will vary a lot, benchmarks and tests are needed when writing even a simple interpreter like this one.
 
+As part of really learning ARM64 code I would like to write an optimize function that takes a token compiled word, and converts it to machine code, optionally.
+
+That will be fun but also difficult, I am working in small steps.
+
+
+
 ### Timing words
 
 Premature optimization may be the root of all evil.
@@ -662,13 +680,44 @@ TIMEIT t1
  
 ```
 
+// PRIME SIEVE benchmark
+
+8192 CARRAY FLAGS   
+
+0 VARIABLE EFLAG 
+
+8190 FLAGS EFLAG ! 
+
+ 
+
+: PRIMES  ( -- n )  1 FILLARRAY FLAGS 0 3  EFLAG @ 0 FLAGS
+  DO   I C@
+       IF  DUP I + DUP EFLAG @ <
+           IF    EFLAG @ SWAP
+                 DO  0 I C! DUP  +LOOP
+           ELSE  DROP  THEN  SWAP 1+ SWAP
+           THEN  2+
+       LOOP  DROP ;
+
+: BENCHMARK  0 1000 0 DO  PRIMES NIP  LOOP ;
+
+: t2 25 0 DO 8190 FLAGS EFLAG ! BENCHMARK LOOP ;
+
+
+
+// 432 ms Sat 4th December
+// t2 10357  : ms to run ( 103577  ) ns 
+
+
+// After adding our FILLARRAY primitive word.
+// t2 7895  : ms to run ( 78951  ) ns 
+
 
 
 #### Adding indefinite loops
 
 - Added versions of the FORTH indefinite loops.
 - Added tracing with stepping, fixing various issues with tracing as they arose. 
-
 
 
 ### Tracing and stepping
@@ -956,6 +1005,7 @@ I have bought into the whole modern strings are immutable objects belief system.
 
 None the less, Strings are clearly related to arrays of chars, PASCAL taught us that much.
 
+C decided they were pointers to blocks of memory, FORTH agrees.
 
 
 
