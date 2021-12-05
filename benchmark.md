@@ -25,7 +25,7 @@ FASTER FIB // not traceable
 TIMEIT t1
 3864  : ms to run ( 38647  ) ns 
  
-// PRIME
+// PRIME SIEVE benchmark
 
 8192 CARRAY FLAGS   
 
