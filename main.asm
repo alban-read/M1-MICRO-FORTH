@@ -3540,6 +3540,159 @@ dcreatvc:
 	RET
 
 
+;; ARRAYS 
+
+; I feel like fill should not be about random blocks of memory.
+
+; n FILLARRAY array_name
+dfillarrayz: ; RUNTIME at command line
+
+; get word address
+100:	
+	save_registers
+	
+	BL		advancespaces
+	BL		collectword
+
+	; display word to find
+	;	BL		saycr
+	;	BL		saylb
+	;	BL		sayword
+	;	BL		sayrb
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f			; not found 
+	CMP		X21, #-1		; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	; found word 
+	restore_registers
+
+	MOV 	X1, 	X28			; base
+	LDR		X0, 	[X28]  		; data pointer
+	LDR		X2, 	[X28, #8]	; runtime code
+	LDR		X3,		[X28, #32]  ; index size
+
+
+	ADRP	X8, darrayaddz@PAGE		
+	ADD		X8, X8, darrayaddz@PAGEOFF
+	CMP		X2, X8
+	B.eq	darrayaddz_fill
+	ADRP	X8, dWarrayaddz@PAGE		
+	ADD		X8, X8, dWarrayaddz@PAGEOFF
+	CMP		X2, X8
+	B.eq	dWarrayaddz_fill
+	ADRP	X8, dHWarrayaddz@PAGE		
+	ADD		X8, X8, dHWarrayaddz@PAGEOFF
+	CMP		X2,	X8
+	B.eq	dHWarrayaddz_fill
+	ADRP	X8, dCarrayaddz@PAGE		
+	ADD		X8, X8, dCarrayaddz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	dCarrayaddz_fill
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	; error out 
+	MOV		X0, #0
+	restore_registers
+	B	stackit
+
+	RET
+
+
+dfillarrayc: ; COMPILE array fill operations
+
+; get word address
+100:	
+	save_registers
+	
+	BL		advancespaces
+	BL		collectword
+
+	; display word to find
+	;	BL		saycr
+	;	BL		saylb
+	;	BL		sayword
+	;	BL		sayrb
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f			; not found 
+	CMP		X21, #-1		; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	; found word 
+	restore_registers
+
+	MOV 	X1, 	X28			; base
+	LDR		X0, 	[X28]  		; data pointer
+	LDR		X2, 	[X28, #8]	; runtime code
+	LDR		X3,		[X28, #32]  ; index size
+
+
+	ADRP	X8, darrayaddz@PAGE		
+	ADD		X8, X8, darrayaddz@PAGEOFF
+	CMP		X2, X8
+	B.eq	compile_darrayaddz_fill
+	ADRP	X8, dWarrayaddz@PAGE		
+	ADD		X8, X8, dWarrayaddz@PAGEOFF
+	CMP		X2, X8
+	B.eq	compile_dWarrayaddz_fill
+	ADRP	X8, dHWarrayaddz@PAGE		
+	ADD		X8, X8, dHWarrayaddz@PAGEOFF
+	CMP		X2,	X8
+	B.eq	compile_dHWarrayaddz_fill
+	ADRP	X8, dCarrayaddz@PAGE		
+	ADD		X8, X8, dCarrayaddz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	compile_dCarrayaddz_fill
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	; error out 
+	MOV		X0, #0
+	restore_registers
+	B	stackit
+
+	RET
+
+
+
+
+
+
+
+
 ;;; ARRAY 1 dimensional cells
 
 ;; ( n -- address )
@@ -3558,8 +3711,82 @@ darrayaddz_index_error:
 	ADRP	X0, tcomer32@PAGE	
 	ADD		X0, X0, tcomer32@PAGEOFF
 	B		sayit
-	
+	RET
 
+
+ 
+dA1FILLAz:	; fetch stacked base and index
+
+	LDP		X0,	X3, [X16, #-16]	 
+	SUB  	X16, X16, #16
+
+
+darrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
+	LDR		X1,	[X16, #-8]	; fill with
+	SUB  	X16, X16, #8
+
+10:
+	STR		X1,	[X0], #8
+	SUB		X3, X3, #1
+	CBNZ	X3, 10b 
+	MOV		X2, #0
+	RET
+
+
+; compiling various fill commands.
+; based on array types.
+; stack base and index, compile fill instruction
+
+compile_darrayaddz_fill:
+	STP		LR,  X16, [SP, #-16]!
+	BL		longlitit	; X0 = data
+	ADD		X15, X15, #2
+	MOV		X0,	X3
+	BL		longlitit	; X3 = index
+	ADD		X15, X15, #2
+	MOV		X0, #32 ; (A1FILLARRAY)
+	STR		X0, [X15]	
+	LDP		LR, X16, [SP], #16
+	MOV		X0, #0
+	RET
+
+compile_dWarrayaddz_fill:
+	STP		LR,  X16, [SP, #-16]!
+	BL		longlitit	; X0 = data
+	ADD		X15, X15, #2
+	MOV		X0,	X3
+	BL		longlitit	; X3 = index
+	ADD		X15, X15, #2
+	MOV		X0, #33  ; (W1FILLARRAY)
+	STR		X0, [X15]	
+	LDP		LR, X16, [SP], #16
+	MOV		X0, #0
+	RET
+
+compile_dHWarrayaddz_fill:
+	STP		LR,  X16, [SP, #-16]!
+	BL		longlitit	; X0 = data
+	ADD		X15, X15, #2
+	MOV		X0,	X3
+	BL		longlitit	; X3 = index
+	ADD		X15, X15, #2
+	MOV		X0, #34 ;   ; (HW1FILLARRAY)
+	STR		X0, [X15]	
+	LDP		LR, X16, [SP], #16
+	MOV		X0, #0
+	RET
+
+compile_dCarrayaddz_fill:
+	STP		LR,  X16, [SP, #-16]!
+	BL		longlitit	; X0 = data
+	ADD		X15, X15, #2
+	MOV		X0,	X3
+	BL		longlitit	; X3 = index
+	ADD		X15, X15, #2
+	MOV		X0, #35 ; (C1FILLARRAY)
+	STR		X0, [X15]	
+	LDP		LR, X16, [SP], #16
+	MOV		X0, #0
 	RET
 
 dcreatarray:
@@ -3666,6 +3893,23 @@ dWarrayaddz_index_error:
 	RET
 
 
+dW1FILLAz:
+
+	LDP		X0,	X3, [X16, #-16]	 
+	SUB  	X16, X16, #16
+
+dWarrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
+
+	LDR		X1,	[X16, #-8]	; fill with
+	SUB  	X16, X16, #8
+
+10:
+	STR		W1,	[X0], #4
+	SUB		X3, X3, #1
+	CBNZ	X3, 10b 
+	MOV		X2, #0
+	RET
+
 
 dWcreatarray:
 
@@ -3769,6 +4013,24 @@ dHWarrayaddz_index_error:
 	ADRP	X0, tcomer32@PAGE	
 	ADD		X0, X0, tcomer32@PAGEOFF
 	B		sayit
+	RET
+
+
+dHW1FILLAz:
+
+	LDP		X0,	X3, [X16, #-16]	 
+	SUB  	X16, X16, #16
+
+dHWarrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
+
+	LDRH	W1,	[X16, #-8]	; fill with
+	SUB  	X16, X16, #8
+
+10:
+	STRH	W1,	[X0], #2
+	SUB		X3, X3, #1
+	CBNZ	X3, 10b 
+	MOV		X2, #0
 	RET
 
 
@@ -3883,6 +4145,23 @@ dCarrayaddz_index_error:
 	B		sayit
 	RET
 
+
+dC1FILLAz:
+
+	LDP		X0,	X3, [X16, #-16]	 
+	SUB  	X16, X16, #16
+
+dCarrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
+
+	LDRB	W1,	[X16, #-8]	; fill with
+	SUB  	X16, X16, #8
+
+10:
+	STRB	W1,	[X0], #1
+	SUB		X3, X3, #1
+	CBNZ	X3, 10b 
+	MOV		X2, #0
+	RET
 
 
 dCcreatarray:
@@ -5451,7 +5730,8 @@ tendivz:
 longlitit: ; COMPILE X0 into word as short or long lit
 
 	; X0 is our literal 
-
+	STP		X1, X3, [SP, #-16]!
+	STP		X2, X4, [SP, #-16]!
 	; halfword numbers ~32k
 	MOV		X3, #4000
 	LSL		X3, X3, #3  
@@ -5465,7 +5745,8 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	STRH	W1, [X15]	; value
 
 	; short literal done
- 
+ 	LDP		X2, X4, [SP], #16	
+	LDP		X1, X3, [SP], #16	
 	RET
 
 25:	; long word
@@ -5484,7 +5765,7 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	CMP		X2, #-1  
 	B.eq	70f
 	CMP		X2, #-2 ; end of pool ERROR  
-	B.eq	exit_compiler_pool_full
+	B.eq	exit_compiler_pool_full ; TODO: test
 	ADD		X3, X3, #1
 	ADD		X1, X1, #8
 	B		10b	
@@ -5499,6 +5780,8 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	STRH	W3, [X15]	; value = index
 
 	; long literal created and stored
+	LDP		X2, X4, [SP], #16	
+	LDP		X1, X3, [SP], #16	
 	RET
 
 
@@ -5509,8 +5792,14 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	ADD		X15, X15, #2
 	MOV		X1, X3
 	STRH	W1, [X15]	; value = index
-	LDP		LR, X0, [SP], #16
+
+	LDP		X2, X4, [SP], #16	
+	LDP		X1, X3, [SP], #16	
+
+	;LDP		LR, X0, [SP], #16
 	RET
+
+
 
 
 stackit: ; push x0 to stack.
@@ -7068,7 +7357,18 @@ dend:
 		makeword "(30)", 		0, 	0,  0				; 30
 		makeword "(31)", 		0, 	0,  0				; 31
 
-		; just words starting with (
+		; compiled array words
+		makeword "(A1FILLARRAY)", 		dA1FILLAz, 	0,  0 ; 32
+		makeword "(W1FILLARRAY)", 		dW1FILLAz, 	0,  0 ; 33
+		makeword "(HW1FILLARRAY)", 		dHW1FILLAz, 	0,  0 ; 34
+		makeword "(C1FILLARRAY)", 		dC1FILLAz, 	0,  0;  35
+		makeword "(A2FILLARRAY)", 		0, 	0,  0			; 36
+		makeword "(W2FILLARRAY)", 		0, 	0,  0			; 37
+		makeword "(HW2FILLARRAY)", 		0, 	0,  0			; 38
+		makeword "(C2FILLARRAY)", 		0, 	0,  0			; 39
+
+
+		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
 
 		makeemptywords 84
@@ -7161,6 +7461,7 @@ edict:
 		makeword "FORGET", clean_last_word , 0, 0 
 		makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
+		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 
 fdict:	
 		makeemptywords 79

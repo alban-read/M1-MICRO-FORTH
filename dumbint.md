@@ -13,9 +13,9 @@ I liked 1980s micro computers, I feel like it should be possible to have fun wit
 
 Since this is inspired by FORTH I include this disclaimer, DumbInt is not FORTH, there are two commercial vendors of high quality optimizing native code FORTH compilers, if you need a high quality compiler for commercial reasons please contact them and purchase one.
 
-The FORTHS I remember fondly ran on microcomputers in the 1980s.
+The FORTHS I remember fondly ran on microcomputers in the 1980s, and were often not standard, they were limited by things like processor speed and memory space, and number of possible colours on the screen, if there were any colours.
 
-There are many things about FORTH that I actively dislike or that are just tedious to implement.
+There are many things about standard FORTH that I actively dislike or that are just tedious to implement.
 
 
 ### purpose
@@ -1279,6 +1279,21 @@ WARRAY (4 bytes)
 HWARRAY (2 bytes)
 
 CARRAY (1 bytes)
+
+
+### ARRAY commands
+
+#### FILLARRAY
+
+n FILLARRAY name
+
+Will fill the named array with n.
+
+This is intended to be a safe type specific way to fill an array.
+
+
+
+
 
 
 ### STRINGs
