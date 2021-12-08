@@ -26,16 +26,12 @@ TIMEIT t1
 3864  : ms to run ( 38647  ) ns 
  
 // PRIME SIEVE benchmark
-
-8192 CARRAY FLAGS   
-
-0 VARIABLE EFLAG 
-
-8190 FLAGS EFLAG ! 
-
  
+CREATE FLAGS 8190 ALLOT
+0 VARIABLE EFLAG
+FLAGS 8190 + EFLAG !
 
-: PRIMES  ( -- n )  1 FILLARRAY FLAGS 0 3  EFLAG @ 0 FLAGS
+: PRIMES  ( -- n )  FLAGS 8190 1 FILL  0 3  EFLAG @ FLAGS
   DO   I C@
        IF  DUP I + DUP EFLAG @ <
            IF    EFLAG @ SWAP
@@ -46,13 +42,9 @@ TIMEIT t1
 
 : BENCHMARK  0 1000 0 DO  PRIMES NIP  LOOP ;
 
-: t2 25 0 DO 8190 FLAGS EFLAG ! BENCHMARK LOOP ;
-
-
+: t2 25 0 DO FLAGS 8190 + EFLAG ! BENCHMARK LOOP ;
 
 // 432 ms Sat 4th December
 // t2 10357  : ms to run ( 103577  ) ns 
-
-// After adding FILLARRAY word.
-// t2 7895  : ms to run ( 78951  ) ns 
+// t2 8043 ms // after adding FILL.
 

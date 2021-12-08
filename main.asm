@@ -96,13 +96,13 @@
 ; name 		the words name
  
 
-.macro makeword name:req, runtime=-1, comptime=-1, datavalue=1
+.macro makeword name:req, runtime=-1, comptime=-1, datavalue=1, dvalue2=0, dvalue3=0, dvalue4=0
 	.quad	\datavalue
 	.quad	\runtime
-	.quad	0				; data
+	.quad	\dvalue2				; data
 	.quad	\comptime
-	.quad	0
-	.quad	0
+	.quad	\dvalue3	
+	.quad	\dvalue4
 10:
 	.asciz	"\name"
 20:
@@ -158,6 +158,19 @@
 	.quad  -1
 	.endr
 .endm
+
+
+.macro copy_word_name
+
+	; copy words name text over
+	LDR		X0, [X22]
+	STR		X0, [X28, #48]
+	ADD		X22, X22, #8
+	LDR		X0, [X22]
+	STR		X0, [X28, #56]
+
+.endm
+
 
 ; trace words, check for X6<>0 
 ; and print a trace of the inner interpreter
@@ -1190,7 +1203,9 @@ init:
 
 	ADRP	X0, dsp@PAGE		
 	ADD		X0, X0, dsp@PAGEOFF
+	 
 	LDR		X16, [X0]  ;; <-- data stack pointer to X16
+	ADD		X16, X16, #16
 
 	ADRP	X0, rsp@PAGE		
 	ADD		X0, X0, rsp@PAGEOFF
@@ -1416,13 +1431,7 @@ scan_words:
 	STR		X28, [X1]
 
 
-	; copy words name text over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
-
+	copy_word_name
 
 	CBZ		X6, faster_mode
 
@@ -1609,6 +1618,11 @@ try_compiling_literal:
 	ADRP	X22, zword@PAGE		
 	ADD		X22, X22, zword@PAGEOFF
 	; tolerate a negative number
+
+	MOV		X0, #'!'
+	BL		X0emit
+
+
 	LDRB	W0, [X22]
 	CMP		W0, #'-'
 	B.ne	22f 
@@ -1634,6 +1648,10 @@ try_compiling_literal:
 	
 	B		23b
 24:
+
+	MOV		X0, #'*'
+	BL		X0emit
+
 	; we have a valid number, so translate it
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
@@ -1679,24 +1697,37 @@ try_compiling_literal:
 70:
 	; literal not present 
 	; free slot found, store lit and return value
-	STR		X0, [X1]
+
+	STR		X0, [X1]	; into the pool
+	
+	MOV		X0, #'|'
+	BL		X0emit
+
 	
 	
 	MOV		X0, #2 ; #LITL
+
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
+
 	STRH	W3, [X15]	; value
 	ADD		X15, X15, #2
+
 
 	B		compile_next_word
 
 80:
 	; found the literal
 
+
+	MOV		X0, #'-'
+	BL		X0emit
+
 	MOV		X0, #2 ; #LITL
 	STRH	W0, [X15]
-	MOV		X1, X3
-	STRH	W1, [X15]	; value
+
+
+	STRH	W3, [X15]	; value
 	ADD		X15, X15, #2
 
 	B		compile_next_word
@@ -2308,12 +2339,6 @@ dmloopc:
 
 
 
-
-
-
-
-
-
 ; The INDEFINITE LOOPS
 ; BEGIN stacks its address, AGAIN, UNTIL, REPEAT and LEAVE use that.
 ;
@@ -2888,6 +2913,33 @@ dseez:
 	BL		X0addrpr
 
 
+
+12010:
+
+	ADRP	X2, dvaluez@PAGE		
+	ADD		X2, X2, dvaluez@PAGEOFF
+	LDR		X0, [X28, #8]
+	CMP		X0, X2
+	B.ne	12020f
+
+	ADRP	X0, word_desc8@PAGE		
+	ADD		X0, X0, word_desc8@PAGEOFF
+	BL		sayit
+
+	BL		saylb
+	
+	LDR		X0, [X28]
+	LDR		X0, [X0]
+
+	BL		X0addrpr
+	BL		sayrb
+
+
+	B		12095f
+
+
+12020:
+
 	; anotate the data word
 	ADRP	X2, dCarrayaddz@PAGE		
 	ADD		X2, X2, dCarrayaddz@PAGEOFF
@@ -3306,7 +3358,16 @@ err_word_exists:
 	B		sayit
 	
 
+
+
+
+
+
+
+
 ; create, creates a standard word header.
+; returns address of data space
+; which may be updated with ALLOT
 
 dcreatz:
 
@@ -3341,28 +3402,16 @@ dcreatz:
 	ADD		X1, X1, last_word@PAGEOFF
 	STR		X28, [X1]
 
-	; copy text over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
+	copy_word_name
+ 
 
-
-	CBZ		X6, 150f
-	B 		160f
-
-	ADRP	X1, runintz@PAGE	; high level word traceable	
-	ADD		X1, X1, runintz@PAGEOFF
+	ADRP	X1, dvaraddz@PAGE	; high level word traceable	
+	ADD		X1, X1, dvaraddz@PAGEOFF
 	STR		X1, [X28, #8]
-
-150:
-	ADRP	X1, fastrunintz@PAGE	; high level word not traceable  
-	ADD		X1, X1, fastrunintz@PAGEOFF
-	STR		X1, [X28, #8]
+ 
 
 160:
-	ADD		X1, 	X28, #32
+	ADD		X1, X28, #32
 	STR		X1, [X28]
 
 	B		300f
@@ -3422,12 +3471,9 @@ dcreatcz:
 	ADD		X1, X1, last_word@PAGEOFF
 	STR		X28, [X1]
 
-	; copy text for name over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
+
+
+
 
 	; constant code
 	ADRP	X1, dconstz@PAGE	
@@ -3501,12 +3547,7 @@ dcreatvz:
 	ADD		X1, X1, last_word@PAGEOFF
 	STR		X28, [X1]
 
-	; copy text for name over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
+	copy_word_name
 
 	; variable code
 	ADRP	X1, dvaraddz@PAGE	; high level word.	
@@ -3540,9 +3581,91 @@ dcreatvc:
 	RET
 
 
+; FILLs
+
+dfillz:
+
+	LDR		X1, [X16, #-8]
+	LDR		X2, [X16, #-16]
+	LDR		X0, [X16, #-24]
+	SUB		X16, X16, #24
+
+
+; fill block of memory
+; Copyright (c) 2016-2020, ARM Limited and Contributors. All rights reserved. BSD.
+; how the hell people copyright obvious functions is beyond me, but whatever
+; X1 = fill; X2=count; X0=address 
+fill_mem:
+
+	cbz	w2, exit		 
+	mov	x3, x0			 
+	tst	x0, #7
+	b.eq	aligned			 
+
+unaligned:
+	strb	w1, [x3], #1
+	subs	w2, w2, #1
+	b.eq	exit			 
+	tst	x3, #7
+	b.ne	unaligned		 
+
+/* 8-bytes aligned */
+aligned:
+	cbz	x1, x1_zero
+	bfi	w1, w1, #8, #8		 
+	bfi	w1, w1, #16, #16
+	bfi	x1, x1, #32, #32
+
+
+x1_zero:
+	ands	w4, w2, #~0x3f
+	b.eq	less_64
+ 
+
+write_64:
+	.rept	4
+	stp	x1, x1, [x3], #16	/* write 64 bytes in a loop */
+	.endr
+	subs	w4, w4, #64
+	b.ne	write_64
+	ands	w2, w2, #0x3f
+	b.eq	exit			/* exit if 0 */
+
+	
+less_64:tbz	w2, #5, less_32		/* < 32 bytes */
+	stp	x1, x1, [x3], #16	/* write 32 bytes */
+	stp	x1, x1, [x3], #16
+	ands	w2, w2, #0x1f
+	b.eq	exit
+
+less_32:tbz	w2, #4, less_16		/* < 16 bytes */
+	stp	x1, x1, [x3], #16	/* write 16 bytes */
+	ands	w2, w2, #0xf
+	b.eq	exit
+
+less_16:tbz	w2, #3, less_8		/* < 8 bytes */
+	str	x1, [x3], #8		/* write 8 bytes */
+	ands	w2, w2, #7
+	b.eq	exit
+
+less_8:	tbz	w2, #2, less_4		/* < 4 bytes */
+	str	w1, [x3], #4		/* write 4 bytes */
+	ands	w2, w2, #3
+	b.eq	exit
+
+less_4:	tbz	w2, #1, less_2		/* < 2 bytes */
+	strh	w1, [x3], #2		/* write 2 bytes */
+	tbz	w2, #0, exit
+less_2:	strb	w1, [x3]		/* write 1 byte */
+exit:	ret
+
+ 
+
+
 ;; ARRAYS 
 
 ; I feel like fill should not be about random blocks of memory.
+; in the 21st century.
 
 ; n FILLARRAY array_name
 dfillarrayz: ; RUNTIME at command line
@@ -3554,11 +3677,6 @@ dfillarrayz: ; RUNTIME at command line
 	BL		advancespaces
 	BL		collectword
 
-	; display word to find
-	;	BL		saycr
-	;	BL		saylb
-	;	BL		sayword
-	;	BL		sayrb
  
 	BL		empty_wordQ
 	B.eq	190f
@@ -3591,6 +3709,12 @@ dfillarrayz: ; RUNTIME at command line
 	ADD		X8, X8, darrayaddz@PAGEOFF
 	CMP		X2, X8
 	B.eq	darrayaddz_fill
+
+	ADRP	X8, darrayvalz@PAGE		
+	ADD		X8, X8, darrayvalz@PAGEOFF
+	CMP		X2, X8
+	B.eq	darrayaddz_fill
+
 	ADRP	X8, dWarrayaddz@PAGE		
 	ADD		X8, X8, dWarrayaddz@PAGEOFF
 	CMP		X2, X8
@@ -3625,11 +3749,6 @@ dfillarrayc: ; COMPILE array fill operations
 	BL		advancespaces
 	BL		collectword
 
-	; display word to find
-	;	BL		saycr
-	;	BL		saylb
-	;	BL		sayword
-	;	BL		sayrb
  
 	BL		empty_wordQ
 	B.eq	190f
@@ -3688,12 +3807,18 @@ dfillarrayc: ; COMPILE array fill operations
 
 
 
-
-
-
-
-
 ;;; ARRAY 1 dimensional cells
+
+darrayvalz: ; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #3 ; full word 8 bytes
+	ADD		X1, X0, X2 ; data + index 
+	LDR		X0, [X1]
+	STR		X0, [X16, #-8]	; value of data
+	RET
 
 ;; ( n -- address )
 darrayaddz: ; X0=data, X1=word
@@ -3714,7 +3839,7 @@ darrayaddz_index_error:
 	RET
 
 
- 
+
 dA1FILLAz:	; fetch stacked base and index
 
 	LDP		X0,	X3, [X16, #-16]	 
@@ -3724,10 +3849,13 @@ dA1FILLAz:	; fetch stacked base and index
 darrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
 	LDR		X1,	[X16, #-8]	; fill with
 	SUB  	X16, X16, #8
+	LSL		X3, X3, #1
+	ADD		X3, X3, #2
 
 10:
-	STR		X1,	[X0], #8
 	SUB		X3, X3, #1
+	STP		X1, X1,	[X0], #16
+
 	CBNZ	X3, 10b 
 	MOV		X2, #0
 	RET
@@ -3789,6 +3917,89 @@ compile_dCarrayaddz_fill:
 	MOV		X0, #0
 	RET
 
+
+
+
+dcreatvalues:
+
+	save_registers_not_stack
+
+	BL		advancespaces
+	BL		collectword
+	BL		get_word
+	BL		empty_wordQ
+	B.eq	300f
+	BL		start_point
+
+100:	; find free word and start building it
+
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f		; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+	; undefined so build the word here
+
+	; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+	copy_word_name
+
+	; VALUES variable code
+	ADRP	X1, darrayvalz@PAGE	; high level word.	
+	ADD		X1, X1, darrayvalz@PAGEOFF
+	STR		X1, [X28, #8]
+
+	ADD		X1, X28, #32
+	STR		X1, [X28]
+
+
+	; set array size from tos.
+	LDR		X0, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X0, [X28, #32] ; array size 
+
+	; ALLOT X0 cells of memory
+	ADRP	X12, allot_ptr@PAGE	
+	ADD		X12, X12, allot_ptr@PAGEOFF
+	LDR		X1, [X12] ; pointer to memory 
+	LSL		X0, X0, #3	; x 8
+	ADD		X0, X1, X0 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
+	STR		X0, [X12]	; bump pointer
+	STR		X0, [X28]	; word points to alloted data
+
+	ADRP	X12, allot_limit@PAGE	
+	ADD		X12, X12, allot_limit@PAGEOFF
+	CMP		X0, X12
+	B.gt	allot_memory_full
+	
+
+B		300f
+
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+	restore_registers_not_stack
+	RET
+
+
+
 dcreatarray:
 
 	save_registers_not_stack
@@ -3821,16 +4032,11 @@ dcreatarray:
 	STR		X28, [X1]
 
 
-	; copy text for name over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
+	copy_word_name
 
-	; variable code
-	ADRP	X1, darrayaddz@PAGE	; high level word.	
-	ADD		X1, X1, darrayaddz@PAGEOFF
+	; ARRAY variable code
+	ADRP	X1, darrayvalz@PAGE	; high level word.	
+	ADD		X1, X1, darrayvalz@PAGEOFF
 	STR		X1, [X28, #8]
 
 	ADD		X1, X28, #32
@@ -3942,11 +4148,7 @@ dWcreatarray:
 	STR		X28, [X1]
 
 	; copy text for name over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
+	copy_word_name
 
 	; variable code
 	ADRP	X1, dWarrayaddz@PAGE	; high level word.	
@@ -4070,11 +4272,7 @@ dHWcreatarray:
 
 
 	; copy text for name over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
+	copy_word_name
 
 	; variable code
 	ADRP	X1, dHWarrayaddz@PAGE	; high level word.	
@@ -4125,8 +4323,16 @@ B		300f
 
 ; BYTE 8 bit array
 
-
-
+dCarrayvalz: ; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #3 ; full word 8 bytes
+	ADD		X1, X0, X2 ; data + index 
+	LDRB	W0, [X1]
+	STR		X0, [X16, #-8]	; value of data
+	RET
 
 ;; ( n -- address )
 dCarrayaddz: ; X0=data, X1=word
@@ -4156,12 +4362,89 @@ dCarrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
 	LDRB	W1,	[X16, #-8]	; fill with
 	SUB  	X16, X16, #8
 
-10:
-	STRB	W1,	[X0], #1
-	SUB		X3, X3, #1
-	CBNZ	X3, 10b 
-	MOV		X2, #0
+; X1 = fill; X2=count; X0=address 
+	MOV 	X2, X3
+	B fill_mem
+
+ 
+
+
+dCcreatvalues:
+
+
+save_registers_not_stack
+
+	BL		advancespaces
+	BL		collectword
+	BL		get_word
+	BL		empty_wordQ
+	B.eq	300f
+	BL		start_point
+
+100:	; find free word and start building it
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f			; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+; undefined so build the word here
+
+; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+	; copy text for name over
+	copy_word_name
+
+	; variable code
+	ADRP	X1, dCarrayaddz@PAGE	; high level word.	
+	ADD		X1, X1, dCarrayaddz@PAGEOFF
+	STR		X1, [X28, #8]
+
+	ADD		X1, X28, #32
+	STR		X1, [X28]
+
+	; set array size from tos.
+	LDR		X0, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X0, [X28, #32] ; array size 
+
+	; ALLOT X0 bytes  of memory
+	ADRP	X12, allot_ptr@PAGE	
+	ADD		X12, X12, allot_ptr@PAGEOFF
+	LDR		X1, [X12] ; pointer to memory 
+	ADD		X0, X1, X0 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
+	STR		X0, [X12]	; bump pointer
+	STR		X0, [X28]	; word points to alloted data
+
+	ADRP	X12, allot_limit@PAGE	
+	ADD		X12, X12, allot_limit@PAGEOFF
+	CMP		X0, X12
+	B.gt	allot_memory_full
+
+	B		300f
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+280:	; error dictionary FULL
+
+300:
+	restore_registers_not_stack
 	RET
+
+
+
 
 
 dCcreatarray:
@@ -4200,11 +4483,7 @@ dCcreatarray:
 
 
 	; copy text for name over
-	LDR		X0, [X22]
-	STR		X0, [X28, #48]
-	ADD		X22, X22, #8
-	LDR		X0, [X22]
-	STR		X0, [X28, #56]
+	copy_word_name
 
 	; variable code
 	ADRP	X1, dCarrayaddz@PAGE	; high level word.	
@@ -4226,6 +4505,8 @@ dCcreatarray:
 	ADD		X12, X12, allot_ptr@PAGEOFF
 	LDR		X1, [X12] ; pointer to memory 
 	ADD		X0, X1, X0 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
 	STR		X0, [X12]	; bump pointer
 	STR		X0, [X28]	; word points to alloted data
 
@@ -4257,12 +4538,6 @@ dtickz: ; ' - get address of NEXT words data field
 	
 	BL		advancespaces
 	BL		collectword
-
-	; display word to find
-	;	BL		saycr
-	;	BL		saylb
-	;	BL		sayword
-	;	BL		sayrb
  
 	BL		empty_wordQ
 	B.eq	190f
@@ -4276,13 +4551,6 @@ dtickz: ; ' - get address of NEXT words data field
 	B.eq	190f			; not found 
 	CMP		X21, #-1		; undefined entry in list?
 	b.eq	170f
-
-	; check word
-
-	; display word seen
-	;BL		saycr
-	;ADD		X0, X28, #8
-	;BL		sayit 
 
 	BL		get_word
 	LDR		X21, [X28, #48] ; name field
@@ -4559,7 +4827,6 @@ dtickc: ; ' at compile time, turn address of word into literal
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
- 
 
 	; found word, push litl and create literal address of word
 
@@ -5414,10 +5681,10 @@ dequalzz:	; 0=
 	SUB		X16, X16, #8
 	CMP		X0, #0
 	B.eq	10f
-	MOV		X0, XZR ; true
+	MOV		X0, XZR  
 	B		20f
 10:
-	MVN		X0, XZR
+	MVN		X0, XZR   
 20:
 	STR		X0, [X16], #8
 	RET
@@ -5527,12 +5794,21 @@ dgtc: ;  ">"
 	RET		
 
 
+dtruez:
+	MVN		X0, XZR
+	STR		X0, [X16], #8
+	RET
+
+dfalsez:
+	MOV		X0, XZR
+	STR		X0, [X16], #8
+	RET
+
 dinvertz:	; INVERT
 
 	LDR		X0, [X16, #-8] 
-	SUB		X16, X16, #8
-	MVN		X0, X0
-	STR		X0, [X16], #8
+	MVN     X0, X0
+	STR		X0, [X16, #-8]
 	RET
 
 
@@ -5570,12 +5846,11 @@ atz: ;  ( address -- n ) fetch var.
 	RET
 
 
-
 dwatz:
 	LDR		X0, [X16, #-8] 	
 	CBZ		X0, itsnull
 	LDR		W0, [X0]
-	STR		W0, [X16, #-8]
+	STR		X0, [X16, #-8]
 	RET
 
 itsnull: ; error word_desc13
@@ -5819,8 +6094,343 @@ dconsz: ; value of constant
 	STR		X0, [X16], #8
 	RET
 
-dconsc: ; compile address of variable
+dconsc: ; compile value of constant
+
 	RET
+
+
+; VALUES are less hazardous variables updated by TO rather than !
+; they return their value rather than their address
+; e.g. 10 VALUE test 
+;      test . =>  10
+
+dvaluez:	; read the value from the address
+	LDR		X0,  [X1]
+	LDR		X0,	 [X0]
+	STR		X0, [X16], #8
+	RET
+
+
+dvaluec:    ; 
+	RET
+
+
+; create value 
+
+dcreatevalz:
+
+	save_registers_not_stack
+
+	BL		advancespaces
+	BL		collectword
+	BL		get_word
+	BL		empty_wordQ
+	B.eq	300f
+	BL		start_point
+
+100:	; find free word and start building it
+
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f		; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+; undefined so build the word here
+
+	; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+	; copy text for name over
+	copy_word_name
+
+	; variable code
+	ADRP	X1, dvaluez@PAGE	; high level word.	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	STR		X1, [X28, #8]
+
+ 
+
+	ADD		X1, X28, #32
+	STR		X1, [X28]
+
+	; set value from tos.
+	LDR		X1, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X1, [X28, #32]
+
+	B		300f
+
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+
+280:	; error dictionary FULL
+
+300:
+
+	restore_registers_not_stack
+	RET
+
+ 
+
+
+dcreatevalc:
+
+	RET
+
+
+
+
+
+; TO e.g. 10 TO MyVALUE
+
+dtocz: ; (TO) expects address of word to update.
+
+	LDR		X3, [X16, #-8] 
+	SUB		X16, X16, #8
+
+	LDR		X2,	 [X3, #8] 
+
+	ADRP	X1, dvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+	
+	ADRP	X1, dvaluez@PAGE	; high level word.	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+	ADRP	X1, darrayaddz@PAGE	; high level word.
+	ADD		X1, X1, darrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	ADRP	X1, darrayvalz@PAGE	; high level word.
+	ADD		X1, X1, darrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+150:
+
+	; get value to change
+
+	LDR		X1, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	STR		X1, [X0]  ; store 
+	SUB		X16, X16, #8
+	RET
+
+160:
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+
+	LSL		X2, X2, #3
+	ADD		X1, X2, X0
+	LDR		X0, [X16, #-16] 
+	STR		X0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+ 
+
+190:	; error out 
+	MOV		X0, #0
+
+
+	RET
+
+
+
+dtoz:
+
+100:	
+	save_registers
+	
+	BL		advancespaces
+	BL		collectword
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f		; not found 
+	CMP		X21, #-1	; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	; found word, update it
+ 
+	restore_registers
+
+
+	; check variable 
+
+	LDR		X2,	 [X28, #8] 
+
+
+	ADRP	X1, dvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+	
+	ADRP	X1, dvaluez@PAGE	; high level word.	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+	ADRP	X1, darrayaddz@PAGE	; high level word.
+	ADD		X1, X1, darrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+	
+
+	ADRP	X1, darrayvalz@PAGE	; high level word.
+	ADD		X1, X1, darrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	B  		190f  ; not a word we can update 
+
+
+150:
+
+	; get value to change
+
+	LDR		X1, [X16, #-8] 
+	LDR		X0, [X28] ; var or val address
+	STR		X1, [X0]  ; store 
+	SUB		X16, X16, #8
+	RET
+
+160:
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X28] ; var or val address
+	LDR		X1, [X28, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+
+	LSL		X2, X2, #3
+	ADD		X1, X2, X0
+	LDR		X0, [X16, #-16] 
+	STR		X0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	; error out 
+	MOV		X0, #0
+
+ 
+	RET
+
+
+dtoc:	; COMPILE in address of next word followed by (TO)
+
+	STP		LR,  XZR, [SP, #-16]!
+
+	BL		advancespaces
+	BL		collectword
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+ 
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f		; not found 
+	CMP		X21, #-1	; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	LDR		X2,	 [X28, #8] 
+
+	ADRP	X1, dvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+	
+	ADRP	X1, dvaluez@PAGE	; high level word.	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+	ADRP	X1, darrayaddz@PAGE	; high level word.
+	ADD		X1, X1, darrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+
+	ADRP	X1, darrayvalz@PAGE	; high level word.
+	ADD		X1, X1, darrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+
+150:
+	MOV		X0, X28 ; word address
+	BL 		longlitit
+	ADD		X15, X15, #2
+	MOV  	X0, #31; (TO)
+	STRH    W0, [X15]      
+	; found word, compile in the words address
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+	
+	B  		190f  ; not a word we can update 
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	; error out 
+	LDP		LR, XZR, [SP], #16	
+	MOV		X0, #-1	; not a word TO can use
+
+
+ 
+	RET
+
+
+ 
 
 
 dlitz: ; next cell has address of short (half word) inline literal
@@ -6675,7 +7285,7 @@ ddelc:	; del (127)
 	RET
 
 ; ALLOT extra memory to a variable
-; 0 VARIABLE test  200 ALLOT: test
+; 0 VARIABLE test  200 ALLOT> test
 ; 
 allotoz: 
 
@@ -6688,6 +7298,8 @@ allotoz:
 	LDR		X1, [X12] ; pointer to memory 
 	LSL		X0, X0, #3	; x 8
 	ADD		X0, X1, X0 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
 	STR		X0, [X12]	; bump pointer
 	MOV		X3, X0		; save to update variable pointer
 	ADRP	X12, allot_limit@PAGE	
@@ -6750,6 +7362,35 @@ allot_memory_full: ; display err
 	B		sayit
 	
 	
+; e.g. CREATE fred 200 ALLOT
+allotlastz: 
+
+10:		; ALLOT the memory allocation
+
+	LDR		X0, [X16, #-8]		; CELLS
+	SUB		X16, X16, #8
+	ADRP	X12, allot_ptr@PAGE	
+	ADD		X12, X12, allot_ptr@PAGEOFF
+	LDR		X1, [X12] ; pointer to memory 
+	LSL		X0, X0, #3	; x 8
+	ADD		X0, X1, X0 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
+	ADD		X0, X0, #8
+	STR		X0, [X12]	; bump pointer
+	MOV		X3, X0		; save to update variable pointer
+	ADRP	X12, allot_limit@PAGE	
+	ADD		X12, X12, allot_limit@PAGEOFF
+	CMP		X0, X12
+	B.gt	allot_memory_full
+
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	LDR		X1, [X1]
+	STR		X3, [X1] ; word now has ALLOT address
+ 
+	RET
+
 
 
 .data 
@@ -7354,8 +7995,8 @@ dend:
 		makeword "(27)", 		0, 	0,  0				; 27
 		makeword "(28)", 		0, 	0,  0				; 28
 		makeword "(29)", 		0, 	0,  0				; 29
-		makeword "(30)", 		0, 	0,  0				; 30
-		makeword "(31)", 		0, 	0,  0				; 31
+		makeword "(@)", 		datz, 	0,  0			; 30
+		makeword "(TO)", 		dtocz, 	0,  0			; 31
 
 		; compiled array words
 		makeword "(A1FILLARRAY)", 		dA1FILLAz, 	0,  0 ; 32
@@ -7382,7 +8023,9 @@ hashdict:
 
 		makeword "ALLWORDS", alldotwords , 0, 0 
 
-		makeword "ALLOT:", allotoz , 0, 0 
+		makeword "ALLOT>", allotoz , 0, 0 
+
+		makeword "ALLOT", allotlastz , 0, 0 
 
 		makeword "ARRAY", dcreatarray , 0, 0 
 
@@ -7417,6 +8060,7 @@ bdict:
 
 
 		makeword "CARRAY", dCcreatarray , 0, 0 
+		makeword "CVALUES", dCcreatvalues , 0, 0 
 		makeword "C@", 		catz, 0, 0
 		makeword "C!", 		cstorz, 0, 0
 		makeword "CONSTANT", dcreatcz , dcreatcc, 0
@@ -7457,11 +8101,12 @@ edict:
 
 		makeword "FFIB", dtstfib, 0,  0
 		makeword "FASTER", duntracable, 0, 0
-		makeword "FALSE", dconstz, dconstc,  0
+		makeword "FALSE", dfalsez, 0,  0
 		makeword "FORGET", clean_last_word , 0, 0 
 		makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
+		makeword "FILL", dfillz, 0, 0
 
 fdict:	
 		makeemptywords 79
@@ -7513,8 +8158,8 @@ kdict:
 	
 		makeword "LONG$", dvaraddz, dvaraddc,  long_strings
 
-		makeword "LITBASE", dvaraddz, dvaraddc,  quadlits
-
+		 
+		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
 	
 ldict:
 		makeemptywords 61
@@ -7603,9 +8248,10 @@ rdict:
 
 sdict:
 		makeemptywords 50
+		makeword "TO", dtoz, dtoc, 0
 		makeword "TIMEIT", dtimeitz, 0, 0
 		makeword "TRACE", dtracable, 0, 0
-		makeword "TRUE", dconstz, dconstc,  -1
+		makeword "TRUE", dtruez, 0,  0
 		makeword "TRACING?", dtraqz, 0, 0
 		makeword "TICKS", dtickerz, 0, 0
 		makeword "TPMS", dconstz, dconstz, 24000
@@ -7627,11 +8273,13 @@ tdict:
 	
 udict:
 
-		makeemptywords 48
+		makeemptywords 4
+
+		makeword "VALUE", dcreatevalz , dcreatevalc, 0
+
+		makeword "VALUES", dcreatvalues , 0, 0 
 		makeword "VERSION", announce , 0, 0
-
-
-		makeword "VARIABLE", dcreatvz , dcreatvc, 0
+		makeword "VARIABLE", dcreatvz , 0, 0
 
 		makeqvword 118
 		makeword "V", dvaraddz, dvaraddc,  8 * 86 + ivars	
