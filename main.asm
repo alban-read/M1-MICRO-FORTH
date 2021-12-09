@@ -440,7 +440,6 @@ dotwords:
 	RET
 
 sayit:	
-	
 	ADRP	X8, ___stdoutp@GOTPAGE
 	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 	LDR		X1, [X8]
@@ -453,7 +452,6 @@ sayit:
 
 
 sayit_err:	
-	
 	ADRP	X8, ___stdoutp@GOTPAGE
 	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 	LDR		X1, [X8]
@@ -464,7 +462,6 @@ sayit_err:
 	restore_registers
 	MOV		X0, #-1
 	RET
-
 
 resetword: ; clear word return x22
 	ADRP	X22, zword@PAGE		
@@ -840,7 +837,7 @@ fprint: ; prints float on top of stack
 	RET
 
 
-word2number:	; converts ascii at word to 32bit number
+word2number:	; converts ascii at word to number
 			; IN X16
 
 	ADRP	X0, zword@PAGE		
@@ -856,6 +853,22 @@ word2number:	; converts ascii at word to 32bit number
 	B			chkoverflow
 	RET
 
+
+word2fnumber:	; converts ascii at word to float number
+			; IN X16
+
+	ADRP	X0, zword@PAGE		
+	ADD		X0, X0, zword@PAGEOFF
+
+	save_registers
+	BL		_atof
+	restore_registers  
+	
+	STR		D0, [X16], #8
+
+	; check for overflow
+	B			chkoverflow
+	RET
 
 
 dsleepz: ; sleep	
@@ -1368,7 +1381,7 @@ finish_list: ; we did not find a defined word.
 
 
 20:
-	; look for an integer number made of decimal digits.
+	; look for a number made of decimal digits.
 	; If found immediately push it onto our Data Stack
 
 	ADRP	X22, zword@PAGE		
@@ -1381,6 +1394,8 @@ finish_list: ; we did not find a defined word.
 	ADD		X22, X22, #1
 	LDRB	W0, [X22]
 
+	MOV 	X0, #0 ; not float
+
 22:
 	CMP		W0, #'9'
 	B.gt	30f
@@ -1389,18 +1404,30 @@ finish_list: ; we did not find a defined word.
 
 23:	ADD		X22, X22, #1
 	LDRB	W0, [X22]
-	CMP		W0, #0
-	B.eq	24f
+	CMP		W0, #0 ; end
+	B.eq	25f
 	CMP		W0, #'.'
-	B.eq	30f
+	B.eq	24f
+
 	CMP		W0, #'9'
 	B.gt	30f
 	CMP		W0, #'0'
 	B.lt	30f
 	
 	B		23b
-24:
-	; we have a valid number, so we translate it
+
+24: ; signal we have a float
+	MOV 	X1, #-1
+	B 		23b
+
+25: 
+	CBZ 	X1, 29f
+	; float
+	BL		word2fnumber
+	B		advance_word
+
+29:
+	; int
 	BL		word2number
 	B		advance_word
 
@@ -1643,7 +1670,7 @@ finished_compiling_token:
 
 try_compiling_literal:
 
-
+	MOV     X3, #0 ; not float
 20:
 	; look for an integer number made of decimal digits.
 	; If found  store a literal in our word.
@@ -1655,6 +1682,7 @@ try_compiling_literal:
 	MOV		X0, #'!'
 	BL		X0emit
 
+	
 
 	LDRB	W0, [X22]
 	CMP		W0, #'-'
@@ -1673,26 +1701,47 @@ try_compiling_literal:
 	CMP		W0, #0
 	B.eq	24f
 	CMP		W0, #'.'
-	B.eq	30f
+	B.eq	405f
 	CMP		W0, #'9'
 	B.gt	30f
 	CMP		W0, #'0'
 	B.lt	30f
 	
 	B		23b
+
+
+405: ; we have a float
+	MOV 	X3, #-1
+	MOV		X0, #'f'
+	BL		X0emit
+	B 		23b 
+
 24:
 
 	MOV		X0, #'*'
 	BL		X0emit
 
-	; we have a valid number, so translate it
+	CBZ 	X3, its_an_it
+	save_registers
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
+	BL 		_atof
+	restore_registers 
+	FMOV  	X0, D0	; float 
+	B 		25f 	; process as long word
+ 
 
+its_an_it:
 	save_registers
-	BL		_atoi
-	restore_registers  
+	ADRP	X0, zword@PAGE		
+	ADD		X0, X0, zword@PAGEOFF
+	BL 		_atoi
+	restore_registers 
+ 
 
+
+check_number_size:
+	
 	; halfword numbers ~32k
 	MOV		X3, #4000
 	LSL		X3, X3, #3  
@@ -1711,13 +1760,11 @@ try_compiling_literal:
 25:	; long word
 	; we need to find or create this in the literal pool.
 
-
-
-
 	; X0 is our literal 
 	ADRP	X1, quadlits@PAGE	
 	ADD		X1, X1, quadlits@PAGEOFF
 	MOV		X3, XZR
+
 
 10:
 	LDR		X2, [X1]
@@ -7452,7 +7499,7 @@ tdec:	.ascii "%3ld"
 	.zero 16
 
 .align	8
-fdec:	.ascii "%3f"
+fdec:	.ascii "%f"
 	.zero 16
 
 
@@ -8113,8 +8160,8 @@ edict:
 		makeword "fsqrt", fsqrt, 0,  0
 		makeword "fneg", fnegz, 0,  0
 		makeword "fabs", fabsz, 0,  0
-		makeword "S>F", fstofz, 0,  0 
-		makeword "F>S", ftosz, 0,  0 
+		makeword "s>f", fstofz, 0,  0 
+		makeword "f>s", ftosz, 0,  0 
 		makeword "FFIB", dtstfib, 0,  0
 		makeword "FASTER", duntracable, 0, 0
 		makeword "FALSE", dfalsez, 0,  0
@@ -8185,7 +8232,7 @@ ldict:
 		makeword "MAP", dmaparray, 0, 0	
 		makeword "MOD", dmodz, dmodc, 0	
 		makeword "MS", dsleepz , 0, 0 
-		
+
 		makeemptywords 68
 
 		makeqvword 109
