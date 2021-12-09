@@ -5363,10 +5363,6 @@ fsqrt:
 	RET
 
 
-
-
- 
-
 dplusc: ; 
 	RET
 
@@ -8188,7 +8184,8 @@ ldict:
 
 		makeword "MAP", dmaparray, 0, 0	
 		makeword "MOD", dmodz, dmodc, 0	
-
+		makeword "MS", dsleepz , 0, 0 
+		
 		makeemptywords 68
 
 		makeqvword 109
@@ -8258,7 +8255,7 @@ rdict:
 		makeword "SHORT$HASH", dvaraddz, dvaraddc,  short_strings_hash
 		makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 		makeword "SWAP", dswapz , 0, 0 
-		makeword "SLEEP", dsleepz , 0, 0 
+	
 		makeword "SPACES", spacesz , spacesc, 0 
 		makeword "SPACE", emitchz , emitchc, 32
 	 	makeword "SP@", fetchspz , 0, 0 
