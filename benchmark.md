@@ -8,10 +8,7 @@
 : t1 25 0 DO 34 FIB LOOP ; // run many
 
 
-: FAC DUP 1> IF DUP 1- FAC * ELSE DROP 1 ENDIF ;
 
-
-: t2 100 FAC ;
 
 
 TIMEIT t1
@@ -26,6 +23,7 @@ TIMEIT t1
 3864  : ms to run ( 38647  ) ns 
  
 // PRIME SIEVE benchmark
+// tests variety of features.
  
 CREATE FLAGS 8190 ALLOT
 0 VARIABLE EFLAG
@@ -48,3 +46,6 @@ FLAGS 8190 + EFLAG !
 // t2 10357  : ms to run ( 103577  ) ns 
 // t2 8043 ms // after adding FILL.
 
+
+: FAC DUP 1> IF DUP 1- FAC * ELSE DROP 1 ENDIF ;
+: t3 100 FAC ;
