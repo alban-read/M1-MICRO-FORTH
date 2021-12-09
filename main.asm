@@ -452,6 +452,20 @@ sayit:
 	RET
 
 
+sayit_err:	
+	
+	ADRP	X8, ___stdoutp@GOTPAGE
+	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+	LDR		X1, [X8]
+	save_registers
+ 
+	BL		_fputs	
+	
+	restore_registers
+	MOV		X0, #-1
+	RET
+
+
 resetword: ; clear word return x22
 	ADRP	X22, zword@PAGE		
 	ADD		X22, X22, zword@PAGEOFF
@@ -1522,6 +1536,8 @@ find_word_token:
 
 	
 	; yes we have found our word
+	MOV		X0, #'.'
+	BL		X0emit
 
 
 	; found word (at X28), get token.
@@ -1678,6 +1694,9 @@ try_compiling_literal:
 25:	; long word
 	; we need to find or create this in the literal pool.
 
+
+
+
 	; X0 is our literal 
 	ADRP	X1, quadlits@PAGE	
 	ADD		X1, X1, quadlits@PAGEOFF
@@ -1725,7 +1744,7 @@ try_compiling_literal:
 
 	MOV		X0, #2 ; #LITL
 	STRH	W0, [X15]
-
+	ADD		X15, X15, #2
 
 	STRH	W3, [X15]	; value
 	ADD		X15, X15, #2
@@ -1733,7 +1752,8 @@ try_compiling_literal:
 	B		compile_next_word
 
 30:	; exit number means word not found/not number
-
+	MOV		X0, #'?'
+	BL		X0emit
 	B		exit_compiler_unrecognized
 
 
@@ -3687,7 +3707,7 @@ dfillarrayz: ; RUNTIME at command line
 120:
 	LDR		X21, [X28, #48] ; name field
 
-	CMP		X21, #0		; end of list?
+	CMP		X21, #0		    ; end of list?
 	B.eq	190f			; not found 
 	CMP		X21, #-1		; undefined entry in list?
 	b.eq	170f
@@ -3720,12 +3740,31 @@ dfillarrayz: ; RUNTIME at command line
 	ADD		X8, X8, dWarrayaddz@PAGEOFF
 	CMP		X2, X8
 	B.eq	dWarrayaddz_fill
+	
+	ADRP	X8, dWarrayvalz@PAGE		
+	ADD		X8, X8, dWarrayvalz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	dWarrayaddz_fill
+
+
 	ADRP	X8, dHWarrayaddz@PAGE		
 	ADD		X8, X8, dHWarrayaddz@PAGEOFF
 	CMP		X2,	X8
 	B.eq	dHWarrayaddz_fill
+
+
+	ADRP	X8, dHWarrayvalz@PAGE		
+	ADD		X8, X8, dHWarrayvalz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	dHWarrayaddz_fill
+
 	ADRP	X8, dCarrayaddz@PAGE		
 	ADD		X8, X8, dCarrayaddz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	dCarrayaddz_fill
+
+	ADRP	X8, dCarrayvalz@PAGE		
+	ADD		X8, X8, dCarrayvalz@PAGEOFF
  	CMP		X2,	X8
 	B.eq	dCarrayaddz_fill
 
@@ -3749,8 +3788,6 @@ dfillarrayc: ; COMPILE array fill operations
 	
 	BL		advancespaces
 	BL		collectword
-
- 
 	BL		empty_wordQ
 	B.eq	190f
 
@@ -3933,8 +3970,6 @@ dHWarrayvalz: ; X0=data, X1=word
 	RET
 
 
-
-
 ;; ( n -- address )
 dHWarrayaddz: ; X0=data, X1=word
 	LDR		X2, [X16, #-8]	; X2 = index
@@ -4114,6 +4149,10 @@ compile_dCarrayaddz_fill:
 	BL		start_point
 
 .endm
+
+
+;; ARRAY returns addresses
+;; VALUES returns value
 
 
 dcreatvalues:
@@ -4360,7 +4399,6 @@ dendifz:
 ; We look for closest ELSE or IF by seeking the branch.
 
  
-
 dendifc:
 	
 	;SUB	X15, X15, #2 ; do not compile endif
@@ -4408,9 +4446,6 @@ dendifc:
 
 200:
 	RET
-
-
-
 
 
 delsez:
@@ -4476,8 +4511,6 @@ dzbranchz_notrace:
 	SUB		X0, X0, #2
 	ADD		X15, X15, X0	; change IP
 
- 
-
 	RET
 
 90:	
@@ -4487,8 +4520,6 @@ dzbranchz_notrace:
 
 
 dzbranchc:
-	
-
 	RET
 
 
@@ -4530,7 +4561,6 @@ dtickc: ; ' at compile time, turn address of word into literal
 	B.eq	190f			; not found 
 	CMP		X21, #-1		; undefined entry in list?
 	b.eq	170f
-
 
 	BL		get_word
 	LDR		X21, [X28, #48] ; name field
@@ -5918,22 +5948,33 @@ dcreatevalc:
 
 ; TO e.g. 10 TO MyVALUE
 
-dtocz: ; (TO) expects address of word to update.
+
+; Generic TO checks type of word and changes the data
+; more specialized TO words can just check they have the right word type.
+;
+
+dtocz: ; (TO) expects address of word to update in X2
+
+ 
 
 	LDR		X3, [X16, #-8] 
 	SUB		X16, X16, #8
 
+toupdateit:
+
 	LDR		X2,	 [X3, #8] 
+
+	; check type of word and select right update functions
 
 	ADRP	X1, dvaraddz@PAGE	; high level word.	
 	ADD		X1, X1, dvaraddz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	150f 
+	B.eq	155f 
 	
 	ADRP	X1, dvaluez@PAGE	; high level word.	
 	ADD		X1, X1, dvaluez@PAGEOFF
 	CMP 	X2, X1
-	B.eq	150f 
+	B.eq	155f 
 
 	ADRP	X1, darrayaddz@PAGE	; high level word.
 	ADD		X1, X1, darrayaddz@PAGEOFF
@@ -5983,7 +6024,29 @@ dtocz: ; (TO) expects address of word to update.
 	B.eq	120f 
 
 
-120:	; HW word
+	; not a word we understand
+
+	B		190f
+
+
+120:
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+
+	LSL		X2, X2, #1
+	ADD		X1, X2, X0
+	LDR		W0, [X16, #-16] 
+	STRH	W0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+
+
+125:	; HW word
 
 	LDR		X1, [X16, #-8] 
 	LDRH	W0, [X3] ; var or val address
@@ -5992,7 +6055,7 @@ dtocz: ; (TO) expects address of word to update.
 	RET
 
 
-130:	; W word
+135:	; W word
 
 	LDR		X1, [X16, #-8] 
 	LDR		W0, [X3] ; var or val address
@@ -6001,7 +6064,23 @@ dtocz: ; (TO) expects address of word to update.
 	RET
 
 
-140:	; C byte
+140:
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+
+	LSL		X2, X2, #2
+	ADD		X1, X2, X0
+	LDR		W0, [X16, #-16] 
+	STR   	W0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+
+145:	; C byte
 
 	LDR		X1, [X16, #-8] 
 	LDR		W0, [X3] ; var or val address
@@ -6012,8 +6091,23 @@ dtocz: ; (TO) expects address of word to update.
 
 
 150:
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
 
-	; get value to change
+	ADD		X1, X2, X0
+	LDR		W0, [X16, #-16] 
+	STRB   	W0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET	
+
+
+
+155:
+
+	; get variable to change
 
 	LDR		X1, [X16, #-8] 
 	LDR		X0, [X3] ; var or val address
@@ -6038,7 +6132,11 @@ dtocz: ; (TO) expects address of word to update.
  
 
 190:	; error out 
-	MOV		X0, #0
+
+	ADRP	X0, tcomer33@PAGE	; high level word.
+	ADD		X0, X0, tcomer33@PAGEOFF
+	B		sayit_err	
+	 
 
 
 	RET
@@ -6075,61 +6173,9 @@ dtoz:
  
 	restore_registers
 
-
-	; check variable 
-
-	LDR		X2,	 [X28, #8] 
-
-
-	ADRP	X1, dvaraddz@PAGE	; high level word.	
-	ADD		X1, X1, dvaraddz@PAGEOFF
-	CMP 	X2, X1
-	B.eq	150f 
-	
-	ADRP	X1, dvaluez@PAGE	; high level word.	
-	ADD		X1, X1, dvaluez@PAGEOFF
-	CMP 	X2, X1
-	B.eq	150f 
-
-	ADRP	X1, darrayaddz@PAGE	; high level word.
-	ADD		X1, X1, darrayaddz@PAGEOFF
-	CMP 	X2, X1
-	B.eq	160f 
-	
-
-	ADRP	X1, darrayvalz@PAGE	; high level word.
-	ADD		X1, X1, darrayvalz@PAGEOFF
-	CMP 	X2, X1
-	B.eq	160f 
-
-
-	B  		190f  ; not a word we can update 
-
-
-
-150:
-
-	; get value to change
-
-	LDR		X1, [X16, #-8] 
-	LDR		X0, [X28] ; var or val address
-	STR		X1, [X0]  ; store 
-	SUB		X16, X16, #8
-	RET
-
-160:
-	LDR		X2, [X16, #-8] 
-	LDR		X0, [X28] ; var or val address
-	LDR		X1, [X28, #32]
-	CMP		X2,  X1
-	B.gt	darrayaddz_index_error
-
-	LSL		X2, X2, #3
-	ADD		X1, X2, X0
-	LDR		X0, [X16, #-16] 
-	STR		X0, [X1]  ; store 
-	SUB		X16, X16, #16
-	RET
+	MOV		X3,  X28
+	; 
+	B 		toupdateit
 
 
 170:	; next word in dictionary
@@ -6138,12 +6184,14 @@ dtoz:
 
 190:	; error out 
 	MOV		X0, #0
-
  
 	RET
 
 
+; when compiling in TO we want to check that the words are TO able or fail.
+
 dtoc:	; COMPILE in address of next word followed by (TO)
+
 
 	STP		LR,  XZR, [SP, #-16]!
 
@@ -6155,7 +6203,7 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 
 	BL		start_point
 
-
+200:
 	LDR		X21, [X28, #48] ; name field
 
 	CMP		X21, #0		; end of list?
@@ -6231,6 +6279,8 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 	CMP 	X2, X1
 	B.eq	150f 
 
+	; not a word we understand 
+	B 		190f
 
 ; we must specialize (TO) for the four data sizes
 
@@ -6249,12 +6299,14 @@ dtoc:	; COMPILE in address of next word followed by (TO)
  
 
 150:	; Q 
+
 	MOV		X0, X28 ; word address
 	BL 		longlitit
 	ADD		X15, X15, #2
 	MOV  	X0, #31; (TO) generic
-	STRH    W0, [X15]      
-	; found word, compile in the words address
+	STRH    W0, [X15]     
+
+ 
 	LDP		LR, XZR, [SP], #16	
 	RET
 
@@ -6263,9 +6315,14 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 
 170:	; next word in dictionary
 	SUB		X28, X28, #64
-	B		120b
+	B		200b
 
 190:	; error out 
+
+	ADRP	X0, tcomer33@PAGE	; high level word.
+	ADD		X0, X0, tcomer33@PAGEOFF
+	BL		sayit_err
+
 	LDP		LR, XZR, [SP], #16	
 	MOV		X0, #-1	; not a word TO can use
 
@@ -7462,10 +7519,15 @@ tcomer31: .ascii "\nError: ALLOT MEMORY FULL "
 	.zero 16
 
 
-
 .align	8
 tcomer32: .ascii "\nError: ARRAY index invalid."
 	.zero 16
+
+.align	8
+tcomer33: .ascii "\nError: TO can not update."
+	.zero 16
+
+ 
 
 
 .align	8
@@ -7961,6 +8023,7 @@ fdict:
 gdict:
 		makeemptywords 78
 		makeword "HWARRAY", dHWcreatarray , 0, 0 
+		makeword "HWVALUES", dHWcreatvalues , 0, 0 
 		makeword "HW!", dhstorez, dhstorec,  0
 		makeword "HW@", dhatz, dhatc, 0
 
@@ -8125,6 +8188,7 @@ udict:
 		makeword "VALUE", dcreatevalz , dcreatevalc, 0
 
 		makeword "VALUES", dcreatvalues , 0, 0 
+
 		makeword "VERSION", announce , 0, 0
 		makeword "VARIABLE", dcreatvz , 0, 0
 
@@ -8135,6 +8199,7 @@ vdict:
 
 		makeemptywords 48
 		makeword "WARRAY", dWcreatarray , 0, 0 
+		makeword "WVALUES", dWcreatvalues , 0, 0 
 		makeword "WORDS", dotwords , 0, 0 
 		makeword "WHILE", 0 , dwhilec, 0 
 		makeword "W!", dwstorz , 0, 0 
