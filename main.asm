@@ -254,8 +254,8 @@
 .data
 
 .align 8
-
-ver:	.double 0.534
+;; VERSION OF THE APP
+ver:	.double 0.601
 tver:	.ascii  "Version %2.2f\n"
 	.zero	4
 
@@ -815,6 +815,23 @@ print: ; prints int on top of stack
 
 	ADRP	X0, tdec@PAGE		
 	ADD		X0, X0, tdec@PAGEOFF
+	save_registers
+	STP		X1, X0, [SP, #-16]!
+	BL		_printf		
+	ADD		SP, SP, #16 
+	restore_registers  
+	RET
+
+
+
+fprint: ; prints float on top of stack		
+	
+	LDR		X1, [X16, #-8]
+	SUB		X16, X16, #8	
+		
+12:
+	ADRP	X0, fdec@PAGE		
+	ADD		X0, X0, fdec@PAGEOFF
 	save_registers
 	STP		X1, X0, [SP, #-16]!
 	BL		_printf		
@@ -5234,6 +5251,11 @@ ddotc: ;
 	RET
 
 
+fdotz: ; . print tos
+	B 		fprint
+	RET
+
+
 ddivz: ; / divide
 	B 		udivz
 	RET
@@ -5277,6 +5299,73 @@ dplusz: ; +
 	SUB		X16, X16, #8
 	RET
 
+
+fplusz: ; f+
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	FADD	D0, D0, D1
+	STR		D0, [X16, #-16]
+	SUB		X16, X16, #8
+	RET
+
+fminusz: ; f-
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	FSUB	D0, D1, D0
+	STR		D0, [X16, #-16]
+	SUB		X16, X16, #8
+	RET
+
+fmulz: ; f*
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	FMUL	D0, D1, D0
+	STR		D0, [X16, #-16]
+	SUB		X16, X16, #8
+	RET
+
+fdivz: ; f/
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	FDIV	D0, D1, D0
+	STR		D0, [X16, #-16]
+	SUB		X16, X16, #8
+	RET
+
+fnegz:	;  fnegate 
+	LDR		D0, [X16, #-8]
+	FNEG	D0, D0
+	STR		D0, [X16, #-8]
+	RET		
+
+fabsz:	;  fnegate 
+	LDR		D0, [X16, #-8]
+	FABS	D0, D0
+	STR		D0, [X16, #-8]
+	RET	
+
+ftosz: ; f>s float to int
+	LDR		D0, [X16, #-8]
+	fcvtzs	X0, D0
+	STR		X0, [X16, #-8]
+	RET
+
+fstofz: ; s>f int to float
+ 	LDR		X0, [X16, #-8] 
+    scvtf	D0, X0
+	STR		D0, [X16, #-8]
+	RET
+	 
+fsqrt:
+	LDR		D0, [X16, #-8] 
+    fsqrt	D0, D0
+	STR		D0, [X16, #-8]
+	RET
+
+
+
+
+ 
 
 dplusc: ; 
 	RET
@@ -7296,6 +7385,14 @@ allotlastz:
 
 .data 
 
+
+; floats
+
+.align 8
+fc1:		.double 	1.0
+
+
+
 ; variables
 .align 8 
 last_word:	
@@ -7357,6 +7454,11 @@ trbr:	.ascii "]"
 .align	8
 tdec:	.ascii "%3ld"
 	.zero 16
+
+.align	8
+fdec:	.ascii "%3f"
+	.zero 16
+
 
 .align	8
 thex:	.ascii "%8X"
@@ -7905,10 +8007,10 @@ dend:
 		makeword "(TO)", 		dtocz, 	0,  0			; 31
 
 		; compiled array words
-		makeword "(A1FILLARRAY)", 		dA1FILLAz, 	0,  0 ; 32
-		makeword "(W1FILLARRAY)", 		dW1FILLAz, 	0,  0 ; 33
-		makeword "(HW1FILLARRAY)", 		dHW1FILLAz, 	0,  0 ; 34
-		makeword "(C1FILLARRAY)", 		dC1FILLAz, 	0,  0;  35
+		makeword "(A1FILLARRAY)", 		dA1FILLAz, 	 0,  0 ; 32
+		makeword "(W1FILLARRAY)", 		dW1FILLAz,   0,  0 ; 33
+		makeword "(HW1FILLARRAY)", 		dHW1FILLAz,  0,  0 ; 34
+		makeword "(C1FILLARRAY)", 		dC1FILLAz,  0,  0;  35
 		makeword "(A2FILLARRAY)", 		0, 	0,  0			; 36
 		makeword "(W2FILLARRAY)", 		0, 	0,  0			; 37
 		makeword "(HW2FILLARRAY)", 		0, 	0,  0			; 38
@@ -8006,7 +8108,17 @@ edict:
 		makeemptywords 48
 		
 		makeqvword 102
-
+		 
+		makeword "f.", fdotz, 0,  0
+		makeword "f+", fplusz, 0,  0
+		makeword "f-", fminusz, 0,  0
+		makeword "f*", fmulz, 0,  0
+		makeword "f/", fdivz, 0,  0
+		makeword "fsqrt", fsqrt, 0,  0
+		makeword "fneg", fnegz, 0,  0
+		makeword "fabs", fabsz, 0,  0
+		makeword "S>F", fstofz, 0,  0 
+		makeword "F>S", ftosz, 0,  0 
 		makeword "FFIB", dtstfib, 0,  0
 		makeword "FASTER", duntracable, 0, 0
 		makeword "FALSE", dfalsez, 0,  0
@@ -8233,8 +8345,14 @@ zdict:
 
 		makeemptywords 30
 
-
-		
+ 		makeword "0.0", dconstz, dconstc,  0.0
+		makeword "0.1", dconstz, dconstc,  0.1
+		makeword "0.5", dconstz, dconstc,  0.5
+	 	makeword "1.0", dconstz, dconstc,  1.0
+		makeword "2.0", dconstz, dconstc,  2.0
+		makeword "4.0", dconstz, dconstc,  4.0
+		makeword "8.0", dconstz, dconstc,  8.0
+		makeword "16.0",dconstz, dconstc, 16.0
 		makeword "*/", dstarslshz, 0,  10
 		makeword "*/MOD", dstarslshzmod, 0,  10
 		makeword "1-DUP1-", fibtest, 0,  10
