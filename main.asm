@@ -30,9 +30,7 @@
 ;; X23 also used for text
 
 
-
-
- .macro reset_data_stack
+.macro reset_data_stack
 	ADRP	X1, sp1@PAGE		
 	ADD		X1, X1, sp1@PAGEOFF
 	ADRP	X0, dsp@PAGE		
@@ -41,8 +39,7 @@
 	MOV		X16, X1 
 .endm
 
-
- .macro reset_return_stack
+.macro reset_return_stack
 	ADRP	X1, rp1@PAGE		
 	ADD		X1, X1, rp1@PAGEOFF
 	ADRP	X0, rsp@PAGE		
@@ -50,7 +47,6 @@
 	STR		X1, [X0]
 	MOV		X14, X1 
 .endm
-
 
 .macro save_registers  
 	STP		X12, X13, [SP, #-16]!
@@ -80,9 +76,8 @@
 	LDP		X12, X13, [SP], #16	
 .endm
 
-
 ; dictionary headers
-; These are seperate from the token space, or literal pools
+; These are separate from the token space, or literal pools
 ; contain the name of a word, the runtime and compile time functions
 ; and a small ammount of data for the functions use.
 
@@ -95,7 +90,6 @@
 ; data
 ; name 		the words name
  
-
 .macro makeword name:req, runtime=-1, comptime=-1, datavalue=1, dvalue2=0, dvalue3=0, dvalue4=0
 	.quad	\datavalue
 	.quad	\runtime
@@ -122,7 +116,6 @@
 	.zero	16 - ( 20b-10b )
 .endm
 
-
 .macro makebword name:req, runtime=-1, comptime=-1, datavalue=1
 	.quad	\datavalue
 	.quad	\runtime
@@ -134,7 +127,7 @@
 	.zero	15
 .endm
 
- .macro makeqvword name:req
+.macro makeqvword name:req
 	.quad	8 * \name + ivars	
 	.quad	dvaraddz
 	.quad	0
@@ -145,7 +138,6 @@
 	.zero	15
 .endm
 
-;  
 .macro makeemptywords n=32 
 	.rept  \n
 	.quad  -1
@@ -159,18 +151,14 @@
 	.endr
 .endm
 
-
 .macro copy_word_name
-
 	; copy words name text over
 	LDR		X0, [X22]
 	STR		X0, [X28, #48]
 	ADD		X22, X22, #8
 	LDR		X0, [X22]
 	STR		X0, [X28, #56]
-
 .endm
-
 
 ; trace words, check for X6<>0 
 ; and print a trace of the inner interpreter
@@ -201,13 +189,11 @@
 	BL		X0prname
 	BL		ddotsz
 
-
 	LDP		X1, X12, [SP], #16	
 	LDP		LR, X0, [SP], #16	
 999:
 .endm
  
-
 .macro  do_trace	
 	CBZ		X6, 	999f
 	STP		LR,  X0, [SP, #-16]!
@@ -265,8 +251,7 @@ tver:	.ascii  "Version %2.2f\n"
 
 .align 8			
 
-
-	; get line from terminal
+; get line from terminal
 getline:
 
 	ADRP	X8, ___stdinp@GOTPAGE
@@ -288,8 +273,7 @@ dpagez:
 	B		sayit
 
 
-
-		; Ok prompt
+; Ok prompt
 sayok:	
 	ADRP	X0, tok@PAGE	
 	ADD		X0, X0, tok@PAGEOFF
@@ -304,7 +288,6 @@ sayforgetting:
 	ADRP	X0, tforget@PAGE	
 	ADD		X0, X0, tforget@PAGEOFF
 	B		sayit
-
 
 saycompfin:	
 	ADRP	X0, tcomer6@PAGE	
@@ -331,18 +314,15 @@ sayrb:
 	ADD		X0, X0, trbr@PAGEOFF
 	B		sayit		
 
-
 saybye:
 	ADRP	X0, tbye@PAGE	
 	ADD		X0, X0, tbye@PAGEOFF
 	B		sayit
 
-
 saynotfound:
 	ADRP	X0, tcomer4@PAGE	
 	ADD		X0, X0, tcomer4@PAGEOFF
 	B		sayit
-
 
 sayerrlength:
 	ADRP	X0, tlong@PAGE	
@@ -358,8 +338,7 @@ sayerrpoolfullquad:
 	ADRP	X0, poolfullerr@PAGE	
 	ADD		X0, X0, poolfullerr@PAGEOFF
 	B		sayit
-
-			
+		
 sayword:
 	ADRP	X0, zword@PAGE	
 	ADD		X0, X0, zword@PAGEOFF
@@ -381,7 +360,6 @@ sayeol:
 	BL		sayit
 	B		finish
 
-
 sayliteral:
 	ADRP	X0, tliteral@PAGE	
 	ADD		X0, X0, tliteral@PAGEOFF
@@ -390,9 +368,6 @@ sayliteral:
 
 
 ; WORDS - displays words in the dictionary.
-
- 
-
 
 alldotwords:
 
@@ -444,9 +419,7 @@ sayit:
 	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 	LDR		X1, [X8]
 	save_registers
- 
 	BL		_fputs	
-	
 	restore_registers
 	RET
 
@@ -456,9 +429,7 @@ sayit_err:
 	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
 	LDR		X1, [X8]
 	save_registers
- 
 	BL		_fputs	
-	
 	restore_registers
 	MOV		X0, #-1
 	RET
@@ -633,11 +604,9 @@ reprintz:
 10:
 	RET
 
-
 reprintc:
 	RET
 	
-
 
 spacesz:
 	; number of spaces
@@ -664,8 +633,6 @@ spacesz:
 
 spacesc:	
 	RET
-
-
 
 
 X0prname:
@@ -722,7 +689,6 @@ X0branchpr:
 	restore_registers  
 	RET
 
-
 X0addrpr:
 	MOV	X1, X0
 	B		12f
@@ -743,7 +709,6 @@ addrpr: ; prints int on top of stack in hex
 	restore_registers  
 	RET
 
-
 X0prip: ; print IP
 	MOV		X1, X0
 	ADRP	X0, tpradIP@PAGE		
@@ -754,7 +719,6 @@ X0prip: ; print IP
 	ADD	SP, SP, #16 
 	restore_registers  
 	RET
-
 
 X0addrprln: ; print address
 	MOV	X1, X0
@@ -776,7 +740,6 @@ lnaddrpr: ; prints int on top of stack
 	restore_registers  
 	RET
 
-
 X0hexprint:
 	MOV	X1, X0
 	B		12f
@@ -797,8 +760,6 @@ hexprint: ; prints int on top of stack in hex
 	restore_registers  
 	RET
 
-
-
 X0print:
 	MOV		X1, X0
 	B		12f
@@ -809,7 +770,6 @@ print: ; prints int on top of stack
 	SUB		X16, X16, #8	
 		
 12:
-
 	ADRP	X0, tdec@PAGE		
 	ADD		X0, X0, tdec@PAGEOFF
 	save_registers
@@ -818,8 +778,6 @@ print: ; prints int on top of stack
 	ADD		SP, SP, #16 
 	restore_registers  
 	RET
-
-
 
 fprint: ; prints float on top of stack		
 	
@@ -835,7 +793,6 @@ fprint: ; prints float on top of stack
 	ADD		SP, SP, #16 
 	restore_registers  
 	RET
-
 
 word2number:	; converts ascii at word to number
 			; IN X16
@@ -853,7 +810,6 @@ word2number:	; converts ascii at word to number
 	B			chkoverflow
 	RET
 
-
 word2fnumber:	; converts ascii at word to float number
 			; IN X16
 
@@ -870,7 +826,6 @@ word2fnumber:	; converts ascii at word to float number
 	B			chkoverflow
 	RET
 
-
 dsleepz: ; sleep	
 	
 	LDR		X0, [X16, #-8]
@@ -883,8 +838,6 @@ dsleepz: ; sleep
 	ADD		SP, SP, #16 
 	restore_registers  
 	RET
-
-
 
 chkunderflow: ; check for stack underflow
 	ADRP	X0, spu@PAGE		
@@ -1005,7 +958,6 @@ empty_wordQ: ; is word empty?
 
 start_point: ; finds where to start searching the dictionary
  
-	
 	ADRP	X22, zword@PAGE		
 	ADD		X22, X22, zword@PAGEOFF
 	
@@ -1232,8 +1184,6 @@ searchall:
 ;; start running here
 
 main:	
-
-
 
 	; here we set some global values
 	; the dictionary end, the data (parameter) stack
@@ -1709,7 +1659,6 @@ try_compiling_literal:
 	
 	B		23b
 
-
 405: ; we have a float
 	MOV 	X3, #-1
 	MOV		X0, #'f'
@@ -1717,7 +1666,6 @@ try_compiling_literal:
 	B 		23b 
 
 24:
-
 	MOV		X0, #'*'
 	BL		X0emit
 
@@ -1785,8 +1733,6 @@ check_number_size:
 	
 	MOV		X0, #'|'
 	BL		X0emit
-
-	
 	
 	MOV		X0, #2 ; #LITL
 
@@ -1796,12 +1742,10 @@ check_number_size:
 	STRH	W3, [X15]	; value
 	ADD		X15, X15, #2
 
-
 	B		compile_next_word
 
 80:
 	; found the literal
-
 
 	MOV		X0, #'-'
 	BL		X0emit
@@ -2017,8 +1961,6 @@ fetchrpz: ; fetch stack pointer to stack
 ;
 ;
 
-
-
 dlocaz:	; LOCAL A
 	LDR		X0, [X26, #-64]	
 	STR		X0, [X16], #8
@@ -2028,7 +1970,6 @@ dlocasz:
 	LDR		X0,	[X16, #-8]!
 	STR		X0, [X26, #-64]
 	RET
-
 
 dlocbz:	; LOCAL B
 	LDR		X0, [X26, #-8]	
@@ -2050,7 +1991,6 @@ dloccsz:
 	STR		X0, [X26, #-16]
 	RET
 
-
 dlocdz:	; LOCAL D
 	LDR		X0, [X26, #-24]	
 	STR		X0, [X16], #8
@@ -2061,18 +2001,15 @@ dlocdsz:
 	STR		X0, [X26, #-24]
 	RET
 
-
 dlocez:	; LOCAL E
 	LDR		X0, [X26, #-32]	
 	STR		X0, [X16], #8
 	RET
 
-
 dlocesz:
 	LDR		X0,	[X16, #-8]!
 	STR		X0, [X26, #-32]
 	RET
-
 
 dlocfz:	; LOCAL F
 	LDR		X0, [X26, #-48]	
@@ -2094,12 +2031,10 @@ dlocgsz:
 	STR		X0, [X26, #-48]
 	RET
 
-
 dlochz:	; LOCAL H
 	LDR		X0, [X26, #-56]	
 	STR		X0, [X16], #8
 	RET
-
 
 dlochsz:
 	LDR		X0,	[X16, #-8]!
@@ -2163,7 +2098,6 @@ ddoerz:
 	STP		X2,  X12, [X14], #16
 	STP		X0,  X1,  [X14], #16
 
-
 	; Check my arguments
 	CMP		X0, X1
 	B.lt	skip_do_loop
@@ -2185,7 +2119,6 @@ ddowndoerz:
 	LSR		X0, X0, #3
 	CMP		X0, #2
 	B.lt	do_loop_arguments
-
 
 	; Get my arguments
 	LDP 	X0, X1,  [X16, #-16]  
@@ -2258,7 +2191,6 @@ do_loop_arguments:
 	BL		sayit	
 	LDP		LR, X15, [SP], #16	; unwind word
 
-
 200:
 	LDP		LR, X12, [SP], #16
 	RET
@@ -2279,12 +2211,9 @@ do_loop_arguments:
 dplooperz:
 
 	loop_vars
-
 	LDR		X2, [X16, #-8]
 	SUB		X16, X16, #8	
-
 	ADD		X1, X1, X2
-
 	CMP		X0, X1
 	B.lt	loops_end
 
