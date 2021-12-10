@@ -8,9 +8,6 @@
 : t1 25 0 DO 34 FIB LOOP ; // run many
 
 
-
-
-
 TIMEIT t1
 
 // 27th November 2021
