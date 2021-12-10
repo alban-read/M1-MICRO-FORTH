@@ -1290,9 +1290,10 @@ short_words:
 
 
 	; check if we need to enter the compiler loop.
+	CBZ		X15, fw1  	; compiler is not working on a word.
 	LDRB	W0, [X22]
 	CMP		W0, #']'	; do we enter the compiler ?
-	B.eq	enter_compiler
+	B.eq	reenter_compiler
 
 fw1:
 	BL		start_point	
@@ -1304,7 +1305,7 @@ fw1:
 	LDR		X21, [X28, #48]		; name field
 	CMP		X21, #0				; end of list?
 	B.eq	finish_list	
-	CMP		X21, #-1		; undefined entry in list?
+	CMP		X21, #-1			; undefined entry in list?
 	b.eq	251b
 
 	CMP		X21, X22		; is this our word?
@@ -1388,14 +1389,9 @@ litint:
 
 	
 exnum:	; exit number
-
-
-decimal_number:
-
-	; OR the word may be a floating point decimal number
-	; TODO check for floating point and convert it.
-	; from here we are no longer interpreting the line.
-	; we are compiling input from ':' until we see a ';'
+	RET
+	
+; ------- interpreter 
 
 compiler:
 
@@ -1492,8 +1488,6 @@ compile_words:
 
 compile_next_word:
 
-
-	
 	; is the dictonary word full
 
 	ADRP	X1, last_word@PAGE		
@@ -1503,6 +1497,7 @@ compile_next_word:
 	CMP		X0, #124
 	B.gt	exit_compiler_word_full
 
+reenter_compiler:
 	; get next word from line
 	BL 		advancespaces
 	BL 		collectword
@@ -1512,8 +1507,13 @@ compile_next_word:
 
 	BL		start_point
 
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	LDRB	W0, [X22]
 	CMP		W0, #';'	; do we exit the compiler now ?
 	B.eq	exit_compiler
+	CMP		W0, #'['	; do we exit the compiler now ?
+	B.eq	advance_word ; back to interpret
 
 
 find_word_token:
@@ -1882,10 +1882,8 @@ exit_compiler: ; NORMAL success exit
 	SUB		X0, X15, X0
 	BL		X0print
 	BL		saycompfin
-
+	MOV 	X15, #0
 	B		advance_word ; back to main loop
-
-
 
 not_compiling:
 
@@ -2832,7 +2830,8 @@ clean_last_word:
 	ADRP	X8, here@PAGE	
 	ADD		X8, X8, here@PAGEOFF
 	STR		X0, [X8]
-
+	
+	MOV 	X15, #0 ; we failed. compilation stopped.
 
 	RET
 
@@ -3908,7 +3907,7 @@ dWarrayvalz: ; X0=data, X1=word
 	LSL		X2, X2, #2 ;  word 4 bytes
 
 	ADD		X1, X0, X2 ; data + index 
-	LDR		X0, [X1]
+	LDR		W0, [X1]
 	STR		X0, [X16, #-8]	; value of data
 	RET
 
@@ -3963,7 +3962,7 @@ dHWarrayvalz: ; X0=data, X1=word
 	LSL		X2, X2, #1 ;  word 4 bytes
 
 	ADD		X1, X0, X2 ; data + index 
-	LDR		X0, [X1]
+	LDRH	W0, [X1]
 	STR		X0, [X16, #-8]	; value of data
 	RET
 
@@ -7251,7 +7250,7 @@ ddelz:	; del (127)
 ddelc:	; del (127)
 	RET
 
-; ALLOT extra memory to a variable
+; ALLOT extra BYTES of memory to a variable
 ; 0 VARIABLE test  200 ALLOT> test
 ; 
 allotoz: 
@@ -7263,8 +7262,7 @@ allotoz:
 	ADRP	X12, allot_ptr@PAGE	
 	ADD		X12, X12, allot_ptr@PAGEOFF
 	LDR		X1, [X12] ; pointer to memory 
-	LSL		X0, X0, #3	; x 8
-	ADD		X0, X1, X0 
+	ADD		X0, X1, #16 
 	ADD		X0, X0, #7
 	AND		X0, X0, #-8
 	STR		X0, [X12]	; bump pointer
@@ -7402,7 +7400,6 @@ tok:	.ascii  "\nOk\n"
 .align	8
 tbye:	.ascii "\nBye..\n"
 	.zero 16
-
 
 .align	8
 texit:	.ascii "Exit no more input.."
@@ -8249,6 +8246,8 @@ rdict:
 
 sdict:
 		makeemptywords 50
+
+		makeword "TOKENS", dHWarrayvalz, 0,  token_space, 0, 128*1024
 		makeword "TO", dtoz, dtoc, 0
 		makeword "TIMEIT", dtimeitz, 0, 0
 		makeword "TRACE", dtracable, 0, 0
