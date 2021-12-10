@@ -1330,7 +1330,6 @@ fw1:
 finish_list: ; we did not find a defined word.
 
 
-20:
 	; look for a number made of decimal digits.
 	; If found immediately push it onto our Data Stack
 
@@ -1338,51 +1337,57 @@ finish_list: ; we did not find a defined word.
 	ADD		X22, X22, zword@PAGEOFF
 	
 	; tolerate a negative number
+
+	MOV 	X3, #0 ; not float
+
 	LDRB	W0, [X22]
 	CMP		W0, #'-'
-	B.ne	22f 
+	B.ne	positv
 	ADD		X22, X22, #1
 	LDRB	W0, [X22]
 
-	MOV 	X0, #0 ; not float
+positv:
 
-22:
 	CMP		W0, #'9'
-	B.gt	30f
-	CMP	W0, #'0'
-	B.lt	30f
+	B.gt	exnum
+	CMP		W0, #'0'
+	B.lt	exnum
 
-23:	ADD		X22, X22, #1
+ntxtdigit:
+ 	ADD		X22, X22, #1
 	LDRB	W0, [X22]
 	CMP		W0, #0 ; end
-	B.eq	25f
+	B.eq	digend
 	CMP		W0, #'.'
-	B.eq	24f
+	B.eq	fltsig
 
 	CMP		W0, #'9'
-	B.gt	30f
+	B.gt	exnum
 	CMP		W0, #'0'
-	B.lt	30f
+	B.lt	exnum
 	
-	B		23b
+	B		ntxtdigit
 
-24: ; signal we have a float
-	MOV 	X1, #-1
-	B 		23b
+fltsig: ; signal we have a float
+	MOV 	X3, #-1
+	B 		ntxtdigit
 
-25: 
-	CBZ 	X1, 29f
-	; float
+digend:
+
+	CBZ 	X3, litint
+
+litfloat:
+ 
 	BL		word2fnumber
 	B		advance_word
 
-29:
-	; int
+litint:
+ 
 	BL		word2number
 	B		advance_word
 
 	
-30:	; exit number
+exnum:	; exit number
 
 
 decimal_number:
@@ -7331,16 +7336,17 @@ allotlastz:
 
 	LDR		X0, [X16, #-8]		; CELLS
 	SUB		X16, X16, #8
+
 	ADRP	X12, allot_ptr@PAGE	
 	ADD		X12, X12, allot_ptr@PAGEOFF
-	LDR		X1, [X12] ; pointer to memory 
-	LSL		X0, X0, #3	; x 8
-	ADD		X0, X1, X0 
+	LDR		X1, [X12] ; pointer to memory
+
 	ADD		X0, X0, #7
 	AND		X0, X0, #-8
-	ADD		X0, X0, #8
+	ADD		X0, X1, #16
 	STR		X0, [X12]	; bump pointer
 	MOV		X3, X0		; save to update variable pointer
+
 	ADRP	X12, allot_limit@PAGE	
 	ADD		X12, X12, allot_limit@PAGEOFF
 	CMP		X0, X12
@@ -7758,9 +7764,9 @@ lsp:
 allot_ptr:		.quad	allot_space
 				.zero 	32
 allot_space:	;  allotable bytes
-				.zero	128*1024
+				.zero	256*1024
 allot_limit:	; allotments went too far
-				.zero 	32		
+				.zero 	8*1024		
 
 
 ; this is the data stack
