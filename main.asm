@@ -5606,6 +5606,97 @@ fsqrt:
 	RET
 
 
+fgtz:
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	SUB     X16, X16, #16
+	MOV 	X0, #0
+	FCMP 	D0, D1
+	CINV    X0, X0, gt 
+	STR		X0, [X16], #8
+	RET
+
+
+fgtez:
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	SUB     X16, X16, #16
+	MOV 	X0, #0
+	FCMP 	D0, D1
+	CINV    X0, X0, ge 
+	STR		X0, [X16], #8
+	RET
+
+
+
+fltz:
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	SUB     X16, X16, #16
+	MOV 	X0, #0
+	FCMP 	D0, D1
+	CINV    X0, X0, lt 
+	STR		X0, [X16], #8
+	RET
+
+
+fltezz:
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	SUB     X16, X16, #16
+	MOV 	X0, #0
+	FCMP 	D0, D1
+	CINV    X0, X0, pl
+	MVN     X0, X0
+	STR		X0, [X16], #8
+	RET
+
+
+fgtzz:
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	SUB     X16, X16, #16
+	MOV 	X0, #0
+	FCMP 	D0, D1
+	CINV    X0, X0, pl
+	STR		X0, [X16], #8
+	RET
+
+
+fltez:
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	SUB     X16, X16, #16
+	MOV 	X0, #0
+	FCMP 	D0, D1
+	CINV    X0, X0, le 
+	STR		X0, [X16], #8
+	RET
+
+
+feqz:
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	SUB     X16, X16, #16
+	MOV 	X0, #0
+	FCMP 	D0, D1
+	CINV    X0, X0, eq
+	STR		X0, [X16], #8
+	RET
+
+
+fneqz:
+	LDR		D0, [X16, #-8]
+	LDR		D1, [X16, #-16]
+	SUB     X16, X16, #16
+	MOV 	X0, #0
+	FCMP 	D0, D1
+	CINV    X0, X0, ne
+	STR		X0, [X16], #8
+	RET
+
+
+
 dplusc: ; 
 	RET
 
@@ -8424,7 +8515,14 @@ edict:
 		makeemptywords 48
 		
 		makeqvword 102
-		 
+		makeword "f=", fneqz, 0,  0 
+		makeword "f=", feqz, 0,  0 
+		makeword "f>=0", fgtzz, 0,  0 
+		makeword "f<0", fltezz, 0,  0 
+		makeword "f<=", fltez, 0,  0 
+		makeword "f>=", fgtez, 0,  0 	 
+		makeword "f<", fltz, 0,  0 
+		makeword "f>", fgtz, 0,  0
 		makeword "f.", fdotz, 0,  0
 		makeword "f+", fplusz, 0,  0
 		makeword "f-", fminusz, 0,  0
@@ -8539,6 +8637,7 @@ odict:
 		makeemptywords 62
  
 		makeword "PAGE", dpagez, 0, 0
+
 		makevarword "PAD", zpad
 
 		makeword "PRINT", print, 0, 0
