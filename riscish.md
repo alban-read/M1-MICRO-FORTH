@@ -14,6 +14,12 @@ Untyped - Storage has no type, words are aware of the size of storage cells but 
 
 The syntax follows FORTH closely, including reverse polish notation, composition of functions by word concatenation, very similar control flow etc.
 
+The inner (token) interpreter is not running all of the time in this implementation.
+
+It only runs when a high level word is executing, otherwise the interpreter and compiler are just running machine code, the interpeter and compiler are not written in FORTH.
+
+Each high level word invokes an interpreter to run itself, multiple different versions of the interpreter exist, and they can be selected after the word has been compiled.
+
 
 ### Values
 
@@ -73,7 +79,7 @@ LOCALS is a VALUES of length 8 (0..7) that provide some local memory storage for
 
 LOCALS backing memory is implemented as a stack, allowing about 250 levels of depth.
 
-On entry to a word LOCALS are erased, all values read as zero.
+On entry to a word LOCALS are erased, all values will be read as zero.
 
 LOCALS cease to exist and are reused when a word ends.
 
@@ -81,8 +87,55 @@ WLOCALS use the same memory as LOCALS providing word sized access (32bits) to 16
 
 If it is more convenient to have 16 smaller values use WLOCALS instead of LOCALS
 
-These are both just views over the same memory in the local stack.
+These are both just views over the same 64 bytes of memory in the local memory stack.
 
+To recap locals are valid between : and ; 
+
+e.g.
+
+: t1 127 FILLVALUES WLOCALS  15 WLOCALS 14 WLOCALS + . ;
+
+Should return 254, every high level word, normally gets its own fresh set of LOCALS.
+
+They are not normally shareable.
+
+After t1 runs type 14 WLOCALS . and it will be zero, the command line level has its own set of LOCALS as well.
+
+
+#### advanced LOCALS use cases
+
+You may have a recursive word you do not want to eat into the LOCALS stack.
+
+You can declare the word is FLAT like this.
+
+FLAT word.
+
+: FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ; FLAT FIB
+
+This makes FIB a very, very, tiny ammount faster, LOCALS are not slow.
+
+
+##### LOCAL Accessor words.
+
+A FLAT word lives with the locals of its parent word, the word that called it.
+
+Using the standard local access can be cumbersome, the name LOCALS does not mean much.
+
+FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give these local variables some sensible names.
+
+// allocate a local to speed.
+
+: set-speed 0 TO LOCALS ; FLAT set-speed 
+
+: speed 0 LOCALS ; FLAT speed
+
+
+: test 10 set-speed  speed . ;
+
+
+set-speed and speed are working on the LOCALS shared with test.
+
+Obviously accessor words could do a lot more, like checking the speed is valid etc.
 
 
 

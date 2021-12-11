@@ -5130,6 +5130,70 @@ dlimited:
 	RET
 
 
+
+
+; run with parents locals
+dflat:
+
+	save_registers
+
+	BL		advancespaces
+	BL		collectword
+
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f			; not found 
+	CMP		X21, #-1		; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	; is it high level
+	LDR		X0, [X28, #8]	; words code
+	ADRP	X8, runintz@PAGE	
+	ADD		X8, X8, runintz@PAGEOFF
+	CMP		X0, X8
+	B.eq	140f
+
+	ADRP	X8, fastrunintz@PAGE	
+	ADD		X8, X8, fastrunintz@PAGEOFF
+	STR		X8, [X28, #8]	; words code is now fast
+	CMP		X0, X8
+	B.eq	140f
+	
+	B 		200f
+140:
+
+	ADRP	X8, flatrunintz@PAGE	
+	ADD		X8, X8, flatrunintz@PAGEOFF
+	STR		X8, [X28, #8]	
+	B		200f
+
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	; error out 
+	MOV	X0, #-1
+
+200:
+	restore_registers
+	RET
+
+
+
+
 ; fast not traceable, otherwise the same as runintz below.
 
 fastrunintcz: ; interpret the list of tokens at word + 
@@ -5178,6 +5242,41 @@ fastrunintz:; interpret the list of tokens at X0
 90:
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #64
+	RET
+
+
+
+; flat - no local stacking
+
+
+flatrunintz:; interpret the list of tokens at X0
+
+	; SAVE IP 
+	STP		LR,  X15, [SP, #-16]!
+	SUB		X15, X0, #2
+	MOV		X29, #64
+
+
+	; unrolling the loop here x16 makes this a lot faster, 
+10:	; next token
+	
+	.rept	16
+
+		LDRH	W1, [X15, #2]!
+		CBZ		X1, 90f
+	 
+		MADD	X1, X29, X1, X27
+		LDP		X0, X2, [X1]
+		CBZ		X2, 10b
+	
+		BLR		X2		; with X0 as data and X1 as address	
+
+	.endr
+
+	b		10b
+
+90:
+	LDP		LR, X15, [SP], #16	
 	RET
 
 
@@ -8338,6 +8437,7 @@ edict:
 		makeword "f>s", ftosz, 0,  0 
 		makeword "FFIB", dtstfib, 0,  0
 		makeword "FASTER", duntracable, 0, 0
+		makeword "FLAT", dflat, 0, 0
 		makeword "FALSE", dfalsez, 0,  0
 		makeword "FORGET", clean_last_word , 0, 0 
 		makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
@@ -8345,6 +8445,8 @@ edict:
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
+
+	
 
 fdict:	
 		makeemptywords 79
