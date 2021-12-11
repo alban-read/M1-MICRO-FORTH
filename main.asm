@@ -1979,6 +1979,19 @@ dlocalsvalz: ; X0=data, X1=word
 	RET
 
 
+dlocalsWvalz: ; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #2 ; word 4
+	SUB		X1, X26, X2 ; LOCALS + index 
+	SUB 	X1, X1, #4
+	LDR		W0, [X1]		; word
+	STR		X0, [X16, #-8]	; value of data
+	RET
+
+
 dlocaz:	; LOCAL A
 	LDR		X0, [X26, #-8]	
 	STR		X0, [X16], #8
@@ -3785,6 +3798,13 @@ dfillarrayz: ; RUNTIME at command line
  	CMP		X2,	X8
 	B.eq	dlocalsvalz_fill
 
+
+	ADRP	X8, dlocalsWvalz@PAGE		
+	ADD		X8, X8, dlocalsWvalz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	dlocalsWvalz_fill
+
+
 	ADRP	X0, tcomer34@PAGE		
 	ADD		X0, X0, tcomer34@PAGEOFF
 	B 		sayit 
@@ -3840,6 +3860,12 @@ dfillarrayc: ; COMPILE array fill operations
 	CMP		X2, X8
 	B.eq	compile_localsvalz_fill
 
+	ADRP	X8, dlocalsWvalz@PAGE		
+	ADD		X8, X8, dlocalsWvalz@PAGEOFF
+	CMP		X2, X8
+	B.eq	compile_localsWvalz_fill
+
+
 	ADRP	X8, darrayvalz@PAGE		
 	ADD		X8, X8, darrayvalz@PAGEOFF
  	CMP		X2,	X8
@@ -3850,15 +3876,34 @@ dfillarrayc: ; COMPILE array fill operations
 	CMP		X2, X8
 	B.eq	compile_dWarrayaddz_fill
 
+
+	ADRP	X8, dWarrayvalz@PAGE		
+	ADD		X8, X8, dWarrayvalz@PAGEOFF
+	CMP		X2, X8
+	B.eq	compile_dWarrayaddz_fill
+
 	ADRP	X8, dHWarrayaddz@PAGE		
 	ADD		X8, X8, dHWarrayaddz@PAGEOFF
 	CMP		X2,	X8
 	B.eq	compile_dHWarrayaddz_fill
 	
+	ADRP	X8, dHWarrayvalz@PAGE		
+	ADD		X8, X8, dHWarrayvalz@PAGEOFF
+	CMP		X2,	X8
+	B.eq	compile_dHWarrayaddz_fill
+
+
 	ADRP	X8, dCarrayaddz@PAGE		
 	ADD		X8, X8, dCarrayaddz@PAGEOFF
  	CMP		X2,	X8
 	B.eq	compile_dCarrayaddz_fill
+
+
+	ADRP	X8, dCarrayvalz@PAGE		
+	ADD		X8, X8, dCarrayvalz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	compile_dCarrayaddz_fill
+
 
 	ADRP	X0, tcomer34@PAGE		
 	ADD		X0, X0, tcomer34@PAGEOFF
@@ -3942,9 +3987,7 @@ darrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
 	RET
 
 
-; LOCALS
-
-
+; LOCALS are a special case, they are referenced by a stack on X26
 
 dALFILLAz:	; fetch stacked base and index
 
@@ -3963,6 +4006,26 @@ dlocalsvalz_fill:
 	RET
 
 
+
+dWALFILLAz:	; fetch stacked base and index
+
+	LDP		X0,	X3, [X16, #-16]	 
+	SUB  	X16, X16, #16
+
+
+dlocalsWvalz_fill:  ; (32 bit)
+	LDR		X1,	[X16, #-8]	; fill with
+	SUB  	X16, X16, #8
+	SUB 	X26, X26, #64		; it is always this size
+	STP		W1, W1, [X26],#8  ; fill
+	STP		W1, W1, [X26],#8
+	STP		W1, W1, [X26],#8
+	STP		W1, W1, [X26],#8
+	STP		W1, W1, [X26],#8  ; fill
+	STP		W1, W1, [X26],#8
+	STP		W1, W1, [X26],#8
+	STP		W1, W1, [X26],#8
+	RET
 
 
 ; WORD 32 bit array
@@ -4124,6 +4187,19 @@ dCarrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
 ; stack base and index, compile fill instruction
 
 
+; special for locals
+compile_localsWvalz_fill: ; 
+	STP		LR,  X16, [SP, #-16]!
+	BL		longlitit	; X0 = data
+	ADD		X15, X15, #2
+	MOV		X0,	X3
+	BL		longlitit	; X3 = index
+	ADD		X15, X15, #2
+	MOV		X0, #41 ; (WALFILLARRAY)
+	STR		X0, [X15]	
+	LDP		LR, X16, [SP], #16
+	MOV		X0, #0
+	RET
 
 compile_localsvalz_fill: ; 
 	STP		LR,  X16, [SP, #-16]!
@@ -4259,7 +4335,7 @@ dWcreatvalues:
  	find_free_word
 	ADRP	X8, dWarrayvalz@PAGE	; high level word.	
 	ADD		X8, X8, dWarrayvalz@PAGEOFF
-	MOV		X3, #3
+	MOV		X3, #2
 	B 		arrayvaluecreator
 
 dWcreatarray:
@@ -6172,6 +6248,14 @@ toupdateit:
 	B.eq	130f 
 
 
+	ADRP	X1, dlocalsWvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsWvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	170f 
+
+
+
+
 	ADRP	X1, dHWarrayaddz@PAGE	; high level word.
 	ADD		X1, X1, dHWarrayaddz@PAGEOFF
 	CMP 	X2, X1
@@ -6290,8 +6374,23 @@ toupdateit:
 	RET
 
 
+170: ; update LOCALS (32bit W) (offset from X26)
 
-180: ; update LOCALS (offset from X26)
+ 	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #2 ;  
+	SUB		X1, X26, X2 ; LOCALS + index 
+	SUB 	X1, X1, #4
+	LDR		X0, [X16, #-16] 
+	STR		W0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+180: ; update LOCALS (64bit) (offset from X26)
 
  	LDR		X2, [X16, #-8] 
 	LDR		X0, [X3] ; var or val address
@@ -6433,6 +6532,12 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 
 	ADRP	X1, dWarrayaddz@PAGE	; high level word.
 	ADD		X1, X1, dWarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+
+	ADRP	X1, dlocalsWvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsWvalz@PAGEOFF
 	CMP 	X2, X1
 	B.eq	130f 
 
@@ -8124,6 +8229,8 @@ dend:
 		makeword "(HW2FILLARRAY)", 		0, 	0,  0			; 38
 		makeword "(C2FILLARRAY)", 		0, 	0,  0			; 39
 		makeword "(ALFILLARRAY)", 		dALFILLAz, 	0,  0	; 40
+		makeword "(WALFILLARRAY)", 		dWALFILLAz, 0,  0	; 41
+
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
@@ -8280,7 +8387,7 @@ kdict:
 		makeqvword 108
 
 	
-		makeword "LOCALS", dlocalsvalz, 0,  token_space, 0, 7
+		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
 
 
 		makeword "LEAVE", 0 , dleavec, 0 
@@ -8430,6 +8537,7 @@ vdict:
 		makeemptywords 48
 		makeword "WARRAY", dWcreatarray , 0, 0 
 		makeword "WVALUES", dWcreatvalues , 0, 0 
+		makeword "WLOCALS", dlocalsWvalz, 0,  0, 0, 15
 		makeword "WORDS", dotwords , 0, 0 
 		makeword "WHILE", 0 , dwhilec, 0 
 		makeword "W!", dwstorz , 0, 0 
