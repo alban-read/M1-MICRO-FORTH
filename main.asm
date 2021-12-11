@@ -1389,9 +1389,9 @@ litint:
 
 	
 exnum:	; exit number
-	RET
+ 
 	
-; ------- interpreter 
+; ------- interpreter ends
 
 compiler:
 
@@ -1952,7 +1952,7 @@ fetchrpz: ; fetch stack pointer to stack
 	RET
 
 
-; locals
+; locals LOCALS
 ; local stack indexed by X26
 ; 0..  7 A
 ; 8.. 15 B
@@ -1964,54 +1964,69 @@ fetchrpz: ; fetch stack pointer to stack
 ;
 ;
 
+; specialized to read LOCALS as array
+
+dlocalsvalz: ; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #3 ; full word 8 bytes
+	SUB		X1, X26, X2 ; LOCALS + index 
+	SUB 	X1, X1, #8
+	LDR		X0, [X1]
+	STR		X0, [X16, #-8]	; value of data
+	RET
+
+
 dlocaz:	; LOCAL A
-	LDR		X0, [X26, #-64]	
+	LDR		X0, [X26, #-8]	
 	STR		X0, [X16], #8
 	RET
 
 dlocasz: 
 	LDR		X0,	[X16, #-8]!
-	STR		X0, [X26, #-64]
+	STR		X0, [X26, #-8]
 	RET
 
 dlocbz:	; LOCAL B
-	LDR		X0, [X26, #-8]	
+	LDR		X0, [X26, #-16]	
 	STR		X0, [X16], #8
 	RET
 
 dlocbsz:
 	LDR		X0,	[X16, #-8]!
-	STR		X0, [X26, #-8]
+	STR		X0, [X26, #-16]
 	RET
 
 dloccz:	; LOCAL C
-	LDR		X0, [X26, #-16]	
+	LDR		X0, [X26, #-24]	
 	STR		X0, [X16], #8
 	RET
 
 dloccsz:
 	LDR		X0,	[X16, #-8]!
-	STR		X0, [X26, #-16]
+	STR		X0, [X26, #-24]
 	RET
 
 dlocdz:	; LOCAL D
-	LDR		X0, [X26, #-24]	
+	LDR		X0, [X26, #-32]	
 	STR		X0, [X16], #8
 	RET
 
 dlocdsz:
 	LDR		X0,	[X16, #-8]!
-	STR		X0, [X26, #-24]
+	STR		X0, [X26, #-32]
 	RET
 
 dlocez:	; LOCAL E
-	LDR		X0, [X26, #-32]	
+	LDR		X0, [X26, #-40]	
 	STR		X0, [X16], #8
 	RET
 
 dlocesz:
 	LDR		X0,	[X16, #-8]!
-	STR		X0, [X26, #-32]
+	STR		X0, [X26, #-40]
 	RET
 
 dlocfz:	; LOCAL F
@@ -2021,27 +2036,27 @@ dlocfz:	; LOCAL F
 
 dlocfsz:
 	LDR		X0,	[X16, #-8]!
-	STR		X0, [X26, #-40]
+	STR		X0, [X26, #-48]
 	RET
 
 dlocgz:	; LOCAL G
-	LDR		X0, [X26, #-48]	
+	LDR		X0, [X26, #-56]	
 	STR		X0, [X16], #8
 	RET
 
 dlocgsz:
 	LDR		X0,	[X16, #-8]!
-	STR		X0, [X26, #-48]
+	STR		X0, [X26, #-56]
 	RET
 
 dlochz:	; LOCAL H
-	LDR		X0, [X26, #-56]	
+	LDR		X0, [X26, #-64]	
 	STR		X0, [X16], #8
 	RET
 
 dlochsz:
 	LDR		X0,	[X16, #-8]!
-	STR		X0, [X26, #-56]
+	STR		X0, [X26, #-64]
 	RET
 
 
@@ -3705,7 +3720,7 @@ dfillarrayz: ; RUNTIME at command line
 	LDR		X21, [X28, #48] ; name field
 
 	CMP		X21, #0		    ; end of list?
-	B.eq	190f			; not found 
+	B.eq	195f			; not found 
 	CMP		X21, #-1		; undefined entry in list?
 	b.eq	170f
 
@@ -3765,16 +3780,19 @@ dfillarrayz: ; RUNTIME at command line
  	CMP		X2,	X8
 	B.eq	dCarrayaddz_fill
 
+	ADRP	X8, dlocalsvalz@PAGE		
+	ADD		X8, X8, dlocalsvalz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	dlocalsvalz_fill
+
+	ADRP	X0, tcomer34@PAGE		
+	ADD		X0, X0, tcomer34@PAGEOFF
+	B 		sayit 
+
 170:	; next word in dictionary
 	SUB		X28, X28, #64
 	B		120b
 
-190:	; error out 
-	MOV		X0, #0
-	restore_registers
-	B	stackit
-
-	RET
 
 
 dfillarrayc: ; COMPILE array fill operations
@@ -3794,7 +3812,7 @@ dfillarrayc: ; COMPILE array fill operations
 	LDR		X21, [X28, #48] ; name field
 
 	CMP		X21, #0		; end of list?
-	B.eq	190f			; not found 
+	B.eq	195f			; not found 
 	CMP		X21, #-1		; undefined entry in list?
 	b.eq	170f
 
@@ -3816,27 +3834,55 @@ dfillarrayc: ; COMPILE array fill operations
 	ADD		X8, X8, darrayaddz@PAGEOFF
 	CMP		X2, X8
 	B.eq	compile_darrayaddz_fill
+
+	ADRP	X8, dlocalsvalz@PAGE		
+	ADD		X8, X8, dlocalsvalz@PAGEOFF
+	CMP		X2, X8
+	B.eq	compile_localsvalz_fill
+
+	ADRP	X8, darrayvalz@PAGE		
+	ADD		X8, X8, darrayvalz@PAGEOFF
+ 	CMP		X2,	X8
+	B.eq	compile_darrayaddz_fill
+
 	ADRP	X8, dWarrayaddz@PAGE		
 	ADD		X8, X8, dWarrayaddz@PAGEOFF
 	CMP		X2, X8
 	B.eq	compile_dWarrayaddz_fill
+
 	ADRP	X8, dHWarrayaddz@PAGE		
 	ADD		X8, X8, dHWarrayaddz@PAGEOFF
 	CMP		X2,	X8
 	B.eq	compile_dHWarrayaddz_fill
+	
 	ADRP	X8, dCarrayaddz@PAGE		
 	ADD		X8, X8, dCarrayaddz@PAGEOFF
  	CMP		X2,	X8
 	B.eq	compile_dCarrayaddz_fill
 
+	ADRP	X0, tcomer34@PAGE		
+	ADD		X0, X0, tcomer34@PAGEOFF
+	B		sayit_err 
+ 
+
 170:	; next word in dictionary
 	SUB		X28, X28, #64
 	B		120b
 
-190:	; error out 
-	MOV		X0, #0
+
+195: 
+	ADRP	X0, tcomer35@PAGE		
+	ADD		X0, X0, tcomer35@PAGEOFF
+	BL 		sayit 
 	restore_registers
-	B	stackit
+	RET
+
+190:	; error out 
+	ADRP	X0, tcomer34@PAGE		
+	ADD		X0, X0, tcomer34@PAGEOFF
+	BL 		sayit 
+	restore_registers
+	MOV		X0, #-1
 
 	RET
 
@@ -3894,6 +3940,30 @@ darrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
 	CBNZ	X3, 10b 
 	MOV		X2, #0
 	RET
+
+
+; LOCALS
+
+
+
+dALFILLAz:	; fetch stacked base and index
+
+	LDP		X0,	X3, [X16, #-16]	 
+	SUB  	X16, X16, #16
+
+
+dlocalsvalz_fill:  
+	LDR		X1,	[X16, #-8]	; fill with
+	SUB  	X16, X16, #8
+	SUB 	X26, X26, #64		; it is always this size
+	STP		X1, X1, [X26],#16   ; fill
+	STP		X1, X1, [X26],#16
+	STP		X1, X1, [X26],#16
+	STP		X1, X1, [X26],#16
+	RET
+
+
+
 
 ; WORD 32 bit array
 
@@ -4053,6 +4123,22 @@ dCarrayaddz_fill: ; X1 base, X0 data, X2 runtime, X3 index
 ; based on array types.
 ; stack base and index, compile fill instruction
 
+
+
+compile_localsvalz_fill: ; 
+	STP		LR,  X16, [SP, #-16]!
+	BL		longlitit	; X0 = data
+	ADD		X15, X15, #2
+	MOV		X0,	X3
+	BL		longlitit	; X3 = index
+	ADD		X15, X15, #2
+	MOV		X0, #40 ; (ALFILLARRAY)
+	STR		X0, [X15]	
+	LDP		LR, X16, [SP], #16
+	MOV		X0, #0
+	RET
+
+
 compile_darrayaddz_fill:
 	STP		LR,  X16, [SP, #-16]!
 	BL		longlitit	; X0 = data
@@ -4065,6 +4151,8 @@ compile_darrayaddz_fill:
 	LDP		LR, X16, [SP], #16
 	MOV		X0, #0
 	RET
+
+
 
 compile_dWarrayaddz_fill:
 	STP		LR,  X16, [SP, #-16]!
@@ -6053,6 +6141,13 @@ toupdateit:
 	B.eq	160f 
 
 
+	ADRP	X1, dlocalsvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	180f 
+
+
+
 	ADRP	X1, dCarrayaddz@PAGE	; high level word.
 	ADD		X1, X1, dCarrayaddz@PAGEOFF
 	CMP 	X2, X1
@@ -6194,7 +6289,22 @@ toupdateit:
 	SUB		X16, X16, #16
 	RET
 
- 
+
+
+180: ; update LOCALS (offset from X26)
+
+ 	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #3 ; full word 8 bytes
+	SUB		X1, X26, X2 ; LOCALS + index 
+	SUB 	X1, X1, #8
+	LDR		X0, [X16, #-16] 
+	STR		X0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
 
 190:	; error out 
 
@@ -6343,6 +6453,14 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 	ADD		X1, X1, darrayvalz@PAGEOFF
 	CMP 	X2, X1
 	B.eq	150f 
+
+	; LOCALS
+	ADRP	X1, dlocalsvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+
 
 	; not a word we understand 
 	B 		190f
@@ -7431,7 +7549,7 @@ tdec:	.ascii "%3ld"
 	.zero 16
 
 .align	8
-fdec:	.ascii "%f"
+fdec:	.ascii "%.2f"
 	.zero 16
 
 
@@ -7604,6 +7722,14 @@ tcomer32: .ascii "\nError: ARRAY index invalid."
 tcomer33: .ascii "\nError: TO can not update."
 	.zero 16
 
+ .align	8
+tcomer34: .ascii "\nError in x FILLARRAY nnnnnn  - Needs a fillable Values, Array or LOCALS word."
+	.zero 16
+
+  .align	8
+tcomer35: .ascii "\nError in x FILLARRAY nnnnn  - the nnnnn word not found."
+	.zero 16
+
  
 
 
@@ -7755,6 +7881,11 @@ token_space_top:
 lsp:	 
 				.zero	16*1024
 
+
+
+; The ALLOTMENT
+
+
 .align 	8
 
 
@@ -7764,6 +7895,8 @@ allot_space:	;  allotable bytes
 				.zero	256*1024
 allot_limit:	; allotments went too far
 				.zero 	8*1024		
+
+
 
 
 ; this is the data stack
@@ -7990,7 +8123,7 @@ dend:
 		makeword "(W2FILLARRAY)", 		0, 	0,  0			; 37
 		makeword "(HW2FILLARRAY)", 		0, 	0,  0			; 38
 		makeword "(C2FILLARRAY)", 		0, 	0,  0			; 39
-
+		makeword "(ALFILLARRAY)", 		dALFILLAz, 	0,  0	; 40
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
@@ -8010,6 +8143,8 @@ hashdict:
 
 		makeword "ALLOT", allotlastz , 0, 0 
 
+		makeword "ALLOTMENT", dCarrayvalz, 0,  allot_space, 0, 256*1024
+
 		makeword "ARRAY", dcreatarray , 0, 0 
 
 		makeword "ADDR" , daddrz, daddrc, 0
@@ -8021,7 +8156,7 @@ hashdict:
 
 		makeword "AND" , dandz, 0, 0
 
-		makeqvword 97
+		makeword "a" , dlocaz, 0
 		makeword "A", dvaraddz, dvaraddc,  8 * 65 + ivars	
 	
 	
@@ -8100,6 +8235,7 @@ edict:
 		makeword "FORGET", clean_last_word , 0, 0 
 		makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
+		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
 
@@ -8144,6 +8280,8 @@ kdict:
 		makeqvword 108
 
 	
+		makeword "LOCALS", dlocalsvalz, 0,  token_space, 0, 7
+
 
 		makeword "LEAVE", 0 , dleavec, 0 
 
@@ -8260,6 +8398,8 @@ sdict:
 		makeword "TROFF", dtroffz, 0, 0
 		makeword "TYPEZ", ztypez, ztypec, 0	
 		makeword "THEN", 0 , dendifc, 0 
+		makeword "THERE", dvaraddz, dvaraddc,  allot_ptr	
+ 
 		makeqvword 116
 		makeword "T", dvaraddz, dvaraddc,  8 * 84 + ivars	
 
@@ -8399,23 +8539,23 @@ zdict:
 		makeword "+!", plustorz, 0 , 0
 
 		; cheap locals
-		makeword "_A@" , dlocaz, 0
-		makeword "_B@" , dlocbz, 0
-		makeword "_C@" , dloccz, 0
-		makeword "_D@" , dlocdz, 0
-		makeword "_E@" , dlocez, 0
-		makeword "_F@" , dlocfz, 0
-		makeword "_G@" , dlocgz, 0
-		makeword "_H@" , dlochz, 0
+		makeword "<a" , dlocaz, 0
+		makeword "<b" , dlocbz, 0
+		makeword "<c" , dloccz, 0
+		makeword "<d" , dlocdz, 0
+		makeword "<e" , dlocez, 0
+		makeword "<f" , dlocfz, 0
+		makeword "<g" , dlocgz, 0
+		makeword "<h" , dlochz, 0
 	 
-		makeword "_A!" , dlocasz, 0
-		makeword "_B!" , dlocbsz, 0
-		makeword "_C!" , dloccsz, 0
-		makeword "_D!" , dlocdsz, 0
-		makeword "_E!" , dlocesz, 0
-		makeword "_F!" , dlocfsz, 0
-		makeword "_G!" , dlocgsz, 0
-		makeword "_H!" , dlochsz, 0
+		makeword ">a" , dlocasz, 0
+		makeword ">b" , dlocbsz, 0
+		makeword ">c" , dloccsz, 0
+		makeword ">d" , dlocdsz, 0
+		makeword ">e" , dlocesz, 0
+		makeword ">f" , dlocfsz, 0
+		makeword ">g" , dlocgsz, 0
+		makeword ">h" , dlochsz, 0
 
 		
 
