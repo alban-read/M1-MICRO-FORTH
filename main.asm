@@ -5627,8 +5627,6 @@ fgtez:
 	STR		X0, [X16], #8
 	RET
 
-
-
 fltz:
 	LDR		D0, [X16, #-8]
 	LDR		D1, [X16, #-16]
@@ -8586,21 +8584,12 @@ kdict:
 	
 		makeqvword 108
 
-	
 		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
-
-
 		makeword "LEAVE", 0 , dleavec, 0 
-
 		makeword "LOOP", 0 , dloopc, 0 
-
 		makeword "LIMIT", dlimited , 0, 0 
-
 		makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
-	
 		makeword "LONG$", dvaraddz, dvaraddc,  long_strings
-
-		 
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
 	
 ldict:
