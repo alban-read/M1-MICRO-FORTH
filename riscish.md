@@ -4,7 +4,7 @@ This FORTH is implemented mainly (entirely so far) in AARCH64 assembly language 
 
 The compiler compiles words to tokens, which are then executed by a simpler interpreter.
 
-It is going to be quite specific to features of the ARM processor, such as wordsizes.
+It is going to be quite specific to features of the ARM V8 64 bit processor, such as wordsizes.
 
 FORTH primitives are implemented as assembly language functions, the compiler converts high level FORTH words into list of tokens for the token interpreter(s) to execute.
 
@@ -73,6 +73,9 @@ Some special values are built in.
 
 #### LOCALS and WLOCALS
 
+These are not FORTH standard words.
+
+
 LOCALS provide each word with eight (64bit) local variables.
 
 LOCALS is a VALUES of length 8 (0..7) that provide some local memory storage for each word invocation. 
@@ -112,16 +115,19 @@ FLAT word.
 
 : FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ; FLAT FIB
 
-This makes FIB a very, very, tiny ammount faster, LOCALS are not slow.
+This makes FIB a very, very, tiny fraction faster, LOCALS are not slow.
 
 
 ##### LOCAL Accessor words.
 
-A FLAT word lives with the locals of its parent word, the word that called it.
+A FLAT word sees the locals of its parent word, the word that called it, or the command line.
 
 Using the standard local access can be cumbersome, the name LOCALS does not mean much.
 
-FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give these local variables some sensible names.
+FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give local variables some sensible names.
+
+
+```FORTH
 
 // allocate a local to speed.
 
@@ -131,6 +137,9 @@ FLAT words can be used to create words for accessing the parents locals, in the 
 
 
 : test 10 set-speed  speed . ;
+
+```
+
 
 
 set-speed and speed are working on the LOCALS shared with test.

@@ -8355,14 +8355,14 @@ hashdict:
 
 		makeword "ADDR" , daddrz, daddrc, 0
 
-
 		makeword "AGAIN" , dagainz, dagainc, 0
 
 		makeword "ABS" , dabsz, dabsc, 0
 
 		makeword "AND" , dandz, 0, 0
 
-		makeword "a" , dlocaz, 0
+	 	makeqvword 97
+		
 		makeword "A", dvaraddz, dvaraddc,  8 * 65 + ivars	
 	
 	
