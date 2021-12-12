@@ -1,6 +1,8 @@
 ### This is a non standard VARIANT of FORTH
 
-This FORTH is implemented mainly (entirely so far) in AARCH64 assembly language (main.asm), and runs hosted under OSX on the Apple M1.
+This FORTH is implemented mainly in AARCH64 assembly language (main.asm), and runs hosted under OSX on the Apple M1.
+
+A few C library functions are used, the program is linked against the C library, it is possible to call C functions, which will be useful, in order to talk to the operating system.
 
 The compiler compiles words to tokens, which are then executed by a simpler interpreter.
 
@@ -47,7 +49,7 @@ An array of values is created with the VALUES plural word.
 
 128 VALUES myvalues 
 
-The VALUES are allotted from memory that is zero filled, so all values will read as 0.
+The VALUES are allotted from memory that is zero filled, so all values will initially read as 0.
 
 To change every value.
 
@@ -75,10 +77,9 @@ Some special values are built in.
 
 These are not FORTH standard words.
 
-
 LOCALS provide each word with eight (64bit) local variables.
 
-LOCALS is a VALUES of length 8 (0..7) that provide some local memory storage for each word invocation. 
+LOCALS is a special array of values of length 8 (0..7) that provide some small local memory storage for each word invocation. 
 
 LOCALS backing memory is implemented as a stack, allowing about 250 levels of depth.
 
@@ -105,11 +106,11 @@ They are not normally shareable.
 After t1 runs type 14 WLOCALS . and it will be zero, the command line level has its own set of LOCALS as well.
 
 
-#### advanced LOCALS use cases
+#### advanced LOCALS usage
 
-You may have a recursive word you do not want to eat into the LOCALS stack.
+You may have a recursive word that you do not want to eat into the LOCALS stack.
 
-You can declare the word is FLAT like this.
+You can declare that a word is FLAT like this.
 
 FLAT word.
 
@@ -120,11 +121,11 @@ This makes FIB a very, very, tiny fraction faster, LOCALS are not slow.
 
 ##### LOCAL Accessor words.
 
-A FLAT word sees the locals of its parent word, the word that called it, or the command line.
+A FLAT word sees the locals of its parent word, that is the word that called it, or the command line.
 
 Using the standard local access can be cumbersome, the name LOCALS does not mean much.
 
-FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give local variables some sensible names.
+FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give local variables some sensible names by creating accessor words.
 
 
 ```FORTH
@@ -140,12 +141,9 @@ FLAT words can be used to create words for accessing the parents locals, in the 
 
 ```
 
-
-
 set-speed and speed are working on the LOCALS shared with test.
 
-Obviously accessor words could do a lot more, like checking the speed is valid etc.
-
+Obviously accessor words could do a lot more, like checking that the given speed is valid etc.
 
 
 
@@ -166,7 +164,9 @@ Numbers containing a . are taken to be floating point numbers.
 
 The same parameter stack is used, which may hold 64 bit (double) floats or 64 bit (quad) integers.
 
-A small set of floating point operations are implemented.
+A small set of floating point operations are implemented, typical comparison and math operations that the CPU directly supports.
+
+
 
 
 
