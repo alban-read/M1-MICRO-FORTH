@@ -6999,61 +6999,12 @@ ddotsz:
 
 ;; STRINGS ASCII ZERO terminated
 
-; executes .' using an inline literal lookup.
+
+strequal:
+	RET
 
 
-; hash is used to look up literal strings.
-; I have to suspect that collisions might occur..
-; if there are enough string literals defined.
 
-.macro short_string_hash
-
-200:	; short string hash
-
-	MOV		X22, X8
-	MOV		W7, #53					
-	MOV		X8, #51721
-	MOVK	X8, #15258, LSL #16		
-	MOV		W1, 	#0					
-	MOV		W2, #1					
-
-205:
-	LDRB	W0, [X22], #1
-	CBZ		W0,  208f
-
-	ADD		W0, W0, #1
-	MUL		W3, W2, W0
-	ADD		W1, W1, W3
-	MUL		W2, W2, W7
-	SDIV	W4, W2, W8
-	ADD		W1, W1, W4
-	ADD		X22, X22, #1
-	B		205b
-
-	MOV		X2, X1
-
-
-208:	
-.endm
-
-
-.macro	short_hash_find_free
-	ADRP	X8, short_strings_hash@PAGE		
-	ADD		X13, X8, short_strings_hash@PAGEOFF
-	
-	MOV		X3, #0	; position in table		
-	
-210:
-	LDR		X0, 	[X13, X3, LSL#3]
-	CBZ		X0, 220f
-	CMP		X2, X0  ; is this our hash? 2 not 0
-	B.eq	800f	; already in table
-	ADD		X3, X3, #1
-	B		210b
-
-220: 	; found free slot at x3
-
-.endm
 
 .macro clear_string_buffer
 	; clear target space
@@ -7072,87 +7023,132 @@ ddotsz:
 
 dstrdotz:
 
-	do_trace
-
 	STP		LR,  XZR, [SP, #-16]!
+	STP		X12,  X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	MOV 	X2, X12 
+	.rept	64
+		STP		XZR, XZR, [X12], #16
+	.endr
+	MOV    X12, X2
 	
-	clear_string_buffer
 
-	MOV		W1, #0
+	; copy bytes from input to string_buffer
+	MOV 	X2, #255
+100:
+	LDRB	W0, [X23], #1
+	CMP		W0, #39 ; ' 
+	B.eq	120f 
+	STRB	W0, [X12], #1
+	SUB 	X2, X2, #1
+	CBZ  	X2, 120f
 
-10:	LDRB	W0, [X23], #1
-	CMP		W0, #39 ; '
-	b.eq	200f
-	CMP		W0, #10
-	B.eq	990f
-	CMP		W0, #12
-	B.eq	990f
-	CMP		W0, #13
-	B.eq	990f
-	CMP		W0, #0
-	B.eq	990f
+	CMP		W0, #10 ; ' 
+	B.eq	500f 
+	CMP		W0, #13 ; ' 
+	B.eq	500f 
+	CBZ  	W0, 500f
 
-30:	STRB	W0, [X22], #1
-	ADD		W1, W1, #1
+	B 		100b
+
+
+120:
+
+	MOV 	W0, #0
+	STRB	W0, [X12]
+
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
 	
-	B.ne	10b
+	ADRP	X13, short_strings@PAGE		
+	ADD		X13, X13, short_strings@PAGEOFF
 
-	CMP		W1, #255		; count
-	B.lt	200f
-	
-	MOV		W3, #0
+ 
+	; find a free slot or a match in the short strings
 
-	B		770f		; string too long
+140:
+
+	ADRP	X1, short_strings_end@PAGE		
+	ADD		X1, X1, short_strings_end@PAGEOFF
+	CMP		X13, X1  ; check for string space
+	B.gt 	490f
+
+	; is this next string slot free
+	LDRB	W0, [X13]
+	CBZ 	W0, 180f 
+
+	; no, is this string a duplicate ?
+	MOV		X5,  X13 ; save pos
+
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
 
 
+	; the strings in the buffer and the slot are equal
+	; avoid adding any duplicates
+150:
+	MOV		X13,  X5 
+	B 	450f
 
-	short_string_hash
-	short_hash_find_free
 
-	STR		X2, [X13, X3, LSL#3]		; store hash
+160: ; strings not equal so we must check next slot to find space
+	MOV		X13,  X5 
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	ADD		X13, X13, #256	
+	B 		140b
 
+; found free slot so we fill with our string.
+180:
+	MOV 	X5, X13
 
-	MOV		X0, X3
-	LSL		X0, X0, #6
-
-	ADRP	X8, string_buffer@PAGE		
-	ADD		X8, X8, string_buffer@PAGEOFF
-	MOV		X22, X8
-
-	ADRP	X8, short_strings@PAGE		
-	ADD		X13, X8, short_strings@PAGEOFF
-	ADD		X13, X13, X0 ; string base + n * 64
-	MOV		X2,  X13
+185:
 
 	; copy from string buffer to string
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
 	.rept 16
-		LDP		X0, X1, [X22], #16
+		LDP		X0, X1, [X12], #16
 		STP		X0, X1, [X13], #16
 	.endr
 
-	MOV		X0, X2
+
+450:	
+
+	MOV 	X0, X5
 	BL		sayit
 
-
-770:	; err string too long.
-
-	MOV		X0, #-1	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
 	LDP		LR, X15, [SP], #16	
-	;; TODO
-	
-	RET
-
-
-780:	; hash table full
-	MOV		X0, #-1	
-	LDP		LR, X15, [SP], #16	
-	;; TODO
 
 	RET
 
+490:
+	ADRP	X0, tcomer36@PAGE		
+	ADD		X0, X0, tcomer36@PAGEOFF
+	BL 		sayit_err	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, X15, [SP], #16	
+	MOV 	X0, #-1
+	RET
 
-800:	; normal exit
-	
+500:	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
 	LDP		LR, X15, [SP], #16	
 	
 	RET
@@ -7161,128 +7157,132 @@ dstrdotz:
 
 dstrstksz: ; runtime S" .. " stash and return address
 
-
-	do_trace
-
 	STP		LR,  XZR, [SP, #-16]!
+	STP		X12,  X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	MOV 	X2, X12 
+	.rept	64
+		STP		XZR, XZR, [X12], #16
+	.endr
+	MOV    X12, X2
 	
-	clear_string_buffer
 
-	MOV		W1, #0
+	; copy bytes from input to string_buffer
+	MOV 	X2, #255
+100:
+	LDRB	W0, [X23], #1
+	CMP		W0, #39 ; ' 
+	B.eq	120f 
+	STRB	W0, [X12], #1
+	SUB 	X2, X2, #1
+	CBZ  	X2, 120f
 
-10:	LDRB	W0, [X23], #1
-	CMP		W0, #39 ; '
-	b.eq	200f
-	STRB	W0, [X22], #1
-	ADD		W1, W1, #1
-	B.ne	10b
+	CMP		W0, #10 ; ' 
+	B.eq	500f 
+	CMP		W0, #13 ; ' 
+	B.eq	500f 
+	CBZ  	W0, 500f
 
+	B 		100b
 
-200:
+120:
 
-	; short string hash
+	MOV 	W0, #0
+	STRB	W0, [X12]
 
-	MOV		X22, X8
-	MOV		W7, #53					
-	MOV		X8, #51721
-	MOVK	X8, #15258, LSL #16		
-	MOV		W1, #0					
-	MOV		W2, #1					
-
-205:
-	LDRB	W0, [X22], #1
-	CBZ		W0,  208f
-
-	ADD		W0, W0, #1
-	MUL		W3, W2, W0
-	ADD		W1, W1, W3
-	MUL		W2, W2, W7
-	SDIV	W4, W2, W8
-	ADD		W1, W1, W4
-	ADD		X22, X22, #1
-	B		205b
-
-208:	
-	MOV		X2, X1 ; X2 = HASH
-
-	ADRP	X8, short_strings_hash@PAGE		
-	ADD		X13, X8, short_strings_hash@PAGEOFF
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
 	
-	MOV		X3, #0	; position in table		
-	
-210:
-	LDR		X0, [X13, X3, LSL#3]
-	CBZ		X0, 220f
-	CMP		X2, X0  ; is this our hash? 2 not 0
-	B.eq	800f	; already in table
-	ADD		X3, X3, #1
-	B		210b
+	ADRP	X13, short_strings@PAGE		
+	ADD		X13, X13, short_strings@PAGEOFF
 
-220:	
-	STR		X2, [X13, X3, LSL#3]		; store hash
+	; find a free slot or a match in the short strings
 
-	MOV		X0, X3
-	LSL		X0, X0, #6
+140:
 
-	ADRP	X8, string_buffer@PAGE		
-	ADD		X8, X8, string_buffer@PAGEOFF
-	MOV		X22, X8
+	ADRP	X1, short_strings_end@PAGE		
+	ADD		X1, X1, short_strings_end@PAGEOFF
+	CMP		X13, X1  ; check for string space
+	B.gt 	490f
 
-	ADRP	X8, short_strings@PAGE		
-	ADD		X13, X8, short_strings@PAGEOFF
-	ADD		X13, X13, X0 ; string base + n * 64
-	MOV		X2,  X13
+	; is this next string slot free
+	LDRB	W0, [X13]
+	CBZ 	W0, 180f 
+
+	; no, is this string a duplicate ?
+	MOV		X5,  X13 ; save pos
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
+
+
+	; the strings in the buffer and the slot are equal
+	; avoid adding any duplicates
+150:
+	MOV		X13,  X5 
+	B 		450f
+
+
+160: ; strings not equal so we must check next slot to find space
+	MOV		X13,  X5 
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	ADD		X13, X13, #256	
+	B 		140b
+
+; found free slot so we fill with our string.
+180:
+	MOV 	X5, X13
+
+185:
 
 	; copy from string buffer to string
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
 	.rept 16
-		LDP		X0, X1, [X22], #16
+		LDP		X0, X1, [X12], #16
 		STP		X0, X1, [X13], #16
 	.endr
-	
-	LDP		LR, X15, [SP], #16	
-	MOV		X0, X2
-	B 		stackit
 
 
-800: 	; already in table
+450:	
 
-	MOV		X0, X3
-	LSL		X0, X0, #6
+	MOV 	X0, X5
+	BL		stackit
 
-	ADRP	X8, string_buffer@PAGE		
-	ADD		X8, X8, string_buffer@PAGEOFF
-	MOV		X22, X8
-
-	ADRP	X8, short_strings@PAGE		
-	ADD		X13, X8, short_strings@PAGEOFF
-	ADD		X13, X13, X0 ; string base + n * 64
-	MOV		X0,  X13
-
-	LDP		LR, X15, [SP], #16	
-	B 		stackit
-
-
-770:	; err string too long.
-
-	MOV		X0, #-1	
-
-	LDP		LR, X15, [SP], #16	
-	B 		stackit
-	;; TODO
-	
-	RET
-
-
-780:	; hash table full
-	MOV		X0, #-2
-	LDP		LR, X15, [SP], #16	
-	B 		stackit
-	;; TODO
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, XZR, [SP], #16	
 
 	RET
 
+490:
+	ADRP	X0, tcomer36@PAGE		
+	ADD		X0, X0, tcomer36@PAGEOFF
+	BL 		sayit_err	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, XZR, [SP], #16	
+	MOV 	X0, #-1
+	RET
 
-
+500:	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, XZR, [SP], #16	
+	
+	RET
 
 
 
@@ -7292,85 +7292,137 @@ dstrstksz: ; runtime S" .. " stash and return address
 dstrdotc:
 
 	STP		LR,  XZR, [SP, #-16]!
+	STP		X12,  X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	MOV 	X2, X12 
+	.rept	64
+		STP		XZR, XZR, [X12], #16
+	.endr
+	MOV    X12, X2
 	
-	clear_string_buffer
 
-	MOV		W1, #0
+	; copy bytes from input to string_buffer
+	MOV 	X2, #255
+100:
+	LDRB	W0, [X23], #1
+	CMP		W0, #39 ; ' 
+	B.eq	120f 
+	STRB	W0, [X12], #1
+	SUB 	X2, X2, #1
+	CBZ  	X2, 120f
 
-10:	LDRB	W0, [X23], #1
-	CMP		W0, #39 ; '
-	b.eq	200f
-	CMP		W0, #10
-	B.eq	990f
-	CMP		W0, #12
-	B.eq	990f
-	CMP		W0, #13
-	B.eq	990f
-	CMP		W0, #0
-	B.eq	990f
+	CMP		W0, #10 ; ' 
+	B.eq	500f 
+	CMP		W0, #13 ; ' 
+	B.eq	500f 
+	CBZ  	W0, 500f
 
-30:	STRB	W0, [X22], #1
-	ADD		W1, W1, #1
+	B 		100b
+
+
+120:
+
+	MOV 	W0, #0
+	STRB	W0, [X12]
+
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
 	
-	B.ne	10b
+	ADRP	X13, short_strings@PAGE		
+	ADD		X13, X13, short_strings@PAGEOFF
 
-	CMP		W1, #255		; count
-	B.lt	200f
-	
-	MOV		W3, #0
+	; find a free slot or a match in the short strings
 
-	B		880f		; string too long
+140:
 
-	
-	short_string_hash
-	short_hash_find_free
+	ADRP	X1, short_strings_end@PAGE		
+	ADD		X1, X1, short_strings_end@PAGEOFF
+	CMP		X13, X1  ; check for string space
+	B.gt 	490f
 
-	STR		X2, [X13, X3, LSL#3]		; store hash
+	; is this next string slot free
+	LDRB	W0, [X13]
+	CBZ 	W0, 180f 
+
+	; no, is this string a duplicate ?
+	MOV		X5,  X13 ; save pos
+
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
+
+	; the strings in the buffer and the slot are equal
+	; avoid adding any duplicates
+150:
+	MOV		X13,  X5 
+	B 	450f
 
 
-	MOV		X0, X3
-	LSL		X0, X0, #6
+160: ; strings not equal so we must check next slot to find space
+	MOV		X13,  X5 
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	ADD		X13, X13, #256	
+	B 		140b
 
-	ADRP	X8, string_buffer@PAGE		
-	ADD		X8, X8, string_buffer@PAGEOFF
-	MOV		X22, X8
+; found free slot so we fill with our string.
+180:
+	MOV 	X5, X13
 
-	ADRP	X8, short_strings@PAGE		
-	ADD		X13, X8, short_strings@PAGEOFF
-	ADD		X13, X13, X0 ; string base + n * 64
+185:
 
 	; copy from string buffer to string
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
 	.rept 16
-		LDP		X0, X1, [X22], #16
+		LDP		X0, X1, [X12], #16
 		STP		X0, X1, [X13], #16
 	.endr
-	B		800f
 
+450:	
 
-300:	; long string
+	ADRP	X1, short_strings@PAGE		
+	ADD		X1, X1, short_strings@PAGEOFF
+	MOV     X2, #256
+	SUB  	X5, X5, X1
+	UDIV 	X3, X5, X2
 
-
-800:	; end no error
 	MOV		W0, #12 ; (.S)
 	STRH	W0, [X15], #2
-	ADD		W3, W3, #32 ; avoid confusion.
 	STRH	W3, [X15]
-	B		990f
-
-880:	; string too long
-	MOV		X0, #-1	
+	 
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
+
 	RET
 
-
-980:	; hash table full
-	MOV		X0, #-1	
+490:
+	ADRP	X0, tcomer36@PAGE		
+	ADD		X0, X0, tcomer36@PAGEOFF
+	BL 		sayit_err	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
+	MOV 	X0, #-1
 	RET
 
-990:	
-	MOV		X0, #0
+500:	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
+	
 	RET
 
 
@@ -7378,124 +7430,133 @@ dstrdotc:
 dstrstksc: ; compile literal that returns its address.
 
 
-	do_trace
-
 	STP		LR,  XZR, [SP, #-16]!
+	STP		X12,  X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	MOV 	X2, X12 
+	.rept	64
+		STP		XZR, XZR, [X12], #16
+	.endr
+	MOV    X12, X2
 	
-	clear_string_buffer
 
-	MOV		W1, #0
+	; copy bytes from input to string_buffer
+	MOV 	X2, #255
+100:
+	LDRB	W0, [X23], #1
+	CMP		W0, #39 ; ' 
+	B.eq	120f 
+	STRB	W0, [X12], #1
+	SUB 	X2, X2, #1
+	CBZ  	X2, 120f
 
-10:	LDRB	W0, [X23], #1
-	CMP		W0, #39 ; '
-	b.eq	200f
-	STRB	W0, [X22], #1
-	ADD		W1, W1, #1
-	B.ne	10b
+	CMP		W0, #10 ; ' 
+	B.eq	500f 
+	CMP		W0, #13 ; ' 
+	B.eq	500f 
+	CBZ  	W0, 500f
 
-
-200:
-
-	; short string hash
-
-	MOV		X22, X8
-	MOV		W7, #53					
-	MOV		X8, #51721
-	MOVK	X8, #15258, LSL #16		
-	MOV		W1, #0					
-	MOV		W2, #1					
-
-205:
-	LDRB	W0, [X22], #1
-	CBZ		W0,  208f
-
-	ADD		W0, W0, #1
-	MUL		W3, W2, W0
-	ADD		W1, W1, W3
-	MUL		W2, W2, W7
-	SDIV	W4, W2, W8
-	ADD		W1, W1, W4
-	ADD		X22, X22, #1
-	B		205b
+	B 		100b
 
 
+120:
 
-208:	
-	MOV		X2, X1 ; X2 = HASH
+	MOV 	W0, #0
+	STRB	W0, [X12]
 
-	ADRP	X8, short_strings_hash@PAGE		
-	ADD		X13, X8, short_strings_hash@PAGEOFF
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
 	
-	MOV		X3, #0	; position in table		
-	
-210:
-	LDR		X0, [X13, X3, LSL#3]
-	CBZ		X0, 220f
-	CMP		X2, X0  ; is this our hash? 2 not 0
-	B.eq	800f	; already in table
-	ADD		X3, X3, #1
-	B		210b
+	ADRP	X13, short_strings@PAGE		
+	ADD		X13, X13, short_strings@PAGEOFF
+
+	; find a free slot or a match in the short strings
+
+140:
+
+	ADRP	X1, short_strings_end@PAGE		
+	ADD		X1, X1, short_strings_end@PAGEOFF
+	CMP		X13, X1  ; check for string space
+	B.gt 	490f
+
+	; is this next string slot free
+	LDRB	W0, [X13]
+	CBZ 	W0, 180f 
+
+	; no, is this string a duplicate ?
+	MOV		X5,  X13 ; save pos
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
 
 
-220:	
-	STR		X2, [X13, X3, LSL#3]		; store hash
+	; the strings in the buffer and the slot are equal
+	; avoid adding any duplicates
+150:
+	MOV		X13,  X5 
+	B 		450f
 
-	MOV		X0, X3
-	LSL		X0, X0, #6
 
-	ADRP	X8, string_buffer@PAGE		
-	ADD		X8, X8, string_buffer@PAGEOFF
-	MOV		X22, X8
+160: ; strings not equal so we must check next slot to find space
+	MOV		X13,  X5 
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	ADD		X13, X13, #256	
+	B 		140b
 
-	ADRP	X8, short_strings@PAGE		
-	ADD		X13, X8, short_strings@PAGEOFF
-	ADD		X13, X13, X0 ; string base + n * 64
-	MOV		X2,  X13
+; found free slot so we fill with our string.
+180:
+	MOV 	X5, X13
+
+185:
 
 	; copy from string buffer to string
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
 	.rept 16
-		LDP		X0, X1, [X22], #16
+		LDP		X0, X1, [X12], #16
 		STP		X0, X1, [X13], #16
 	.endr
-	
-	MOV		X0, X2
+
+
+450:	
+
+	MOV 	X0, X5
 	BL		longlitit
+
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
+
 	RET
 
-800: 	; already in table
-
-	MOV		X0, X3
-	LSL		X0, X0, #6
-
-	ADRP	X8, string_buffer@PAGE		
-	ADD		X8, X8, string_buffer@PAGEOFF
-	MOV		X22, X8
-
-	ADRP	X8, short_strings@PAGE		
-	ADD		X13, X8, short_strings@PAGEOFF
-	ADD		X13, X13, X0 ; string base + n * 64
-	MOV		X0,  X13
-	BL 		longlitit
+490:
+	ADRP	X0, tcomer36@PAGE		
+	ADD		X0, X0, tcomer36@PAGEOFF
+	BL 		sayit_err	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
+	MOV 	X0, #-1
 	RET
 
-
-770:	; err string too long.
-
-	MOV		X0, #-1	
-
-	BL 		longlitit
+500:	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
+	
 	RET
-
-
-780:	; hash table full
-	MOV		X0, #-2
-	BL 		longlitit
-	LDP		LR, XZR, [SP], #16	
-	RET
-
 
 
 ; print a short literal string, inline literal
@@ -7509,9 +7570,9 @@ dslitSzdot:
 
 	ADD		X15, X15, #2		
 	LDRH	W0, [X15]
-	SUB		W0, W0, #32 ; avoid confusion
  
-	LSL		X0, X0, #6
+ 
+	LSL		X0, X0, #8
 	ADD		X0, X0, X12
 
 	BL		sayit
@@ -7539,33 +7600,6 @@ dslitSz:
 dslitLz:
 	RET
 
-
-dhashbufferz:
- 
-	ADRP	X8, string_buffer@PAGE		
-	ADD		X8, X8, string_buffer@PAGEOFF
-	MOV		X12, X8
-
-	MOV		W7, #53					
-	MOV		X8, #51721
-	MOVK	X8, #15258, LSL #16		
-	MOV		W1, 	#0					
-	MOV		W2, #1					
-
-10:	LDRB	W0, [X12], #1
-	CBZ		W0,  90f
-
-	ADD		W0, W0, #1
-	MUL		W3, W2, W0
-	ADD		W1, 	W1, W3
-	MUL		W2, W2, W7
-	SDIV	W4, W2, W8
-	ADD		W1, W1, W4
-	ADD		X12, X12, #1
-	B		10b
-	
-90:	STR		X1, [X16], #8
-	RET
 
 
 
@@ -8023,6 +8057,10 @@ tcomer34: .ascii "\nError in x FILLARRAY nnnnnn  - Needs a fillable Values, Arra
 tcomer35: .ascii "\nError in x FILLARRAY nnnnn  - the nnnnn word not found."
 	.zero 16
 
+   .align	8
+tcomer36: .ascii "\nError out of string space"
+	.zero 16
+
  
 
 
@@ -8286,27 +8324,14 @@ string_buffer:
 .zero 2048
 
  
-short_strings_hash:
-.rept  2048
-	.quad	0
-.endr
-.quad	-1
-.quad	-1
-
+.align 16
 short_strings:
 .rept  2048
 	.zero	256
 .endr
+short_strings_end:
 .quad	-1
 .quad	-1
-
-
-
-;; long strings  
-long_strings_hash:
-.rept  2048
-	.quad	-1
-.endr
 
 
 long_strings:
@@ -8513,7 +8538,7 @@ edict:
 		makeemptywords 48
 		
 		makeqvword 102
-		makeword "f=", fneqz, 0,  0 
+		makeword "f<>", fneqz, 0,  0 
 		makeword "f=", feqz, 0,  0 
 		makeword "f>=0", fgtzz, 0,  0 
 		makeword "f<0", fltezz, 0,  0 
@@ -8557,7 +8582,7 @@ gdict:
 
 
 		makeqvword 104
-		makeword "HASHBUFFER$", dhashbufferz, 0,  0
+ 
 		makeword "H", dvaraddz, dvaraddc,  8 * 72 + ivars	
 hdict:
 	
@@ -8666,7 +8691,7 @@ rdict:
 	 	makeword "STEP", step_in_runz , 0, 0 
 		makevarword "STEPPING", step_limit
 		makevarword "STEPS", step_skip
-		makeword "SHORT$HASH", dvaraddz, dvaraddc,  short_strings_hash
+ 
 		makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 		makeword "SWAP", dswapz , 0, 0 
 	
