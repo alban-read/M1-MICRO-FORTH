@@ -7012,8 +7012,83 @@ ddotsz:
 
 ;; STRINGS ASCII ZERO terminated
 
+;; ALL our strings are guaranteed to be well aligned allowing us to use 16 byte reads.
 
-strequal:
+;; this compares the contents, which given our no duplicate rule is not 
+;; needed
+
+_dstrequalz:
+
+	LDP		X12, X13, [X16, #-16]
+	SUB		X16, X16, #16
+
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
+
+	150:
+	MVN		X0, XZR ; true
+	STR		X0, [X16], #8
+	RET
+
+	160:
+	MOV 	X0, XZR ; false
+	STR		X0, [X16], #8
+	RET
+
+
+dstrcmomp:
+
+	LDP		X12, X13, [X16, #-16]
+	SUB		X16, X16, #16
+
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
+
+	150:
+	MVN		X0, XZR ; true
+	STR		X0, [X16], #8
+	RET
+
+	160:
+	MOV 	X0, XZR ; false
+	STR		X0, [X16], #8
+	RET
+
+
+
+	; relies on our no duplicate rule, a different string
+	; also must be a different object. .
+
+dstrequalz:
+	LDR		X0, [X16, #-8] 
+	LDR		X1, [X16, #-16]
+	CMP 	X0, X1		
+	B.ne	10f
+	MVN		X0, XZR ; true
+	B		20f
+10:
+	MOV		X0, XZR
+20:
+	STR		X0, [X16, #-16]
+	SUB		X16, X16, #8
 	RET
 
 
@@ -8857,6 +8932,9 @@ ydict:
 zdict:
 
 		makeemptywords 30
+
+ 		makeword "$=", dstrequalz, 0,  0
+		makeword "$==", _dstrequalz, 0,  0
 
  		makeword "0.0", dconstz, dconstc,  0.0
 		makeword "0.1", dconstz, dconstc,  0.1
