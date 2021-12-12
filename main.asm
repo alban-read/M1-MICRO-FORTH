@@ -6411,7 +6411,6 @@ toupdateit:
 	B.eq	180f 
 
 
-
 	ADRP	X1, dCarrayaddz@PAGE	; high level word.
 	ADD		X1, X1, dCarrayaddz@PAGEOFF
 	CMP 	X2, X1
@@ -6421,7 +6420,12 @@ toupdateit:
 	ADRP	X1, dCarrayvalz@PAGE	; high level word.
 	ADD		X1, X1, dCarrayvalz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	140f 
+	B.eq	150f 
+
+	ADRP	X1, dSTRINGz@PAGE	; high level word.
+	ADD		X1, X1, dSTRINGz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
 
 
 	ADRP	X1, dWarrayaddz@PAGE	; high level word.
@@ -6754,6 +6758,19 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 	B.eq	150f 
 
 
+	ADRP	X1, dCarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+
+	ADRP	X1, dSTRINGz@PAGE	; high level word.
+	ADD		X1, X1, dSTRINGz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+
+
 
 	; not a word we understand 
 	B 		190f
@@ -6801,13 +6818,9 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 
 	LDP		LR, XZR, [SP], #16	
 	MOV		X0, #-1	; not a word TO can use
-
-
  
 	RET
 
-
- 
 
 
 dlitz: ; next cell has address of short (half word) inline literal
@@ -7005,18 +7018,75 @@ strequal:
 
 
 
+dSTRINGz: ; return our address..
+	STR		X0, [X16], #8
+	RET
 
-.macro clear_string_buffer
-	; clear target space
-	ADRP	X8, string_buffer@PAGE		
-	ADD		X8, X8, string_buffer@PAGEOFF
-	MOV		X22, X8
-	.rept	64
-		STP		XZR, XZR, [X22], #16
-	.endr
 
-	MOV		X22, X8	
-.endm
+; create string 
+
+creatstring:
+
+	save_registers_not_stack
+
+	BL		advancespaces
+	BL		collectword
+	BL		get_word
+	BL		empty_wordQ
+	B.eq	300f
+	BL		start_point
+
+100:	; find free word and start building it
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f		; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+
+    ; undefined so build the word here
+
+	; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+	; copy text for name over
+	copy_word_name
+
+	; variable code
+	ADRP	X1, dSTRINGz@PAGE	; high level word.	
+	ADD		X1, X1, dSTRINGz@PAGEOFF
+	STR		X1, [X28, #8]
+
+
+	; set value from the string on the stack
+	LDR		X1, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X1, [X28]	; data pointer
+	MOV 	X0, #255
+	STR		X0, [X28, #32]
+	B		300f
+
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+
+280:	; error dictionary FULL
+
+300:
+
+	restore_registers_not_stack
+	RET
+
+
 
 
 ; run time .'  for interpreter only
@@ -8326,7 +8396,7 @@ string_buffer:
  
 .align 16
 short_strings:
-.rept  2048
+.rept  4096
 	.zero	256
 .endr
 short_strings_end:
@@ -8335,7 +8405,7 @@ short_strings_end:
 
 
 long_strings:
-.rept  128
+.rept  32
 	.zero	512
 .endr
 .quad	-1
@@ -8443,7 +8513,7 @@ dend:
 		makeword "(C2FILLARRAY)", 		0, 	0,  0			; 39
 		makeword "(ALFILLARRAY)", 		dALFILLAz, 	0,  0	; 40
 		makeword "(WALFILLARRAY)", 		dWALFILLAz, 0,  0	; 41
-
+		makeword "(STRING)", 			dSTRINGz, 0,  0		; 42
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
@@ -8691,6 +8761,8 @@ rdict:
 	 	makeword "STEP", step_in_runz , 0, 0 
 		makevarword "STEPPING", step_limit
 		makevarword "STEPS", step_skip
+
+		makeword "STRING", creatstring , 0, 0 
  
 		makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 		makeword "SWAP", dswapz , 0, 0 
