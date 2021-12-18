@@ -21,3 +21,14 @@
    6 >  ROT 22 >  ROT 19 >  AND AND IF .' Big enough ' THEN ;
 
 : QUADRATIC  ( a b c x -- n )   >R SWAP ROT R@ *  + R> *  + ;
+
+
+$' This is the age '
+
+$' of the train'
+
+$+ 
+
+BUFFER$ TYPEZ
+
+ 
