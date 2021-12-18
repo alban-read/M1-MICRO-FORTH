@@ -156,6 +156,74 @@ Is a VALUES view over the HW (half/word 16 bit) token space, this is where the c
 Is a VALUES view over the (64 bit) long literal space, where large integers, double floats and addresses are stored by the compiler.
 
 
+
+### Strings 
+
+A string is created with an initial text value like this.
+
+S' This is my initial value ' STRING myString
+
+A string returns the address of its data.
+
+myString TYPEZ 
+
+Will print the string.
+
+A string should not be mutated, each unique string exists only once in the string pool, 
+changing one would impact all usages everywhere in a program.
+
+Strings can be compared with $= and $== which check if they are same and $COMPARE wich checks if one is equal, greater, or less than the other.
+
+In terms of storage the strings content is stored in the string pool with all the rest, the word just points it and gives it a name.
+
+Just as you can create a STRING you can also create a number of strings.
+
+10 STRINGS myStrings
+
+Will create 10 strings.
+
+To set the value of a string you use TO, e.g.
+
+S' This is a string' 0 TO myStrings.
+
+Again the storage lives in the string pool.
+
+
+### Appending/building strings
+
+Often a string needs to be built from smaller parts
+
+I find this difficult in standard FORTH, these words are meant to help make it less error prone.
+
+${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} TYPEZ  
+
+
+The string is composed between the ${ Start building and $} end building words.
+
+Each element is added by the comma after it.
+
+At the end the string is stored and its address is returned, so it can be named.
+
+${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender 
+
+
+
+
+
+
+
+#### Storage used when appending
+
+The BUFFER$ and APPEND$ storage is used for this.
+
+When used in the interpreter, only the final result is placed in the string pool, the literals being available from the interpreted text.
+
+When used in the compiler any literal text parts have to be stored in the string pool (since it needs somewhere to live.)
+
+While building (appending) strings, APPENDER^ points to the next byte address.
+
+
+
 ### Floating point support
 
 Floating point words begin with f e.g. f.

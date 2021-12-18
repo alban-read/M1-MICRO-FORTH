@@ -1216,7 +1216,7 @@ init:
 	; start of outer interpreter/compiler
 	;
 	;
-	BL  cls
+	; BL  cls
 	BL  announce
 	BL  dotwords
 input:	
@@ -4323,6 +4323,14 @@ dcreatvalues:
 	MOV		X3, #3
 	B 		arrayvaluecreator
 
+dcreatstringvalues:
+ 	find_free_word
+	ADRP	X8, darrayvalz@PAGE	; high level word.	
+	ADD		X8, X8, darrayvalz@PAGEOFF
+	MOV		X3, #3
+	B 		arrayvaluecreator
+
+
 dcreatarray:
 	find_free_word
 	ADRP	X8, darrayaddz@PAGE	; high level word.	
@@ -5473,11 +5481,38 @@ dstarz: ; *
 dstarc: ; *
 	RET
 
-dcomaz: ; , compile tos into dict.
+; compiled in action for comma
+
+dcomacz:
+
+ 	ADRP	X1, append_ptr@PAGE		
+	ADD		X1, X1, append_ptr@PAGEOFF
+	LDR		X1, [X1]
+	CBZ 	X1, 100f
+	B 		dstrappendcommafromstack
+	RET
+
+
+dcomaz: ; ,  run time comma action
+
+	; we may be appending a string
+	ADRP	X1, append_ptr@PAGE		
+	ADD		X1, X1, append_ptr@PAGEOFF
+	LDR		X1, [X1]
+	CBZ 	X1, 100f
+	B 		dstrappendcomma
+
+100:
 	RET
 
 dcomac: ; , 
+	MOV		X0, #43 ; (,)
+	STR		X0, [X15]	
 	RET
+
+
+
+
 
 dsubz: ; -  subtract
 	B 		subz
@@ -5784,8 +5819,6 @@ dpickz: ;
 	LDR		X1, [X16, X0, LSL #3]
 	STR		X1, [X16], #8
 	RET
-
-	
 
 dnipc: ;	
 	RET	
@@ -6158,7 +6191,6 @@ tendivz:
 	RET
 
 
-
 longlitit: ; COMPILE X0 into word as short or long lit
 
 	; X0 is our literal 
@@ -6232,8 +6264,6 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	RET
 
 
-
-
 stackit: ; push x0 to stack.
 
 	STR		X0, [X16], #8
@@ -6274,6 +6304,7 @@ dconsc: ; compile value of constant
 ; they return their value rather than their address
 ; e.g. 10 VALUE test 
 ;      test . =>  10
+
 
 dvaluez:	; read the value from the address
 	LDR		X0,  [X1]
@@ -6353,8 +6384,6 @@ dcreatevalz:
 	RET
 
  
-
-
 dcreatevalc:
 
 	RET
@@ -6425,7 +6454,7 @@ toupdateit:
 	ADRP	X1, dSTRINGz@PAGE	; high level word.
 	ADD		X1, X1, dSTRINGz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	150f 
+	B.eq	155f 
 
 
 	ADRP	X1, dWarrayaddz@PAGE	; high level word.
@@ -6757,20 +6786,15 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 	CMP 	X2, X1
 	B.eq	150f 
 
-
 	ADRP	X1, dCarrayvalz@PAGE	; high level word.
 	ADD		X1, X1, dCarrayvalz@PAGEOFF
 	CMP 	X2, X1
 	B.eq	150f 
 
-
 	ADRP	X1, dSTRINGz@PAGE	; high level word.
 	ADD		X1, X1, dSTRINGz@PAGEOFF
 	CMP 	X2, X1
 	B.eq	150f 
-
-
-
 
 	; not a word we understand 
 	B 		190f
@@ -7012,16 +7036,369 @@ ddotsz:
 
 ;; STRINGS ASCII ZERO terminated
 
-;; ALL our strings are guaranteed to be well aligned allowing us to use 16 byte reads.
-
+;; All our strings are 
+;; - guaranteed to be well aligned allowing us to use 16 byte reads.
+;; - always unique
+;; - stored in the same string literal pool
+;; - ASCII
+;; - zero terminated
+;; - have 256 bytes for capacity.
+;; use the larger shared BUFFER$ as a temp
 ;; this compares the contents, which given our no duplicate rule is not 
 ;; needed
+
+
+
+; store string at BUFFER$ into strings pool.
+; BUFFER$>
+
+dstfrombuffer:
+
+	STP		LR,  XZR, [SP, #-16]!
+	STP		X12,  X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+
+	ADRP	X12, string_buffer@PAGE		
+	ADD		X12, X12, string_buffer@PAGEOFF
+	
+	ADRP	X13, short_strings@PAGE		
+	ADD		X13, X13, short_strings@PAGEOFF
+
+
+	; find a free slot or a match in the short strings
+
+140:
+
+	ADRP	X1, short_strings_end@PAGE		
+	ADD		X1, X1, short_strings_end@PAGEOFF
+	CMP		X13, X1  ; check for string space
+	B.gt 	490f
+
+	; is this next string slot free
+	LDRB	W0, [X13]
+	CBZ 	W0, 180f 
+
+	; no, is this string a duplicate ?
+	MOV		X5,  X13 ; save pos
+
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
+
+
+	; the strings in the buffer and the slot are equal
+	; avoid adding any duplicates
+150:
+	MOV		X13,  X5 
+	B 	450f
+
+
+
+	; no, is this string a duplicate ?
+	MOV		X5,  X13 ; save pos
+
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
+
+
+	; the strings in the buffer and the slot are equal
+	; avoid adding any duplicates
+150:
+	MOV		X13,  X5 
+	B 	450f
+
+450:	
+
+	MOV 	X0, X5
+	BL		stackit
+
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, X15, [SP], #16	
+
+	RET
+
+490:
+	ADRP	X0, tcomer36@PAGE		
+	ADD		X0, X0, tcomer36@PAGEOFF
+	BL 		sayit_err	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, X15, [SP], #16	
+	MOV 	X0, #-1
+	RET
+
+500:	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, X15, [SP], #16	
+	
+	RET
+
+
+; appender 
+
+
+
+
+; store string at BUFFER$ into strings pool.
+; APPEND$>
+
+dstfromappendbuffer:
+
+	STP		LR,  XZR, [SP, #-16]!
+	STP		X12,  X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+
+	ADRP	X12, append_buffer@PAGE		
+	ADD		X12, X12, append_buffer@PAGEOFF
+	
+	ADRP	X13, short_strings@PAGE		
+	ADD		X13, X13, short_strings@PAGEOFF
+
+
+	; find a free slot or a match in the short strings
+
+140:
+
+	ADRP	X1, short_strings_end@PAGE		
+	ADD		X1, X1, short_strings_end@PAGEOFF
+	CMP		X13, X1  ; check for string space
+	B.gt 	490f
+
+	; is this next string slot free
+	LDRB	W0, [X13]
+	CBZ 	W0, 180f 
+
+
+
+	; no, is this string a duplicate ?
+	MOV		X5,  X13 ; save pos
+
+	; compare up to 256 bytes 16 at a time
+	.rept 16
+		LDP		X0, X1, [X13], #16
+		LDP		X2, X3, [X12], #16
+		CMP		X0, X2
+		B.ne	160f 
+		CMP		X1, X3
+		B.ne	160f 
+		CMP     X0, #0	; end of string
+		B.eq	150f
+	.endr
+
+
+	; the strings in the buffer and the slot are equal
+	; avoid adding any duplicates
+150:
+	MOV		X13,  X5 
+	B 	450f
+
+
+
+160: ; strings not equal so we must check next slot to find space
+	MOV		X13,  X5 
+	ADRP	X12, append_buffer@PAGE		
+	ADD		X12, X12, append_buffer@PAGEOFF
+	ADD		X13, X13, #256	
+	B 		140b
+
+; found free slot so we fill with our string.
+180:
+	MOV 	X5, X13
+
+ 
+185:
+
+	; copy from string buffer to string
+	ADRP	X12, append_buffer@PAGE		
+	ADD		X12, X12, append_buffer@PAGEOFF
+	.rept 16
+		LDP		X0, X1, [X12], #16
+		STP		X0, X1, [X13], #16
+	.endr
+
+450:	
+
+	MOV 	X0, X5
+	BL		stackit
+
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, XZR, [SP], #16	
+
+	RET
+
+490:
+	ADRP	X0, tcomer36@PAGE		
+	ADD		X0, X0, tcomer36@PAGEOFF
+	BL 		sayit_err	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, XZR, [SP], #16	
+	MOV 	X0, #-1
+	RET
+
+500:	
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, XZR, [SP], #16	
+	
+	RET
+
+
+
+
+
+dstrappendbegin:
+	; prepare buffer
+	ADRP	X1, append_buffer@PAGE		
+	ADD		X1, X1, append_buffer@PAGEOFF
+    ADRP	X0, append_ptr@PAGE		
+	ADD		X0, X0, append_ptr@PAGEOFF
+    STR		X1, [X0] ;
+	.rept	64
+		STP		XZR, XZR, [X1], #16
+	.endr
+	RET
+
+; called by (,) x1 has append_ptr
+dstrappendcommafromstack:
+	LDR		X2, [X16, #-8]
+	SUB 	X16, X16, #8
+	B		dstrappender
+
+; add string to append$ from buffer$.
+dstrappendnext:
+
+	ADRP	X1, append_ptr@PAGE		
+	ADD		X1, X1, append_ptr@PAGEOFF
+	LDR		X1, [X1]
+	CBZ		X1, 500f ; not appending
+
+dstrappendcomma:
+
+	ADRP	X2, string_buffer@PAGE		
+	ADD		X2, X2, string_buffer@PAGEOFF
+
+dstrappender:
+
+80:	
+	LDRB	W0, [X1], #1
+	CBZ		W0, 90f  
+	B  		80b
+
+90:	
+	SUB		X1, X1, #1
+
+100:
+	LDRB	W0, [X2], #1
+	STRB	W0, [X1], #1	
+ 	CBNZ	W0, 100b  
+
+110:
+	SUB		X1, X1, #1
+	ADRP	X0, append_ptr@PAGE		
+	ADD		X0, X0, append_ptr@PAGEOFF
+	STR		X1, [X0]
+
+500:
+
+	RET
+
+
+dstrappendend:
+
+	MOV 	X0, #0 ; not appending
+	ADRP	X1, append_ptr@PAGE		
+	ADD		X1, X1, append_ptr@PAGEOFF
+	STR		X0, [X1]
+
+	B 	dstfromappendbuffer
+	RET
+
+
+
+
+
+; dumb as a rock append
+dstrappend:
+	; prepare buffer
+	ADRP	X1, string_buffer@PAGE		
+	ADD		X1, X1, string_buffer@PAGEOFF
+	MOV 	X2, X1 
+	.rept	64
+		STP		XZR, XZR, [X1], #16
+	.endr
+	MOV		X1, X2
+
+	LDP		X2, X3, [X16, #-16]
+	SUB		X16, X16, #16
+
+	CBZ		X2, 500f
+	CBZ		X3, 500f
+
+100:
+	LDRB	W0, [X2],#1
+	CBZ		W0, 110f  
+	STRB	W0, [X1],#1	
+	B  		100b
+
+110:
+	LDRB	W0, [X3],#1
+	CBZ		W0, 120f 
+	STRB	W0, [X1],#1	
+	B 		110b
+ 
+120:
+
+500:
+
+	B 	dstfrombuffer
+
+	RET
+
+
+
+;; a way to fetch string addresses from STRING storage pools
+
+dstringstoragearrayvalz:	; return the value from the string pool index
+; X0=data, X1=word
+	LDR		X2, [X16, #-8]	; X2 = index
+	LDR		X1, [X1, #32]   ; X1 array size 
+	CMP		X2, X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #8 ; string 256
+	ADD		X1, X0, X2 ; data + index 
+	STR		X1, [X16, #-8]	; value of data
+	RET
+
 
 _dstrequalz:
 
 	LDP		X12, X13, [X16, #-16]
 	SUB		X16, X16, #16
 
+	CBZ		X12, 160f
+	CBZ		X13, 160f
+	
 	; compare up to 256 bytes 16 at a time
 	.rept 16
 		LDP		X0, X1, [X13], #16
@@ -7045,10 +7422,14 @@ _dstrequalz:
 	RET
 
 
-dstrcmomp:
+dstrcmp:
 
 	LDP		X12, X13, [X16, #-16]
 	SUB		X16, X16, #16
+	
+	CBZ		X12, 05f
+	CBZ		X13, 05f
+
 
 	; compare up to 256 bytes 16 at a time
 	.rept 16
@@ -7063,19 +7444,41 @@ dstrcmomp:
 	.endr
 
 	150:
-	MVN		X0, XZR ; true
+	MOV		X0, XZR ; true the same = 0
 	STR		X0, [X16], #8
 	RET
 
-	160:
-	MOV 	X0, XZR ; false
+	160:    ; not the same
+
+	SUB 	X12, X12, #16
+	SUB		X13, X13, #16
+
+	.rept 	16
+	LDRB	W0, [X13],#1
+	LDRB	W1, [X12],#1
+	CMP 	X1, X0		
+	B.lt	10f
+	B.gt	20f
+	.endr
+
+	05:
+	MVN		X0, XZR ; true the same (impossible)
+	STR		X0, [X16], #8
+	RET
+ 
+	10:
+	MVN		X0, XZR ;-1 
 	STR		X0, [X16], #8
 	RET
 
+	20:
+	MOV		X0, #1
+ 	STR		X0, [X16], #8
+	RET		
 
 
 	; relies on our no duplicate rule, a different string
-	; also must be a different object. .
+	; also must be a different object.
 
 dstrequalz:
 	LDR		X0, [X16, #-8] 
@@ -7317,6 +7720,7 @@ dstrstksz: ; runtime S" .. " stash and return address
 
 	; copy bytes from input to string_buffer
 	MOV 	X2, #255
+ 
 100:
 	LDRB	W0, [X23], #1
 	CMP		W0, #39 ; ' 
@@ -7337,6 +7741,14 @@ dstrstksz: ; runtime S" .. " stash and return address
 
 	MOV 	W0, #0
 	STRB	W0, [X12]
+
+
+	; exit if appending do not store
+	ADRP	X1, append_ptr@PAGE		
+	ADD		X1, X1, append_ptr@PAGEOFF
+	LDR		X1, [X1]
+	CBNZ 	X1, 500f
+
 
 	ADRP	X12, string_buffer@PAGE		
 	ADD		X12, X12, string_buffer@PAGEOFF
@@ -7472,6 +7884,7 @@ dstrdotc:
 
 	MOV 	W0, #0
 	STRB	W0, [X12]
+
 
 	ADRP	X12, string_buffer@PAGE		
 	ADD		X12, X12, string_buffer@PAGEOFF
@@ -8465,6 +8878,8 @@ quadlits:
 ; string lits ASCII counted strings
 
 
+
+.align 16
 string_buffer:
 .zero 2048
 
@@ -8492,6 +8907,15 @@ long_strings:
 zpad:	.ascii "ZPAD STARTS HERE"
 	.zero 1024
 
+
+
+.align 16
+append_buffer:
+	.asciz "Append Buffer"
+	.zero 2048
+.align 16
+append_ptr:
+	.quad append_buffer
 
 ; the word being processed
 .align 8
@@ -8589,6 +9013,7 @@ dend:
 		makeword "(ALFILLARRAY)", 		dALFILLAz, 	0,  0	; 40
 		makeword "(WALFILLARRAY)", 		dWALFILLAz, 0,  0	; 41
 		makeword "(STRING)", 			dSTRINGz, 0,  0		; 42
+		makeword "(,)",	 			    dcomacz, 0,  0		; 43
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
@@ -8601,6 +9026,10 @@ hashdict:
 		; end of inline compiled words, relax
 
 		makeemptywords 84
+
+		makeword "APPEND$", dvaraddz, dvaraddc,  append_buffer
+		
+		makeword "APPEND^", dvaluez, dvaraddc,  append_ptr
 
 		makeword "ALLWORDS", alldotwords , 0, 0 
 
@@ -8838,7 +9267,9 @@ rdict:
 		makevarword "STEPS", step_skip
 
 		makeword "STRING", creatstring , 0, 0 
+		makeword "STRINGS", dcreatstringvalues , 0, 0 
  
+
 		makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 		makeword "SWAP", dswapz , 0, 0 
 	
@@ -8932,9 +9363,15 @@ ydict:
 zdict:
 
 		makeemptywords 30
-
+		makeword "${", dstrappendbegin , 0, 0 
+		makeword "$.", ztypez, ztypec, 0	
+		makeword "}$", dstrappendend , 0, 0 
+		makeword "$}", dstrappendend , 0, 0 
  		makeword "$=", dstrequalz, 0,  0
 		makeword "$==", _dstrequalz, 0,  0
+		makeword "$compare", dstrcmp, 0,  0
+		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 4096
+	 
 
  		makeword "0.0", dconstz, dconstc,  0.0
 		makeword "0.1", dconstz, dconstc,  0.1
@@ -9041,7 +9478,7 @@ zbytewords:
 		makebword 36, 	ddollarz, 	0, 	0
 		makebword 37, 	dmodz, 		dmodc, 		0
 		makebword 38, 	dandz, 		0, 		0
-		makebword 39, 	dtickz, 	dtickc, 		0
+		makebword 39, 	dstrstksz, 	dstrstksc, 		0
 		makebword 40, 	dlrbz, 		dlrbc, 		0			; (
 		makebword 41, 	0, 			0, 			0			; )
 		makebword 42, 	dstarz, 		0, 		0
@@ -9076,7 +9513,7 @@ zbytewords:
 		makebword 93, 	drsbz, 		drsbc, 		0
 		makebword 94, 	dtophatz, 	0, 	0
 		makebword 95, 	dunderscorez, 	0, 	0
-		makebword 96, 	dbacktkz, 		0, 		0
+		makebword 96, 	dtickz, 		dtickz, 		0
 	
 
 		makeemptywords 123-96
