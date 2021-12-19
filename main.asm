@@ -251,18 +251,76 @@ tver:	.ascii  "Version %2.2f\n"
 
 .align 8			
 
-; get line from terminal
-getline:
 
+from_startup:
+	save_registers
+	ADRP	X0, startup_file@PAGE		
+	ADD		X0, X0, startup_file@PAGEOFF
+ 	ADRP	x1, mode_read@PAGE		
+	ADD		X1, X1, mode_read@PAGEOFF
+	BL		_fopen
+	ADRP	X1, input_file@PAGE
+	ADD		X1, X1, input_file@PAGEOFF
+	STR		X0,	[X1]
+	restore_registers
+	
+	RET
+
+
+dfrom_startup:
+
+ 	ADRP	X0, bequiet@PAGE
+	ADD		X0, X0, bequiet@PAGEOFF
+	MOV 	X1, #-1
+	STR		X1, [X0]
+
+	B	from_startup
+
+
+from_stdin:
+	
 	ADRP	X8, ___stdinp@GOTPAGE
 	LDR		X8, [X8, ___stdinp@GOTPAGEOFF]
 	LDR		X2, [X8]
+
+	ADRP	X0, input_file@PAGE
+	ADD		X0, X0, input_file@PAGEOFF
+	STR		X2,	[X0]
+
+ 	ADRP	X0, bequiet@PAGE
+	ADD		X0, X0, bequiet@PAGEOFF
+	MOV 	X1, #0
+	STR		X1, [X0]
+
+	RET
+
+
+; get line from terminal into PAD
+getline:
+	ADRP	X0, input_file@PAGE
+	ADD		X0, X0, input_file@PAGEOFF
+	LDR		X2,	[X0]
 	ADRP	X0, zpadsz@PAGE		
-	ADD	X1, X0, zpadsz@PAGEOFF
+	ADD		X1, X0, zpadsz@PAGEOFF
 	ADRP	X0, zpadptr@PAGE	
-	ADD	X0, X0, zpadptr@PAGEOFF
+	ADD		X0, X0, zpadptr@PAGEOFF
 	save_registers
 	BL		_getline
+	CMP		X0, #-1 ; end of file
+	B.ne	10f 
+
+	; close file on end of file.
+	ADRP	X0, input_file@PAGE
+	ADD		X0, X0, input_file@PAGEOFF
+	LDR		X0,	[X0]
+	BL		_fclose
+
+	BL 		from_stdin ; revert to stdin
+10:
+    ; store count read in accepted
+	ADRP	X1, accepted@PAGE
+	ADD		X1, X1, accepted@PAGEOFF
+	STR		X0, [X1]
 	restore_registers
 	RET
 
@@ -275,9 +333,19 @@ dpagez:
 
 ; Ok prompt
 sayok:	
+
+	ADRP	X0, bequiet@PAGE
+	ADD		X0, X0, bequiet@PAGEOFF
+	LDR		X0, [X0]
+	CBNZ	X0, quietly
+
 	ADRP	X0, tok@PAGE	
 	ADD		X0, X0, tok@PAGEOFF
 	B		sayit
+
+quietly:
+	RET
+
 
 saycr:	
 	ADRP	X0, tcr@PAGE	
@@ -1096,7 +1164,7 @@ start_point: ; finds where to start searching the dictionary
 	B.ne	215f
 	ADRP	X28, pdict@PAGE		
 	ADD		X28, X28, pdict@PAGEOFF	
-	B		217f
+	B		251f
 
 215:
 	CMP		W0, #'q'
@@ -1191,12 +1259,13 @@ main:
 	
 
 init:	
-
+ 
 	ADRP	X27, dend@PAGE	;; <-- dictionary end
 	ADD		X27, X27, dend@PAGEOFF
 
 	ADRP	X0, dsp@PAGE		
 	ADD		X0, X0, dsp@PAGEOFF
+
 	 
 	LDR		X16, [X0]  ;; <-- data stack pointer to X16
 	ADD		X16, X16, #16
@@ -1207,24 +1276,22 @@ init:
 
 	ADRP	X26, lsp@PAGE		
 	ADD		X26, X26, lsp@PAGEOFF
- 
-
+  
 
 	;  disable tracing, X6 = 0
 	MOV		X6, #0
 
 	; start of outer interpreter/compiler
-	;
-	;
-	; BL  cls
-	BL  announce
-	BL  dotwords
+	
+	BL 	dfrom_startup
+ 
 input:	
 	BL  chkoverflow
 	BL  chkunderflow
 	BL  sayok
 	BL  resetword
 	BL  resetline
+ 
 	BL  getline
 
 advance_word:
@@ -1393,6 +1460,11 @@ exnum:	; exit number
 	
 ; ------- interpreter ends
 
+	ADRP	X0, bequiet@PAGE
+	ADD		X0, X0, bequiet@PAGEOFF
+	MOV 	X1, #-1
+	STR		X1, [X0]
+
 compiler:
 
 	ADRP	X22, zword@PAGE		
@@ -1405,6 +1477,9 @@ compiler:
 	; yes, from here we compile a new word.
 
 enter_compiler:
+
+
+
 
 	; look for the name of the new word we are compiling.
 	BL 		advancespaces
@@ -1535,8 +1610,8 @@ find_word_token:
 
 	
 	; yes we have found our word
-	MOV		X0, #'.'
-	BL		X0emit
+	;MOV		X0, #'.'
+	;BL		X0emit
 
 
 	; found word (at X28), get token.
@@ -1634,8 +1709,8 @@ try_compiling_literal:
 	ADD		X22, X22, zword@PAGEOFF
 	; tolerate a negative number
 
-	MOV		X0, #'!'
-	BL		X0emit
+	;MOV		X0, #'!'
+	;BL		X0emit
 
 	
 
@@ -1666,13 +1741,13 @@ try_compiling_literal:
 
 405: ; we have a float
 	MOV 	X3, #-1
-	MOV		X0, #'f'
-	BL		X0emit
+	;MOV		X0, #'f'
+	;BL		X0emit
 	B 		23b 
 
 24:
-	MOV		X0, #'*'
-	BL		X0emit
+	;MOV		X0, #'*'
+	;BL		X0emit
 
 	CBZ 	X3, its_an_it
 	save_registers
@@ -1698,7 +1773,7 @@ check_number_size:
 	; halfword numbers ~32k
 	MOV		X3, #4000
 	LSL		X3, X3, #3  
-	MOV		X1, x0
+	MOV		X1, X0
 	CMP		X0, X3 
 	B.gt	25f  ; too big to be
 
@@ -1736,8 +1811,8 @@ check_number_size:
 
 	STR		X0, [X1]	; into the pool
 	
-	MOV		X0, #'|'
-	BL		X0emit
+	;MOV		X0, #'|'
+	;BL		X0emit
 	
 	MOV		X0, #2 ; #LITL
 
@@ -1752,8 +1827,8 @@ check_number_size:
 80:
 	; found the literal
 
-	MOV		X0, #'-'
-	BL		X0emit
+	;MOV		X0, #'-'
+	;BL		X0emit
 
 	MOV		X0, #2 ; #LITL
 	STRH	W0, [X15]
@@ -1765,8 +1840,8 @@ check_number_size:
 	B		compile_next_word
 
 30:	; exit number means word not found/not number
-	MOV		X0, #'?'
-	BL		X0emit
+	;MOV		X0, #'?'
+	;BL		X0emit
 	B		exit_compiler_unrecognized
 
 
@@ -1880,8 +1955,8 @@ exit_compiler: ; NORMAL success exit
 	LDR		X0, [X8]
 
 	SUB		X0, X15, X0
-	BL		X0print
-	BL		saycompfin
+	;BL		X0print
+	;BL		saycompfin
 	MOV 	X15, #0
 	B		advance_word ; back to main loop
 
@@ -2951,8 +3026,8 @@ dseez:
 	MOV		X0, #0
 	BL		X0addrpr
 
-	MOV		X0, #':'
-	BL		X0emit
+	;MOV		X0, #':'
+	;BL		X0emit
 
 	LDR		X0, [X28]	
 	BL		X0addrpr
@@ -3117,8 +3192,8 @@ dseez:
 	MOV		X0, #8
 	BL		X0addrpr
 	
-	MOV		X0, #':'
-	BL		X0emit
+	;MOV		X0, #':'
+	;BL		X0emit
 
 	LDR		X0, [X28, #8]
 	BL		X0addrpr 
@@ -3153,8 +3228,8 @@ dseez:
 	MOV		X0, #16
 	BL		X0addrpr
 
-	MOV		X0, #':'
-	BL		X0emit
+	;MOV		X0, #':'
+	;BL		X0emit
 
 	LDR	X0, [X28, #16]	
 	BL		X0addrpr
@@ -3169,8 +3244,8 @@ dseez:
 	MOV		X0, #24
 	BL		X0addrpr
 	
-	MOV		X0, #':'
-	BL		X0emit
+	;MOV		X0, #':'
+	;BL		X0emit
 
 	; offset into word
 	LDR		X0, [X28, #24]
@@ -3188,8 +3263,8 @@ dseez:
 	MOV		X0, #32
 	BL		X0addrpr
 
-	MOV		X0, #':'
-	BL		X0emit
+	;MOV		X0, #':'
+	;BL		X0emit
 
 	LDR	X0, [X28, #32]	
 	BL		X0addrpr
@@ -3205,8 +3280,8 @@ dseez:
 	MOV		X0, #40
 	BL		X0addrpr
 
-	MOV		X0, #':'
-	BL		X0emit
+	;MOV		X0, #':'
+	;BL		X0emit
 
 	LDR		X0, [X28, #40]	
 	BL		X0addrpr
@@ -3221,8 +3296,8 @@ dseez:
 	MOV		X0, #48
 	BL		X0addrpr
 	
-	MOV		X0, #':'
-	BL		X0emit
+	;MOV		X0, #':'
+	;BL		X0emit
 
  
 	ADD		X0, X28, #48
@@ -3336,8 +3411,8 @@ litcont:
 	BL		X0halfpr
 	
 
-	MOV		X0, #'*'
-	BL		X0emit
+	;MOV		X0, #'*'
+	;BL		X0emit
 
 	CMP		W14, #2 ; LITL
 	B.ne	literal_skip
@@ -8936,6 +9011,32 @@ append_ptr:
 zword: .zero 64
 
 
+.align 8
+
+startup_file:	
+	.asciz "forth.fs"
+
+
+mode_read:	
+	.asciz "r"
+
+
+.align 	8
+input_file:			
+				.quad	0
+				.quad	0
+
+.align 	8
+accepted:			
+				.quad	0
+				.quad	0
+
+
+
+.align 	8
+bequiet:	
+				.quad 	0
+
 
  .align 8
  dbye:	.ascii "BYE" 
@@ -9057,6 +9158,9 @@ hashdict:
 
 		makeword "ADDR" , daddrz, daddrc, 0
 
+
+		makeword "ACCEPTED", dvaluez, dvaraddc,  accepted
+
 		makeword "AGAIN" , dagainz, dagainc, 0
 
 		makeword "ABS" , dabsz, dabsc, 0
@@ -9071,7 +9175,7 @@ hashdict:
 adict:
 
 		makeemptywords 84
-
+		makeword "BEQUIET", dvaraddz, dvaraddc,  bequiet
 		makeword "BEGIN" , dbeginz, dbeginc, 0
 		makeword "BUFFER$", dvaraddz, dvaraddc,  string_buffer
 		makeword "BREAK",  dbreakz, dbreakc, 0
@@ -9154,7 +9258,7 @@ edict:
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
-
+		;makeword "FROMSTARTUP", dfrom_startup, 0, 0
 	
 
 fdict:	
@@ -9176,6 +9280,7 @@ hdict:
 	
 		makeemptywords 66
 		makeqvword 105
+		makeword "IN", dvaluez, dvaraddc,  input_file
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
 		makeword "INVERT", dinvertz, 0,  0
@@ -9250,6 +9355,8 @@ odict:
 
 
 pdict:
+
+
 		makeemptywords 62
 		makeqvword 113
 		makeword "Q", dvaraddz, dvaraddc,  8 * 81 + ivars	
