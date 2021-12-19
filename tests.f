@@ -23,12 +23,5 @@
 : QUADRATIC  ( a b c x -- n )   >R SWAP ROT R@ *  + R> *  + ;
 
 
-$' This is the age '
-
-$' of the train'
-
-$+ 
-
-BUFFER$ TYPEZ
 
  

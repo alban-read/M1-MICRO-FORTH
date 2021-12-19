@@ -39,7 +39,7 @@ A value is read
 
 myvalue .
 
-A value is changed
+A value is changed with the TO word
 
 200 TO myvalue
 
@@ -93,7 +93,7 @@ If it is more convenient to have 16 smaller values use WLOCALS instead of LOCALS
 
 These are both just views over the same 64 bytes of memory in the local memory stack.
 
-To recap locals are valid between : and ; 
+To recap locals are only valid between : and ; 
 
 e.g.
 
@@ -145,6 +145,7 @@ set-speed and speed are working on the LOCALS shared with test.
 
 Obviously accessor words could do a lot more, like checking that the given speed is valid etc.
 
+Without FLAT, set-speed and speed would each read their own LOCALS a level above test and test would not work.
 
 
 #### TOKENS
@@ -161,11 +162,11 @@ Is a VALUES view over the (64 bit) long literal space, where large integers, dou
 
 A string is created with an initial text value like this.
 
-S' This is my initial value ' STRING myString
+' This is my initial value ' STRING myString
 
 A string returns the address of its data.
 
-myString TYPEZ 
+myString $. 
 
 Will print the string.
 
@@ -178,47 +179,71 @@ In terms of storage the strings content is stored in the string pool with all th
 
 Just as you can create a STRING you can also create a number of strings.
 
+```FORTH
 10 STRINGS myStrings
+```
 
 Will create 10 strings.
 
 To set the value of a string you use TO, e.g.
 
-S' This is a string' 0 TO myStrings.
+```FORTH
+' string zero ' 0 TO myStrings
 
-Again the storage lives in the string pool.
+Ok
+0 myStrings $.
+string zero 
+```
 
+$. is a word that prints a string.
+
+Again the storage for text lives in the string pool.
+
+The string pool can be accessed using the VALUE $$
+
+e.g. 
+
+```FORTH
+
+0 $$ $. 
+
+```
 
 ### Appending/building strings
 
 Often a string needs to be built from smaller parts
 
-I find this difficult in standard FORTH, these words are meant to help make it less error prone.
+These words are meant to help make it less error prone.
+
+```FORTH
 
 ${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} TYPEZ  
 
+```
 
 The string is composed between the ${ Start building and $} end building words.
 
-Each element is added by the comma after it.
+Each element of text is added by the comma after it.
 
-At the end the string is stored and its address is returned, so it can be named.
+At the end the combined text is stored and its address is returned, so it can be named.
+
+
+```FORTH
 
 ${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender 
 
+```
 
-
-
-
+In line with general FORTH principles the , is a word not a separator, and comes after the text being appended.  The single quote is a word and must be followed by a space. This reads text until the next single quote.
 
 
 #### Storage used when appending
 
-The BUFFER$ and APPEND$ storage is used for this.
+The BUFFER$ and APPEND$ storage is used while appending.
 
 When used in the interpreter, only the final result is placed in the string pool, the literals being available from the interpreted text.
 
-When used in the compiler any literal text parts have to be stored in the string pool (since it needs somewhere to live.)
+When used in the compiler any literal text parts have to be stored in the string pool (since these also need somewhere to live.)
 
 While building (appending) strings, APPENDER^ points to the next byte address.
 
@@ -228,13 +253,15 @@ While building (appending) strings, APPENDER^ points to the next byte address.
 
 Floating point words begin with f e.g. f.
 
-Numbers containing a . are taken to be floating point numbers.
+Numbers containing a decimal point . are taken to be floating point numbers.
 
 The same parameter stack is used, which may hold 64 bit (double) floats or 64 bit (quad) integers.
 
-A small set of floating point operations are implemented, typical comparison and math operations that the CPU directly supports.
+A small set of floating point operations are implemented, typical comparison and math operations that the CPU directly supports are found starting with f, such as f+ and f.
 
+e.g. 
 
+22.0 7.0 f/ f.
 
 
 

@@ -8361,6 +8361,14 @@ allotlastz:
 	RET
 
 
+// creation words are invalid in a compiled word
+dcreat_invalid:
+
+	ADRP	X0, create_error@PAGE		
+	ADD		X0, X0, create_error@PAGEOFF
+	B 		sayit_err
+ 
+
 
 .data 
 
@@ -8728,6 +8736,12 @@ word_desc16: .ascii "\t\t1 DIMENSION ARRAY OF 2 BYTE CELLS"
 word_desc17: .ascii "\t\t1 DIMENSION ARRAY OF BYTES"
 	.zero 16
 
+
+.align	8
+create_error: .ascii "\nError: use of CREATION words (VALUE, STRING etc) not allowed in compiled words."
+	.zero 16
+
+
 .align 8
 clear_screen:
 	.byte 27,'[','2','J',27,'[','H',0
@@ -8754,7 +8768,7 @@ here:
 
 	
 token_space:
-	.zero	128*1024*2
+	.zero	256*1024*2
 
 token_space_top:
 
@@ -8866,7 +8880,7 @@ quadlits:
 	.quad  512
 	.quad  1024
 
-	.rept  512	; <-- increase if literal pool full error arises.
+	.rept  2048	; <-- increase if literal pool full error arises.
 	.quad -1
 	.endr
 	.quad  -2 ; end of literal pool. 
@@ -9039,7 +9053,7 @@ hashdict:
 
 		makeword "ALLOTMENT", dCarrayvalz, 0,  allot_space, 0, 256*1024
 
-		makeword "ARRAY", dcreatarray , 0, 0 
+		makeword "ARRAY", dcreatarray ,dcreat_invalid , 0 
 
 		makeword "ADDR" , daddrz, daddrc, 0
 
@@ -9071,8 +9085,8 @@ bdict:
 		makeword "CHAR", 	dcharz, dcharc, 0
 
 
-		makeword "CARRAY", dCcreatarray , 0, 0 
-		makeword "CVALUES", dCcreatvalues , 0, 0 
+		makeword "CARRAY", dCcreatarray , dcreat_invalid, 0 
+		makeword "CVALUES", dCcreatvalues , dcreat_invalid, 0 
 		makeword "C@", 		catz, 0, 0
 		makeword "C!", 		cstorz, 0, 0
 		makeword "CONSTANT", dcreatcz , dcreatcc, 0
@@ -9149,8 +9163,8 @@ fdict:
 		makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
 gdict:
 		makeemptywords 78
-		makeword "HWARRAY", dHWcreatarray , 0, 0 
-		makeword "HWVALUES", dHWcreatvalues , 0, 0 
+		makeword "HWARRAY", dHWcreatarray , dcreat_invalid, 0 
+		makeword "HWVALUES", dHWcreatvalues , dcreat_invalid, 0 
 		makeword "HW!", dhstorez, dhstorec,  0
 		makeword "HW@", dhatz, dhatc, 0
 
@@ -9188,7 +9202,6 @@ kdict:
 		makeword "LOOP", 0 , dloopc, 0 
 		makeword "LIMIT", dlimited , 0, 0 
 		makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
-		makeword "LONG$", dvaraddz, dvaraddc,  long_strings
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
 	
 ldict:
@@ -9266,11 +9279,9 @@ rdict:
 		makevarword "STEPPING", step_limit
 		makevarword "STEPS", step_skip
 
-		makeword "STRING", creatstring , 0, 0 
-		makeword "STRINGS", dcreatstringvalues , 0, 0 
+		makeword "STRING", creatstring , dcreat_invalid, 0 
+		makeword "STRINGS", dcreatstringvalues , dcreat_invalid, 0 
  
-
-		makeword "SHORT$", dvaraddz, dvaraddc,  short_strings
 		makeword "SWAP", dswapz , 0, 0 
 	
 		makeword "SPACES", spacesz , spacesc, 0 
@@ -9285,7 +9296,7 @@ rdict:
 sdict:
 		makeemptywords 50
 
-		makeword "TOKENS", dHWarrayvalz, 0,  token_space, 0, 128*1024
+		makeword "TOKENS", dHWarrayvalz, 0,  token_space, 0, 256*1024
 		makeword "TO", dtoz, dtoc, 0
 		makeword "TIMEIT", dtimeitz, 0, 0
 		makeword "TRACE", dtracable, 0, 0
@@ -9315,9 +9326,9 @@ udict:
 
 		makeemptywords 4
 
-		makeword "VALUE", dcreatevalz , dcreatevalc, 0
+		makeword "VALUE", dcreatevalz , dcreat_invalid, 0
 
-		makeword "VALUES", dcreatvalues , 0, 0 
+		makeword "VALUES", dcreatvalues , dcreat_invalid, 0 
 
 		makeword "VERSION", announce , 0, 0
 		makeword "VARIABLE", dcreatvz , 0, 0
@@ -9328,8 +9339,8 @@ udict:
 vdict:
 
 		makeemptywords 48
-		makeword "WARRAY", dWcreatarray , 0, 0 
-		makeword "WVALUES", dWcreatvalues , 0, 0 
+		makeword "WARRAY", dWcreatarray , dcreat_invalid, 0 
+		makeword "WVALUES", dWcreatvalues , dcreat_invalid, 0 
 		makeword "WLOCALS", dlocalsWvalz, 0,  0, 0, 15
 		makeword "WORDS", dotwords , 0, 0 
 		makeword "WHILE", 0 , dwhilec, 0 
@@ -9448,26 +9459,8 @@ zdict:
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
 
-		; cheap locals
-		makeword "<a" , dlocaz, 0
-		makeword "<b" , dlocbz, 0
-		makeword "<c" , dloccz, 0
-		makeword "<d" , dlocdz, 0
-		makeword "<e" , dlocez, 0
-		makeword "<f" , dlocfz, 0
-		makeword "<g" , dlocgz, 0
-		makeword "<h" , dlochz, 0
-	 
-		makeword ">a" , dlocasz, 0
-		makeword ">b" , dlocbsz, 0
-		makeword ">c" , dloccsz, 0
-		makeword ">d" , dlocdsz, 0
-		makeword ">e" , dlocesz, 0
-		makeword ">f" , dlocfsz, 0
-		makeword ">g" , dlocgsz, 0
-		makeword ">h" , dlochsz, 0
+	
 
-		
 
 
 zbytewords:
