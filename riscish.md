@@ -33,36 +33,40 @@ A value has no type, it could be used to represent an int, float, char etc.
 
 A value has only a size in bits, the base VALUE is 64 bits.
 
+
+```FORTH
 199 VALUE myvalue
+```
 
 A value is read
-
+```FORTH
 myvalue .
-
+```
 A value is changed with the TO word
-
+```FORTH
 200 TO myvalue
-
+```
 The default cell size for values is 8 (64 bits) each element can store a large integer value or a double float, they are untyped other than bit length.
 
 An array of values is created with the VALUES plural word.
-
+```FORTH
 128 VALUES myvalues 
-
+```
 The VALUES are allotted from memory that is zero filled, so all values will initially read as 0.
 
 To change every value.
-
+```FORTH
 1 FILLVALUES myvalues
-
+```
 Every entry in myvalues becomes 1.
 
 To change one entry use TO
 
-
+```FORTH
 1000 7 TO myvalues 
 
 7 myvalues .
+```
 
 Value entry 7 in myvalues becomes 1000.
 
@@ -97,7 +101,9 @@ To recap locals are only valid between : and ;
 
 e.g.
 
+```FORTH
 : t1 127 FILLVALUES WLOCALS  15 WLOCALS 14 WLOCALS + . ;
+```
 
 Should return 254, every high level word, normally gets its own fresh set of LOCALS.
 
@@ -113,9 +119,9 @@ You may have a recursive word that you do not want to eat into the LOCALS stack.
 You can declare that a word is FLAT like this.
 
 FLAT word.
-
+```FORTH
 : FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ; FLAT FIB
-
+```
 This makes FIB a very, very, tiny fraction faster, LOCALS are not slow.
 
 
@@ -161,13 +167,13 @@ Is a VALUES view over the (64 bit) long literal space, where large integers, dou
 ### Strings 
 
 A string is created with an initial text value like this.
-
+```FORTH
 ' This is my initial value ' STRING myString
-
+```
 A string returns the address of its data.
-
+```FORTH
 myString $. 
-
+```
 Will print the string.
 
 A string should not be mutated, each unique string exists only once in the string pool, 
@@ -260,9 +266,9 @@ The same parameter stack is used, which may hold 64 bit (double) floats or 64 bi
 A small set of floating point operations are implemented, typical comparison and math operations that the CPU directly supports are found starting with f, such as f+ and f.
 
 e.g. 
-
+```FORTH
 22.0 7.0 f/ f.
-
+```
 
 
 
