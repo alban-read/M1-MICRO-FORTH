@@ -12,4 +12,7 @@ PAGE
 
 WORDS CR
 
-.' forth.fs loaded in '  TICKS 0 LOCALS - s>f TPMS s>f f/ f.  .' ms'  
+.' forth.fs loaded in '  TICKS 0 LOCALS - s>f TPMS s>f f/ f.  .'  ms.'  
+
+
+BYE
