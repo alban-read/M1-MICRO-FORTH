@@ -2,7 +2,7 @@
 
 This FORTH is implemented mainly in AARCH64 assembly language (main.asm), and runs hosted under OSX on the Apple M1.
 
-A few C library functions are used, the program is linked against the C library, it is possible to call C functions, which will be useful, in order to talk to the operating system.
+A few C library functions are used, the program is linked against the C library, it is possible to call C functions (from assembler), which will be useful, in order to talk to the operating system.
 
 The compiler compiles words to tokens, which are then executed by a simpler interpreter.
 
@@ -21,6 +21,13 @@ The inner (token) interpreter is not running all of the time in this implementat
 It only runs when a high level word is executing, otherwise the interpreter and compiler are just running machine code, the interpeter and compiler are not written in FORTH.
 
 Each high level word invokes an interpreter to run itself, multiple different versions of the interpreter exist, and they can be selected after the word has been compiled.
+
+
+### Startup
+
+The forth.fs file is loaded when the application starts.
+
+This file should contain any high level words you want to add to the program.
 
 
 ### Values
