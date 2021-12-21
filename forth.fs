@@ -1,6 +1,6 @@
 // forth.fs is loaded when FORTH starts.
 
-TICKS 0 TO LOCALS // start time
+TICKS VALUE start_ticks
 
 : SQUARE DUP * ;
 
@@ -12,7 +12,6 @@ PAGE
 
 WORDS CR
 
-.' forth.fs loaded in '  TICKS 0 LOCALS - s>f TPMS s>f f/ f.  .'  ms.'  
+.' forth.fs loaded in '  TICKS start_ticks - s>f TPMS s>f f/ f.  .'  ms.'  
 
-
-BYE
+ 

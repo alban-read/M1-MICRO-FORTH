@@ -4092,11 +4092,11 @@ dlocalsWvalz_fill:  ; (32 bit)
 	LDR		X1,	[X16, #-8]	; fill with
 	SUB  	X16, X16, #8
 	SUB 	X26, X26, #64		; it is always this size
-	STP		W1, W1, [X26],#8  ; fill
+	STP		W1, W1, [X26],#8  ; fill w pair
 	STP		W1, W1, [X26],#8
 	STP		W1, W1, [X26],#8
 	STP		W1, W1, [X26],#8
-	STP		W1, W1, [X26],#8  ; fill
+	STP		W1, W1, [X26],#8  ; fill w pair
 	STP		W1, W1, [X26],#8
 	STP		W1, W1, [X26],#8
 	STP		W1, W1, [X26],#8
@@ -6357,7 +6357,6 @@ dHWvaraddz:
 dCvaraddz:
 
 
-
 dvaraddz: ; address of variable
 	STR		X0, [X16], #8
 	RET
@@ -6433,7 +6432,6 @@ dcreatevalz:
 	ADD		X1, X1, dvaluez@PAGEOFF
 	STR		X1, [X28, #8]
 
- 
 
 	ADD		X1, X28, #32
 	STR		X1, [X28]
@@ -6470,13 +6468,121 @@ dcreatevalc:
 ; TO e.g. 10 TO MyVALUE
 
 
+
+; SPECIALIZED TO WORDS
+; LIKE TO but only for Word Sized objects
+
+dwtocz:	
+
+	LDR		X3, [X16, #-8] 		
+	SUB		X16, X16, #8
+
+toWupdateit:
+
+	LDR		X2,	 [X3, #8] 
+
+	ADRP	X1, dWvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dWvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	135f 
+
+	ADRP	X1, dWarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dWarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+	ADRP	X1, dWarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dWarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+
+	ADRP	X1, dlocalsWvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsWvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	170f 
+
+	; not a word we understand
+	B		190f
+
+
+; LIKE TO but only for byte Sized objects
+dctocz:	
+
+	LDR		X3, [X16, #-8] 		
+	SUB		X16, X16, #8
+
+toCupdateit:
+
+	LDR		X2,	 [X3, #8] 
+
+	ADRP	X1, dCarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	145f 
+
+
+	ADRP	X1, dCarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+	; not a word we understand
+
+	B		190f
+
+
+; LIKE TO but only for 64bit quad L Sized objects
+
+dltocz:
+
+	LDR		X3, [X16, #-8] 		
+	SUB		X16, X16, #8
+
+toLupdateit:
+
+	LDR		X2,	 [X3, #8] 
+
+	ADRP	X1, dvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	155f 
+	
+	ADRP	X1, dvaluez@PAGE	; high level word.	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	B.eq	155f 
+
+	ADRP	X1, darrayaddz@PAGE	; high level word.
+	ADD		X1, X1, darrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+	ADRP	X1, darrayvalz@PAGE	; high level word.
+	ADD		X1, X1, darrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	ADRP	X1, dlocalsvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	180f 
+
+
+	; not a word we understand
+
+	B		190f
+
+
+
 ; Generic TO checks type of word and changes the data
-; more specialized TO words can just check they have the right word type.
+; more specialized TO words can check fewer word types.
 ;
+
 
 dtocz: ; (TO) expects address of word to update in X2
 
- 
 
 	LDR		X3, [X16, #-8] 
 	SUB		X16, X16, #8
@@ -6518,7 +6624,7 @@ toupdateit:
 	ADRP	X1, dCarrayaddz@PAGE	; high level word.
 	ADD		X1, X1, dCarrayaddz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	140f 
+	B.eq	145f 
 
 
 	ADRP	X1, dCarrayvalz@PAGE	; high level word.
@@ -6550,8 +6656,6 @@ toupdateit:
 	B.eq	170f 
 
 
-
-
 	ADRP	X1, dHWarrayaddz@PAGE	; high level word.
 	ADD		X1, X1, dHWarrayaddz@PAGEOFF
 	CMP 	X2, X1
@@ -6569,6 +6673,10 @@ toupdateit:
 	B		190f
 
 
+
+; The TO updaters follow
+
+
 120:
 	LDR		X2, [X16, #-8] 
 	LDR		X0, [X3] ; var or val address
@@ -6582,8 +6690,6 @@ toupdateit:
 	STRH	W0, [X1]  ; store 
 	SUB		X16, X16, #16
 	RET
-
-
 
 
 125:	; HW word
@@ -6604,7 +6710,8 @@ toupdateit:
 	RET
 
 
-140:
+130:
+
 	LDR		X2, [X16, #-8] 
 	LDR		X0, [X3] ; var or val address
 	LDR		X1, [X3, #32]
@@ -6619,9 +6726,7 @@ toupdateit:
 	RET
 
 
-
 145:	; C byte
-
 	LDR		X1, [X16, #-8] 
 	LDR		W0, [X3] ; var or val address
 	STRB	W1, [X0]  ; store 
@@ -6701,17 +6806,21 @@ toupdateit:
 	SUB		X16, X16, #16
 	RET
 
+
+
+
+; The TO error
+
 190:	; error out 
 
 	ADRP	X0, tcomer33@PAGE	; high level word.
 	ADD		X0, X0, tcomer33@PAGEOFF
 	B		sayit_err	
 	 
-
-
 	RET
 
 
+; TO (interpreted)  just uses generic TO
 
 dtoz:
 
@@ -6759,8 +6868,9 @@ dtoz:
 
 
 ; when compiling in TO we want to check that the words are TO able or fail.
+; we compile in more specific TOs when available.
 
-dtoc:	; COMPILE in address of next word followed by (TO)
+dtoc:	; COMPILE in address of next word followed by (*TO)
 
 
 	STP		LR,  XZR, [SP, #-16]!
@@ -6793,13 +6903,17 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 	ADRP	X1, dvaraddz@PAGE	; high level word.	
 	ADD		X1, X1, dvaraddz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	150f 
+	B.eq	160f 
 
 	ADRP	X1, dWvaraddz@PAGE	; high level word.	
 	ADD		X1, X1, dWvaraddz@PAGEOFF
 	CMP 	X2, X1
 	B.eq	130f 
 
+	ADRP	X1, dWarrayvalz@PAGE	; high level word.	
+	ADD		X1, X1, dWarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
 
 	ADRP	X1, dHWvaraddz@PAGE	; high level word.	
 	ADD		X1, X1, dHWvaraddz@PAGEOFF
@@ -6817,14 +6931,14 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 	ADRP	X1, dvaluez@PAGE	; high level word.	
 	ADD		X1, X1, dvaluez@PAGEOFF
 	CMP 	X2, X1
-	B.eq	150f 
+	B.eq	160f 
 
 
 	; arrays in four sizes
 	ADRP	X1, darrayaddz@PAGE	; high level word.
 	ADD		X1, X1, darrayaddz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	150f 
+	B.eq	160f 
 
 	ADRP	X1, dWarrayaddz@PAGE	; high level word.
 	ADD		X1, X1, dWarrayaddz@PAGEOFF
@@ -6853,13 +6967,13 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 	ADRP	X1, darrayvalz@PAGE	; high level word.
 	ADD		X1, X1, darrayvalz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	150f 
+	B.eq	160f 
 
 	; LOCALS
 	ADRP	X1, dlocalsvalz@PAGE	; high level word.
 	ADD		X1, X1, dlocalsvalz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	150f 
+	B.eq	160f 
 
 	ADRP	X1, dCarrayvalz@PAGE	; high level word.
 	ADD		X1, X1, dCarrayvalz@PAGEOFF
@@ -6874,35 +6988,51 @@ dtoc:	; COMPILE in address of next word followed by (TO)
 	; not a word we understand 
 	B 		190f
 
-; we must specialize (TO) for the four data sizes
+
+
+; we may specialize (TO) for the Q(L), W, HW, C data sizes
 
 120:	; HW word
 
-	 
+	
 
+130:	; TO for W sized word
 
-130:	; W word
-
- 
+ 	MOV		X0, X28 ; word address
+	BL 		longlitit
+	ADD		X15, X15, #2
+	MOV  	X0, #44; (WTO) just wide types
+	STRH    W0, [X15]     
+	LDP		LR, XZR, [SP], #16	
+	RET
 
 
 140:	; C byte
 
  
 
-150:	; Q 
+150:	; GENERIC  TO knows about all TO-able words
 
 	MOV		X0, X28 ; word address
 	BL 		longlitit
 	ADD		X15, X15, #2
 	MOV  	X0, #31; (TO) generic
 	STRH    W0, [X15]     
-
- 
 	LDP		LR, XZR, [SP], #16	
 	RET
 
 	
+160:	; LONG QUAD 64bits 
+
+	MOV		X0, X28 ; word address
+	BL 		longlitit
+	ADD		X15, X15, #2
+	MOV  	X0, #46; (LTO) generic
+	STRH    W0, [X15]     
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+
 	B  		190f  ; not a word we can update 
 
 170:	; next word in dictionary
@@ -6920,6 +7050,9 @@ dtoc:	; COMPILE in address of next word followed by (TO)
  
 	RET
 
+
+
+; LITERALS 
 
 
 dlitz: ; next cell has address of short (half word) inline literal
@@ -9129,6 +9262,11 @@ dend:
 		makeword "(WALFILLARRAY)", 		dWALFILLAz, 0,  0	; 41
 		makeword "(STRING)", 			dSTRINGz, 0,  0		; 42
 		makeword "(,)",	 			    dcomacz, 0,  0		; 43
+
+		makeword "(WTO)", 				dwtocz, 	0,  0	; 44
+		makeword "(CTO)", 				dctocz, 	0,  0	; 45
+		makeword "(LTO)", 				dltocz, 	0,  0	; 46
+
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
