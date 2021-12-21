@@ -241,7 +241,7 @@
 
 .align 8
 ;; VERSION OF THE APP
-ver:	.double 0.601
+ver:	.double 0.621
 tver:	.ascii  "Version %2.2f\n"
 	.zero	4
 
@@ -3026,8 +3026,8 @@ dseez:
 	MOV		X0, #0
 	BL		X0addrpr
 
-	;MOV		X0, #':'
-	;BL		X0emit
+	MOV		X0, #':'
+	BL		X0emit
 
 	LDR		X0, [X28]	
 	BL		X0addrpr
@@ -3192,8 +3192,8 @@ dseez:
 	MOV		X0, #8
 	BL		X0addrpr
 	
-	;MOV		X0, #':'
-	;BL		X0emit
+	MOV		X0, #':'
+	BL		X0emit
 
 	LDR		X0, [X28, #8]
 	BL		X0addrpr 
@@ -3228,8 +3228,8 @@ dseez:
 	MOV		X0, #16
 	BL		X0addrpr
 
-	;MOV		X0, #':'
-	;BL		X0emit
+	MOV		X0, #':'
+	BL		X0emit
 
 	LDR	X0, [X28, #16]	
 	BL		X0addrpr
@@ -3244,8 +3244,8 @@ dseez:
 	MOV		X0, #24
 	BL		X0addrpr
 	
-	;MOV		X0, #':'
-	;BL		X0emit
+	MOV		X0, #':'
+	BL		X0emit
 
 	; offset into word
 	LDR		X0, [X28, #24]
@@ -3263,8 +3263,8 @@ dseez:
 	MOV		X0, #32
 	BL		X0addrpr
 
-	;MOV		X0, #':'
-	;BL		X0emit
+	MOV		X0, #':'
+	BL		X0emit
 
 	LDR	X0, [X28, #32]	
 	BL		X0addrpr
@@ -3280,8 +3280,8 @@ dseez:
 	MOV		X0, #40
 	BL		X0addrpr
 
-	;MOV		X0, #':'
-	;BL		X0emit
+	MOV		X0, #':'
+	BL		X0emit
 
 	LDR		X0, [X28, #40]	
 	BL		X0addrpr
@@ -3296,8 +3296,8 @@ dseez:
 	MOV		X0, #48
 	BL		X0addrpr
 	
-	;MOV		X0, #':'
-	;BL		X0emit
+	MOV		X0, #':'
+	BL		X0emit
 
  
 	ADD		X0, X28, #48
@@ -3411,8 +3411,8 @@ litcont:
 	BL		X0halfpr
 	
 
-	;MOV		X0, #'*'
-	;BL		X0emit
+	MOV		X0, #'*'
+	BL		X0emit
 
 	CMP		W14, #2 ; LITL
 	B.ne	literal_skip
@@ -3583,15 +3583,10 @@ dcreatcz:
 	ADD		X1, X1, last_word@PAGEOFF
 	STR		X28, [X1]
 
-
-
-
-
 	; constant code
 	ADRP	X1, dconstz@PAGE	
 	ADD		X1, X1, dconstz@PAGEOFF
 	STR		X1, [X28, #8]
-
 
 	; set constant from tos.
 	LDR		X1, [X16, #-8]	
@@ -3782,8 +3777,6 @@ exit:	ret
 ; creating new array
 
 dmaparray:
-
-
 
 RET
 
@@ -4007,7 +4000,6 @@ dfillarrayc: ; COMPILE array fill operations
 	RET
 
 
-
 ;;; ARRAY 1 dimensional cells
 
 darrayvalz: ; X0=data, X1=word
@@ -4038,7 +4030,6 @@ darrayaddz_index_error:
 	ADD		X0, X0, tcomer32@PAGEOFF
 	B		sayit
 	RET
-
 
 
 dA1FILLAz:	; fetch stacked base and index
@@ -4079,7 +4070,6 @@ dlocalsvalz_fill:
 	STP		X1, X1, [X26],#16
 	STP		X1, X1, [X26],#16
 	RET
-
 
 
 dWALFILLAz:	; fetch stacked base and index

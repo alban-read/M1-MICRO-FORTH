@@ -22,6 +22,8 @@ It only runs when a high level word is executing, otherwise the interpreter and 
 
 Each high level word invokes an interpreter to run itself, multiple different versions of the interpreter exist, and they can be selected after the word has been compiled.
 
+I am using a certain ammount of brute force and ignorance in the design of this program, which may not scale, but which works presently, in the spirit of getting it started.  
+
 
 ### Startup
 
