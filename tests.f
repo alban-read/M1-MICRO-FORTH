@@ -23,5 +23,14 @@
 : QUADRATIC  ( a b c x -- n )   >R SWAP ROT R@ *  + R> *  + ;
 
 
+: RUNINT 
+  
+  0 FILLARRAY LOCALS 
+
+    
+
+;
+
+
 
  

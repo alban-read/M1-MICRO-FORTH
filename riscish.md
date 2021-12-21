@@ -36,11 +36,11 @@ This file should contain any high level words you want to add to the program.
 
 Values are preferred to VARIABLES, as they are much safer to use, and simpler to access.
 
-A value is created with the VALUE word.
+- A value is created with the VALUE word.
 
-A value has no type, it could be used to represent an int, float, char etc.
+- A value has no type, it could be used to represent an int, float, char etc.
 
-A value has only a size in bits, the base VALUE is 64 bits.
+- A value has only a size in bits, the base VALUE is 64 bits.
 
 
 ```FORTH
@@ -212,7 +212,7 @@ string zero
 
 $. is a word that prints a string.
 
-Again the storage for text lives in the string pool.
+The storage for the string text lives in the string pool a STRING just points a name at it.
 
 The string pool can be accessed using the VALUE $$
 
@@ -264,6 +264,72 @@ While building (appending) strings, APPENDER^ points to the next byte address.
 
 
 
+### Stacks
+
+FORTH has a parameter (or data) stack; used for evaluating expressions, and passing arguments to words.  This has a rich set of words that operate on it, such as SWAP, ROT, OVER, PICK etc.
+
+There is also a return stack that is used in this implementation for some of the control flow constructs, for various loops, exposed by the R> >R words.
+
+There is a hardly visible stack used for the local variables made available to each word.
+
+#### Stack values
+
+We also have stack values, these are extremely simple, and only allow values to be pushed or popped.
+There are none of the features of the main parameter stack.
+
+Like most stacks, the last thing added is the first thing removed LIFO (last in first out)
+
+To declare a user stack just use the STACK creation word.
+
+```FORTH
+
+\\ create a stack of file handles, of depth 18.
+
+18 STACK file_handles
+
+\\ add some values
+
+0 TO file_handles 
+1 TO file_handles
+2 TO file_handles
+
+\\ remove and print the values
+
+file_handles .
+
+2
+
+```
+
+- To take a value from a STACK just use its name, the value on the top of the stack is read.
+
+- To push a value use the TO word, with just the value to push.
+
+- The storage of a stack is taken from the ALLOTMENT and is all zeros.
+
+- A STACK resembles a VALUES object, but maintains a reference internaly to the last item pushed.
+
+file handles are a good use case, when opening a file, push the file handle, when closing the file, pop the file handle.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### Floating point support
 
 Floating point words begin with f e.g. f.
@@ -279,6 +345,15 @@ e.g.
 22.0 7.0 f/ f.
 ```
 
+#### Thoughts
+
+Having the interpreter and token compiler implemented in assembly language does provide some benefits, such as testing the token compiled code easilly, since the interpeter is not made of the token compiled code being tested.
+
+The interpreter in assembler, also means it is not as exposed to high level FORTH as it would be if it was written in FORTH.
+
+High level FORTH does have a lot of access to the system still, various interrnal objects are also exposed as VALUES to FORTH.
+
+In theory a version of the inner interpreter can be written in FORTH, I expect that would be far slower due to the high level loops, and the use of FORTH values instead of machine registers, very interesting to test.
 
 
 
