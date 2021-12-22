@@ -1,10 +1,11 @@
 // forth.fs is loaded when FORTH starts.
 
+
 TICKS VALUE start_ticks
 
-: SQUARE DUP * ;
+// : SQUARE DUP * ;
 
-: QUADRATIC  ( a b c x -- n )   >R SWAP ROT R@ *  + R> *  + ;
+// : QUADRATIC  ( a b c x -- n )   >R SWAP ROT R@ *  + R> *  + ;
 
 PAGE
 

@@ -252,6 +252,15 @@ tver:	.ascii  "Version %2.2f\n"
 .align 8			
 
 
+
+beloud:
+	ADRP	X0, bequiet@PAGE
+	ADD		X0, X0, bequiet@PAGEOFF
+	MOV 	X1, #0
+	STR		X1, [X0]
+	RET
+
+
 from_startup:
 	save_registers
 	ADRP	X0, startup_file@PAGE		
@@ -390,7 +399,7 @@ saybye:
 saynotfound:
 	ADRP	X0, tcomer4@PAGE	
 	ADD		X0, X0, tcomer4@PAGEOFF
-	B		sayit
+	B		sayit_err
 
 sayerrlength:
 	ADRP	X0, tlong@PAGE	
@@ -1286,6 +1295,9 @@ init:
 	BL 	dfrom_startup
  
 input:	
+
+	
+
 	BL  chkoverflow
 	BL  chkunderflow
 	BL  sayok
@@ -1865,9 +1877,7 @@ exit_compiler_pool_full:
 	BL		clean_last_word
 	ADRP	X0, poolfullerr@PAGE	
 	ADD		X0, X0, poolfullerr@PAGEOFF
-	BL		sayit
-
-	B		input ; back to immediate mode
+	B		carry_on
 
 exit_compiler_compile_time_err:
 	SUB		X14, X14, #16
@@ -1876,8 +1886,7 @@ exit_compiler_compile_time_err:
 	; compile time function returned error
 	ADRP	X0, tcomer9@PAGE	
 	ADD		X0, X0, tcomer9@PAGEOFF
-	BL		sayit
-	B		input ; back to immediate mode
+	B		carry_on
 
 
 exit_compiler_unbalanced_loops:
@@ -1885,10 +1894,7 @@ exit_compiler_unbalanced_loops:
 	reset_data_stack
 	ADRP	X0, tcomer30@PAGE	
 	ADD		X0, X0, tcomer30@PAGEOFF
-	BL		sayit
-	B		input ; back to immediate mode
-
-
+	B		carry_on
 
 exit_compiler_word_empty:
 	SUB		X14, X14, #16
@@ -1896,8 +1902,7 @@ exit_compiler_word_empty:
 	; : was followed by nothing which is an error.
 	ADRP	X0, tcomer1@PAGE	
 	ADD		X0, X0, tcomer1@PAGEOFF
-	BL		sayit
-	B		input ; back to immediate mode
+	B		carry_on
 	
 
 exit_compiler_word_full:
@@ -1906,6 +1911,7 @@ exit_compiler_word_full:
 	reset_data_stack
 	BL		clean_last_word
 	BL		sayerrlength
+	BL		beloud
 	B		input ; 
 
 
@@ -1913,6 +1919,7 @@ exit_compiler_word_exists:
 	SUB		X14, X14, #16
 	reset_data_stack
 	BL		err_word_exists
+	BL		beloud
 	B		input ;  
 
 exit_compiler_no_words:
@@ -1958,6 +1965,7 @@ exit_compiler: ; NORMAL success exit
 	;BL		X0print
 	;BL		saycompfin
 	MOV 	X15, #0
+	BL		beloud
 	B		advance_word ; back to main loop
 
 not_compiling:
@@ -1965,12 +1973,25 @@ not_compiling:
 ; at this point we have not found this word
 ; display word not found as an error.
 
+
+
+
 	BL		saycr
 	BL		saylb
 	BL		sayword
 	BL		sayrb
 	BL		saynotfound
 	B		advance_word
+
+
+carry_on:
+	BL		sayit
+	BL 		beloud
+	B		input ; back to immediate mode
+
+
+
+
 
 
 exit_program:	
@@ -4028,7 +4049,7 @@ darrayaddz_index_error:
 	STR		XZR, [X16, #-8]	; null.. trapped by ! and @
 	ADRP	X0, tcomer32@PAGE	
 	ADD		X0, X0, tcomer32@PAGEOFF
-	B		sayit
+	B		sayit_err
 	RET
 
 
@@ -4505,13 +4526,99 @@ B		300f
 	restore_registers_not_stack
 
 	RET
-
-
-
-
-;
  
  ;; End of ARRAYS   
+
+;; STACKS
+
+dstackz:
+
+	LDR 	X0, [X1, #24] ; stack pos
+	SUB		X0, X0, #1
+	STR		X0, [X1, #24] ; stack pos
+	CMP 	X0, #0
+	B.lt	empty_stack 
+
+	LSL		X0, X0, #3
+	LDR		X2, [X1]
+	ADD		X2, X2, X0
+	LDR		X0, [X2] 
+	STR		X0, [X16], #8
+	
+	RET
+
+empty_stack:
+	MOV 	X0, #0
+	STR		X0, [X1, #24] ; stack pos
+	B	darrayaddz_index_error 
+
+dcreatstack:
+
+	find_free_word	
+	ADRP	X8, dstackz@PAGE	; high level word.	
+	ADD		X8, X8, dstackz@PAGEOFF
+	MOV		X3, #3
+ 
+100:	; find free word and start building it
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f		; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+	; undefined so build the word here
+
+	; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+
+	copy_word_name
+
+	; store runtime code
+
+	ADRP	X8, dstackz@PAGE	; high level word.	
+	ADD		X8, X8, dstackz@PAGEOFF
+	STR		X8, [X28, #8]
+
+
+	; set stack size from tos.
+	LDR		X0, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X0, [X28, #32] ; array size 
+
+	MOV 	X3, #3
+	allotation
+	CMP		X0, X12
+	B.gt	allot_memory_full
+
+	B		300f
+
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+
+
+280:	; error dictionary FULL
+
+
+300:
+	restore_registers_not_stack
+
+	RET
+
+
+
+
+
 
 
 dtickz: ; ' - get address of NEXT words data field
@@ -4599,6 +4706,9 @@ dcharc: ; char - convert Char to small lit while compiling.
 
 	RET
  
+
+
+
 
 
 ; control flow
@@ -5288,6 +5398,7 @@ fastrunintz:; interpret the list of tokens at X0
 
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
+
 	SUB		X15, X0, #2
 	MOV		X29, #64
 
@@ -5306,7 +5417,7 @@ fastrunintz:; interpret the list of tokens at X0
 		CBZ		X2, 10b
 	
 		BLR		X2		; with X0 as data and X1 as address	
-
+ 
 	.endr
 
 	b		10b
@@ -6139,7 +6250,6 @@ dwstorz:  ; ( n address -- )
 	RET
 
 
-
 hwatz: ;  ( address -- n ) fetch var.
 	LDR		X0, [X16, #-8] 
 	CBZ		X0, itsnull
@@ -6298,6 +6408,7 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	ADD		X3, X3, #1
 	ADD		X1, X1, #8
 	B		10b	
+
 70:
 	; literal not present 
 	; free slot found, store lit and return value
@@ -6334,6 +6445,39 @@ stackit: ; push x0 to stack.
 	STR		X0, [X16], #8
 	RET
 
+; interpreter pointer exposed
+; these are useful perhaps when testing.
+
+; IP@
+dipatz:
+	STR		X15, [X16], #8
+	RET
+
+; IP!
+dipstrz:
+	LDR		X0, [X16,#-8]
+	MOV 	X15, X0
+	SUB 	X16, X16, #8
+	RET
+
+; IP2+
+dip2plusz:
+	ADD		X15, X15, #2
+	RET
+
+; IP+
+dipplusz:
+	LDR		X0, [X16,#-8]
+	ADD		X15, X15, X0
+	SUB 	X16, X16, #8
+	RET
+
+; HW@IP - get hw from HP; e.g. the TOKEN
+; which will be itself in a high level word.
+dhatipz:
+	LDRH    W0, [X15]
+	STR		X0, [X16], #8
+	RET
 
 
 ; different variable sizes
@@ -6559,6 +6703,10 @@ toLupdateit:
 	CMP 	X2, X1
 	B.eq	180f 
 
+	ADRP	X1, dstackz@PAGE	; high level word.
+	ADD		X1, X1, dstackz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	100f 
 
 	; not a word we understand
 
@@ -6657,6 +6805,11 @@ toupdateit:
 	CMP 	X2, X1
 	B.eq	120f 
 
+	ADRP	X1, dstackz@PAGE	; high level word.
+	ADD		X1, X1, dstackz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	100f 
+
 
 	; not a word we understand
 
@@ -6666,6 +6819,25 @@ toupdateit:
 
 ; The TO updaters follow
 
+
+100:	; push onto stack
+	LDR		X0, [X3] ; base address
+	LDR		X1, [X3, #32] ; max depth
+	LDR 	X2, [X3, #24] ; stack pos
+	CMP		X2,  X1
+	B.eq	darrayaddz_index_error
+
+	LSL		X2, X2, #3
+	ADD		X1, X2, X0
+	LDR		X0, [X16, #-8] 
+	STR		X0, [X1]  ; store on stack
+
+	SUB		X16, X16, #8
+
+	LDR 	X2, [X3, #24] ; stack pos
+	ADD		X2, X2, #1
+	STR 	X2, [X3, #24] ; stack pos
+	RET
 
 120:
 	LDR		X2, [X16, #-8] 
@@ -6956,6 +7128,12 @@ dtoc:	; COMPILE in address of next word followed by (*TO)
 
 	ADRP	X1, darrayvalz@PAGE	; high level word.
 	ADD		X1, X1, darrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	ADRP	X1, dstackz@PAGE	; high level word.
+	ADD		X1, X1, dstackz@PAGEOFF
 	CMP 	X2, X1
 	B.eq	160f 
 
@@ -9399,7 +9577,7 @@ gdict:
 		makeword "HWVALUES", dHWcreatvalues , dcreat_invalid, 0 
 		makeword "HW!", dhstorez, dhstorec,  0
 		makeword "HW@", dhatz, dhatc, 0
-
+		makeword "HW@IP", dhatipz, 0, 0
 
 		makeqvword 104
  
@@ -9408,6 +9586,10 @@ hdict:
 	
 		makeemptywords 66
 		makeqvword 105
+		makeword "IP@", dipatz, dipatz,  0
+		makeword "IP!", dipstrz, dipstrz,  0
+		makeword "IP2+", dip2plusz, dip2plusz,  0
+		makeword "IP+", dipplusz, dipplusz,  0
 		makeword "IN", dvaluez, dvaraddc,  input_file
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
@@ -9509,6 +9691,8 @@ rdict:
 
 		makeemptywords 50
 		makeword "S'", dstrstksz , dstrstksc, 0 
+
+		makeword "STACK", dcreatstack , dcreat_invalid, 0 
 		makeword "STEPOUT", stepoutz , 0, 0 
 	 	makeword "STEP", step_in_runz , 0, 0 
 		makevarword "STEPPING", step_limit
