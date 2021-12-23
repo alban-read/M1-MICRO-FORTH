@@ -52,7 +52,7 @@ Values are preferred to VARIABLES, as they are much safer to use, and simpler to
 199 VALUE myvalue
 ```
 
-A value is read
+A value is read and printed with dot.
 ```FORTH
 myvalue .
 ```
@@ -66,7 +66,7 @@ An array of values is created with the VALUES plural word.
 ```FORTH
 128 VALUES myvalues 
 ```
-The VALUES are allotted from memory that is zero filled, so all values will initially read as 0.
+The VALUES are allotted from s pool of memory that is zero filled, so all values will initially read as 0.
 
 To change every value.
 ```FORTH
@@ -189,17 +189,18 @@ A string is created with an initial text value like this.
 ' This is my initial value ' STRING myString
 ```
 A string returns the address of its data.
+
 ```FORTH
 myString $. 
 ```
-Will print the string.
+Given the address $. will print the string.
 
-A string should not be mutated, each unique string exists only once in the string pool, 
+A string should neot normally be mutated, each unique string exists only once in the string pool, 
 changing one would impact all usages everywhere in a program.
 
 Strings can be compared with $= and $== which check if they are same and $COMPARE wich checks if one is equal, greater, or less than the other.
 
-In terms of storage the strings content is stored in the string pool with all the rest, the word just points it and gives it a name.
+In terms of storage the strings content is stored in the string pool with all the rest, the STRING word just points to the storage and gives it a name.
 
 Just as you can create a STRING you can also create a number of strings.
 
@@ -219,11 +220,13 @@ Ok
 string zero 
 ```
 
+0 myStrings returns the address of the 0th string.
+
 $. is a word that prints a string.
 
-The storage for the string text lives in the string pool a STRING just points a name at it.
+The storage for the string text lives in the string pool a STRING word just points a name at it.
 
-The string pool can be accessed using the VALUE $$
+The string pool can be accessed using the special VALUE $$
 
 e.g. 
 
@@ -233,18 +236,22 @@ e.g.
 
 ```
 
+Looks up the first 0th string in the storage and $. types it to the terminal.
+
+
 ### Little defining words
 
-As this is an interpeter it is almost always slower to use two words when one will do.
+As this is an interpeter it is almost always slower to use two words if one word will do.
 
-It is also faster if a word does more, the overhead of the interpreter is calling the word in the first place.
-The compiler also does not optimize, so it is often up to the programmer to choose to use a faster word not up to the compiler to invent them on the fly.
+It is also faster if each word *does more*, the overhead of the interpreter is calling each word in the first place.
 
-A good example is that 1 + is slower than 1+ and if you do 1 + millions of times, this will have a performance impact.
+The compiler also does not optimize, so it is often up to the programmer to choose to use a faster optimal word not up to the compiler to invent them on the fly.
+
+A good example is that `1 + ` is slower than `1+` and if you do 1 + millions of times, this will have a performance impact.
 
 For this reason FORTH interpreters often come with dozens of little optimized words.
 
-The approach I am taking is to provide a few words for defining those little words, so you can define the words your specific program actually benefits from.
+The approach in this implementation is to provide a few words for defining those little words, so you can define the words your specific program actually benefits from.
 
 Shifting left and right
 
@@ -253,16 +260,16 @@ You can define words that perform left and right shifts for faster multiplicatio
 ```FORTH
 3 SHIFTSL 8*
 ```
-Defines the word 8* that SHIFTS the top of stack left 3 times, multiplying by 8.  SHIFTSR is the opposite word that does division.
+Defines the new word 8* that SHIFTS the top of stack left 3 times, effectively multiplying by 8.  SHIFTSR is the opposite word that does division.
 
 
 ```FORTH
 1 ADDS 1+
 ```
 
-Defines a fast word for adding 1 to the top of the stack, the opposite word is SUBS.
+Defines a fast little word for adding 1 to the top of the stack, the opposite word is SUBS.
 
-Take a look though your app and if you find some common patterns define some of these to speed it up.
+Take a look though your app and if you find some common patterns, define some of these to speed it up.
 
 
 

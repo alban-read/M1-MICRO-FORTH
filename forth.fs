@@ -1,7 +1,16 @@
-// forth.fs is loaded when FORTH starts.
-
+// forth.fs - this file is loaded when FORTH starts.
 
 TICKS VALUE start_ticks
+
+3.14159265359   CONSTANT PI
+
+// common fast add and subtract
+1 ADDS 1+ 1 SUBS 1-
+
+// common fast shifts 
+1 SHIFTSL 2* 2 SHIFTSL 4* 3 SHIFTSL 8*
+1 SHIFTSR 2/ 2 SHIFTSR 4/ 3 SHIFTSR 8/
+
 
 // : SQUARE DUP * ;
 

@@ -11,8 +11,7 @@ def F(n):
 start_time = time.time()
 
 for x in range(25):
-  F(34)BYE
-  
+  F(34) 
 
 finish_time=time.time()
 
