@@ -97,19 +97,22 @@ These are not FORTH standard words.
 
 LOCALS provide each word with eight (64bit) local variables.
 
-LOCALS is a special array of values of length 8 (0..7) that provide some small local memory storage for each word invocation. 
+- LOCALS is a special array of values of length 8 (0..7) that provide some small local memory storage for each word invocation. 
 
-LOCALS backing memory is implemented as a stack, allowing about 250 levels of depth.
+- LOCALS backing memory is implemented as a stack, allowing about 250 levels of depth.
 
 On entry to a word LOCALS are erased, all values will be read as zero.
 
-LOCALS cease to exist and are reused when a word ends.
+- LOCALS cease to exist and are reused when a word ends.
 
-WLOCALS use the same memory as LOCALS providing word sized access (32bits) to 16 (0..15) Values.
 
-If it is more convenient to have 16 smaller values use WLOCALS instead of LOCALS
+Storge for WLOCALS
 
-These are both just views over the same 64 bytes of memory in the local memory stack.
+- WLOCALS use the same memory as LOCALS providing word sized access (32bits) to 16 (0..15) Values.
+
+- If it is more convenient to have 16 smaller values use WLOCALS instead of LOCALS
+
+- These are both just views over the same 64 bytes of memory in the local memory stack.
 
 To recap locals are only valid between : and ; 
 
@@ -132,7 +135,7 @@ There is no need to use LOCALS but if you write a word and think it would be han
 
 You may have a recursive word that you do not want to eat into the LOCALS stack.
 
-You can declare that a word is FLAT like this.
+- You can declare that a word is FLAT like this.
 
 FLAT word.
 ```FORTH
@@ -145,9 +148,9 @@ This makes FIB a very, very, tiny fraction faster, LOCALS are not slow.
 
 A FLAT word sees the locals of its parent word, that is the word that called it, or the command line.
 
-Using the standard local access can be cumbersome, the name LOCALS does not mean much.
+- Using the standard local access can be cumbersome, the name LOCALS does not mean much.
 
-FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give local variables some sensible names by creating accessor words.
+- FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give local variables some sensible names by creating accessor words.
 
 
 ```FORTH
@@ -195,12 +198,11 @@ myString $.
 ```
 Given the address $. will print the string.
 
-A string should neot normally be mutated, each unique string exists only once in the string pool, 
-changing one would impact all usages everywhere in a program.
+- A string should not normally be mutated, each unique string exists only once in the string pool, changing one would impact all usages everywhere in a program.
 
-Strings can be compared with $= and $== which check if they are same and $COMPARE wich checks if one is equal, greater, or less than the other.
+- Strings can be compared with $= and $== which check if they are same and $COMPARE wich checks if one is equal, greater, or less than the other.
 
-In terms of storage the strings content is stored in the string pool with all the rest, the STRING word just points to the storage and gives it a name.
+-  In terms of storage the strings content is stored in the string pool with all the rest, the STRING word just points to the storage and gives it a name.
 
 Just as you can create a STRING you can also create a number of strings.
 
