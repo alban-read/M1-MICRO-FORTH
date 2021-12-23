@@ -1296,7 +1296,6 @@ init:
  
 input:	
 
-
 	BL  chkoverflow
 	BL  chkunderflow
 	BL  sayok
@@ -1994,8 +1993,6 @@ exit_program:
 	
 190:	
 	RET
-
-
 
 ; Return stack
 ; The word execution uses the machine stack pointer

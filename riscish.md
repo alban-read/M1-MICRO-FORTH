@@ -1,12 +1,14 @@
 ### This is a non standard VARIANT of FORTH
 
+This FORTH is non standard.
+
 This FORTH is implemented mainly in AARCH64 assembly language (main.asm), and runs hosted under OSX on the Apple M1.
 
 A few C library functions are used, the program is linked against the C library, it is possible to call C functions (from assembler), which will be useful, in order to talk to the operating system.
 
 The compiler compiles words to tokens, which are then executed by a simpler interpreter.
 
-It is going to be quite specific to features of the ARM V8 64 bit processor, such as wordsizes.
+The implementation is specific to features of the ARM V8 64 bit processor, such as wordsizes.
 
 FORTH primitives are implemented as assembly language functions, the compiler converts high level FORTH words into list of tokens for the token interpreter(s) to execute.
 
@@ -123,6 +125,8 @@ They are not normally shareable.
 
 After t1 runs type 14 WLOCALS . and it will be zero, the command line level has its own set of LOCALS as well.
 
+There is no need to use LOCALS but if you write a word and think it would be handy to have somewhere else to briefly store a value that is not global or the stack, they serve that purpose.
+
 
 #### advanced LOCALS usage
 
@@ -177,6 +181,8 @@ Is a VALUES view over the (64 bit) long literal space, where large integers, dou
 
 
 ### Strings 
+
+Strings are non standard.
 
 A string is created with an initial text value like this.
 ```FORTH
@@ -418,10 +424,6 @@ The design is a token interpreter, I chose to use 16bit tokens to represent word
 
 It is a simple interpreter but FORTH is also a simple and lean language.
 
-At interpreting FORTH words the token interpreter seems significantly faster than Python 3 is at interpreting Python functions, I am not suggesting these are in any way equivalent tasks, just that people do find Python fast enough.
-
-Users of Python tend to be scripting C libraries and I intend to be scripting assembler and C functions.
-
-
+The token interpreter is reasonably competitive with other far more popular interpreted languages.
 
 
