@@ -5,13 +5,11 @@
 
 : FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ;
 
-: t1 25 0 DO 34 FIB LOOP ; // run many
+: t2 25 0 DO 34 FIB DROP LOOP ; // run many
 
+: FIB34 34 FIB DROP ;
 
-
-
-
-
+: t1 25 TIMESDO FIB34 ;
 
 TIMEIT t1
 
@@ -19,31 +17,11 @@ TIMEIT t1
 TIMEIT t1
 9781  : ms to run ( 97813  ) ns 
 
-
 // 29th November 2021 - more reasonable.
 FASTER FIB // not traceable
 TIMEIT t1
 3864  : ms to run ( 38647  ) ns 
  
-
-import time
-
-
-def F(n):
-  if n == 0: return 0
-  elif n == 1: return 1
-  else: return F(n-1)+F(n-2)
-
-start_time = time.time()
-
-for x in range(25):
-  F(34)
-
-finish_time=time.time()
-
-print( finish_time - start_time))
-
-
 
 
 // PRIME SIEVE benchmark

@@ -1296,7 +1296,6 @@ init:
  
 input:	
 
-	
 
 	BL  chkoverflow
 	BL  chkunderflow
@@ -1973,9 +1972,6 @@ not_compiling:
 ; at this point we have not found this word
 ; display word not found as an error.
 
-
-
-
 	BL		saycr
 	BL		saylb
 	BL		sayword
@@ -1984,15 +1980,10 @@ not_compiling:
 	B		advance_word
 
 
-carry_on:
+carry_on:	; say the error loudly and resume interpreting
 	BL		sayit
 	BL 		beloud
 	B		input ; back to immediate mode
-
-
-
-
-
 
 exit_program:	
 
@@ -2167,6 +2158,178 @@ dlochsz:
 	LDR		X0,	[X16, #-8]!
 	STR		X0, [X26, #-64]
 	RET
+
+
+
+; SIMPLE non standard repeater
+
+; n TIMESDO word 
+; execute single word, n times, as quickly as we can.
+
+; compiled times do
+dtimescz: 
+
+	STP		LR,  X15, [SP, #-16]!
+
+	LDP		X3, X1, [X16,#-16]		; x1 word base, x3 count  
+	SUB 	X16, X16, #16
+
+	LDR		X0, [X1]		; words data
+	LDR		X2, [X1, #8]	; exec address
+
+10:
+	; unrolling the loop speeds it up
+	.rept	32
+
+	STP		X0, X1,  [SP, #-16]!
+	STP		X2, X3,  [SP, #-16]!
+
+	BLR		X2 ; call function with X0=data, X1=address
+
+	LDP		X2, X3, [SP], #16
+	LDP 	X0, X1, [SP], #16
+
+	SUB 	X3, X3,	#1
+	CBZ		X3, 20f 
+	.endr
+
+	B 		10b
+
+20:
+ 	LDP 	LR, X15, [SP], #16
+	MOV     X0, #0
+	RET
+
+
+dtimesdoz:
+
+100:	
+	save_registers_not_stack
+	
+	BL		advancespaces
+	BL		collectword
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f			; not found 
+	CMP		X21, #-1		; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	; found word in X28, stack address of word
+
+	LDR		X3, [X16,#-8] ; count to X3
+	SUB 	X16, X16, #8
+	MOV     X1, X28   ; word base
+	LDR		X0, [X28] ; data (argument)
+	LDR		X2, [X28, #8]  ; X2 to call
+	CBZ		X2,  190f
+
+; unrolling loop speeds it up
+
+	.rept	32
+
+	STP		X0, X1,  [SP, #-16]!
+	STP		X2, X3,  [SP, #-16]!
+
+	BLR		X2 ; call function with X0=data, X1=address
+
+	LDP		X2, X3, [SP], #16
+	LDP 	X0, X1, [SP], #16
+
+	SUB 	X3, X3,	#1
+	CBZ		X3, 20f 
+	.endr
+
+	B 		10b
+
+20:
+	restore_registers_not_stack
+
+	RET
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	 
+
+	restore_registers_not_stack
+	MOV		X0, #-1
+	RET
+
+
+
+; compile timesdo
+dtimesdoc:
+
+
+100:	
+	STP		LR,  XZR, [SP, #-16]!
+	
+	BL		advancespaces
+	BL		collectword
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f			; not found 
+	CMP		X21, #-1		; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	; found word in X28, stack address of word
+
+	LDR		X3, [X16,#-8] ; count to X3
+	SUB 	X16, X16, #8
+	MOV     X1, X28   ; word base
+	CBZ		X2,  190f
+  
+
+	MOV 	X0, X1
+	BL		longlitit
+	ADD		X15, X15, #2
+	MOV 	W0, #47 ;(TIMESDO)
+	STRH	W0, [X15] 
+ 
+
+	LDP		LR, X16, [SP], #16
+	RET
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	 
+
+	LDP		LR, X16, [SP], #16
+	MOV		X0, #-1
+	RET
+
+
+	RET
+
 
 
 
@@ -2843,8 +3006,6 @@ plustorz:
 
     LDR		X0, [X16, #-8] 
 	LDR		X1, [X16, #-16]
-
- 
 	
 	LDR 	X2, [X0]
 	ADD		X1, X1, X2
@@ -2982,19 +3143,11 @@ floop:
 	RET	
 	
 
-fibtest: ; 1- DUP 1-'  
-	LDR		X0, [X16, #-8]
-	SUB		X0, X0, #1
-	STR		X0, [X16, #-8]
-	LDR		X0, [X16, #-8]
-	SUB		X0, X0, #1
-	STR		X0, [X16], #8
-	RET 
 
-
-;; Introseption and inspection
+;; Introspection and inspection
 ; good to see what our compiler is doing.
-; displays a word in readable form
+; displays the layout of a word.
+; NOT the source, you have that
 
 
 dseez:
@@ -6323,6 +6476,92 @@ dnplusz:
 dnplusc:
 	RET	
 
+; create an N plus word
+; 1 ADDER 1+
+dcreatndivz:
+
+	find_free_word
+	ADRP	X8, ndivz@PAGE	; high level word.	
+	ADD		X8, X8, ndivz@PAGEOFF
+	MOV		X3, #3
+	B 		100f
+
+dcreatnmulz:
+	
+	find_free_word
+	ADRP	X8, nmulz@PAGE	; high level word.	
+	ADD		X8, X8, nmulz@PAGEOFF
+	MOV		X3, #3
+	B 		100f
+
+creatsubber:
+
+ 	find_free_word
+	ADRP	X8, nsubz@PAGE	; high level word.	
+	ADD		X8, X8, nsubz@PAGEOFF
+	MOV		X3, #3
+	B 		100f
+
+creatadder:
+
+
+ 	find_free_word
+	ADRP	X8, nplusz@PAGE	; high level word.	
+	ADD		X8, X8, nplusz@PAGEOFF
+	MOV		X3, #3
+ 
+
+100:	; find free word and start building it
+
+
+	LDR		X1, [X28, #48] ; name field
+	LDR		X0, [X22]
+	CMP		X1, X0
+	B.eq	290b
+
+	CMP		X1, #0		; end of list?
+	B.eq	280f		; not found 
+	CMP		X1, #-1		; undefined entry in list?
+	b.ne	260f
+
+; undefined so build the word here
+
+	; this is now the last_word word being built.
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR		X28, [X1]
+
+	copy_word_name
+
+	; store runtime code
+
+	STR		X8, [X28, #8]
+
+	ADD		X1, X28, #32
+	STR		X1, [X28]
+
+	; set adder
+	LDR		X0, [X16, #-8]	
+	SUB		X16, X16, #8
+	STR		X0, [X28, #0] ; value to add
+	B		300f
+
+
+260:	; try next word in dictionary
+	SUB		X28, X28, #64
+	B		100b
+
+280:	; error dictionary FULL
+
+
+300:
+	restore_registers_not_stack
+
+	RET
+
+
+
+
 
 nmulz:	; perform shift left to multiply
 	LDR		X1, [X16, #-8]
@@ -9434,7 +9673,7 @@ dend:
 		makeword "(WTO)", 				dwtocz, 	0,  0	; 44
 		makeword "(CTO)", 				dctocz, 	0,  0	; 45
 		makeword "(LTO)", 				dltocz, 	0,  0	; 46
-
+		makeword "(TIMESDO)", 			dtimescz, 	0,  0	; 47
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
@@ -9448,6 +9687,8 @@ hashdict:
 
 		makeemptywords 84
 
+		makeword "ADDS", creatadder, dcreat_invalid, 0	
+		
 		makeword "APPEND$", dvaraddz, dvaraddc,  append_buffer
 		
 		makeword "APPEND^", dvaluez, dvaraddc,  append_ptr
@@ -9499,7 +9740,7 @@ bdict:
 		makeword "CVALUES", dCcreatvalues , dcreat_invalid, 0 
 		makeword "C@", 		catz, 0, 0
 		makeword "C!", 		cstorz, 0, 0
-		makeword "CONSTANT", dcreatcz , dcreatcc, 0
+		makeword "CONSTANT", dcreatevalz , dcreat_invalid, 0
 		makeword "CREATE", 	dcreatz, dcreatc, 0
 	
 		makeword "CR", 		saycr, 0, 0
@@ -9564,7 +9805,6 @@ edict:
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
-		;makeword "FROMSTARTUP", dfrom_startup, 0, 0
 	
 
 fdict:	
@@ -9633,7 +9873,7 @@ ldict:
 mdict:
 		makeemptywords 64
 
-
+	
 		makeword "NTH", dnthz, dnthc, 0	
 
 		makeword "NIP", dnipz, dnipc, 0	
@@ -9691,7 +9931,7 @@ rdict:
 
 		makeemptywords 50
 		makeword "S'", dstrstksz , dstrstksc, 0 
-
+		makeword "SUBS", creatsubber, dcreat_invalid, 0	
 		makeword "STACK", dcreatstack , dcreat_invalid, 0 
 		makeword "STEPOUT", stepoutz , 0, 0 
 	 	makeword "STEP", step_in_runz , 0, 0 
@@ -9702,7 +9942,8 @@ rdict:
 		makeword "STRINGS", dcreatstringvalues , dcreat_invalid, 0 
  
 		makeword "SWAP", dswapz , 0, 0 
-	
+		makeword "SHIFTSL", dcreatnmulz, dcreat_invalid,0
+		makeword "SHIFTSR", dcreatndivz, dcreat_invalid,0
 		makeword "SPACES", spacesz , spacesc, 0 
 		makeword "SPACE", emitchz , emitchc, 32
 	 	makeword "SP@", fetchspz , 0, 0 
@@ -9722,6 +9963,7 @@ sdict:
 		makeword "TRUE", dtruez, 0,  0
 		makeword "TRACING?", dtraqz, 0, 0
 		makeword "TICKS", dtickerz, 0, 0
+		makeword "TIMESDO", dtimesdoz, dtimesdoc, 0
 		makeword "TPMS", dconstz, dconstz, 24000
 		makeword "TPS",  dconstz, dconstz, 24000000
 		makeword "TRON", dtronz, 0, 0
@@ -9802,62 +10044,12 @@ zdict:
 		makeword "$compare", dstrcmp, 0,  0
 		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 4096
 	 
-
- 		makeword "0.0", dconstz, dconstc,  0.0
-		makeword "0.1", dconstz, dconstc,  0.1
-		makeword "0.5", dconstz, dconstc,  0.5
-	 	makeword "1.0", dconstz, dconstc,  1.0
-		makeword "2.0", dconstz, dconstc,  2.0
-		makeword "4.0", dconstz, dconstc,  4.0
-		makeword "8.0", dconstz, dconstc,  8.0
-		makeword "16.0",dconstz, dconstc, 16.0
 		makeword "*/", dstarslshz, 0,  10
 		makeword "*/MOD", dstarslshzmod, 0,  10
-		makeword "1-DUP1-", fibtest, 0,  10
-		makeword "10", dconstz, dconstc,  10
-		makeword "11", dconstz, dconstc,  11
-		makeword "12", dconstz, dconstc,  12
-		makeword "13", dconstz, dconstc,  13
-		makeword "14", dconstz, dconstc,  14
-		makeword "15", dconstz, dconstc,  15
-		makeword "16", dconstz, dconstc,  16
-		makeword "17", dconstz, dconstc,  17
-		makeword "18", dconstz, dconstc,  18
-		makeword "19", dconstz, dconstc,  19
-		makeword "20", dconstz, dconstc,  20
-		makeword "21", dconstz, dconstc,  21
-		makeword "22", dconstz, dconstc,  22
-		makeword "23", dconstz, dconstc,  23
-		makeword "24", dconstz, dconstc,  24
-		makeword "25", dconstz, dconstc,  25
-		makeword "-1", dconstz, dconstc,  -1
-		makeword "-2", dconstz, dconstc,  -2
-		makeword "1+", dnplusz , 0, 1 
-		makeword "2+", dnplusz , 0, 2
-		makeword "4+", dnplusz , 0, 4
-		makeword "1-", doneminusz , 0, 1
-		makeword "2-", dotwominusz , 0, 2
-		makeword "2*", dnmulz , 0, 2
-		makeword "2/", dndivz , 0, 2
-		makeword "4*", dnmulz , 0, 2
-		makeword "4/", dndivz , 0, 2
-
-		makeword "8-", dnsubz , 0, 8
-		makeword "8+", dnplusz , 0, 8 
-		makeword "8*", dnmulz , 0, 3
-		makeword "8/", dndivz , 0, 3
-
-
+		 
 		makeword "10*", tentimez , 0, 0
 		makeword "10/", tendivz , 0, 0
-		makeword "16-", dnsubz , 0, 4
-		makeword "16+", dnplusz , 0, 4 
-		makeword "16*", dnmulz , 0, 4
-		makeword "16/", dndivz , 0, 4
 
-		makeword "24+", dnplusz , 0, 24
-		makeword "24-", dnsubz , 0, 24
-		
 		makeword "0=", dequalzz, 0 , 0
 		makeword "0<", dltzz, 0 , 0
 		makeword "0>", dgtzz, 0 , 0
@@ -9879,9 +10071,6 @@ zdict:
 		makeword "+!", plustorz, 0 , 0
 
 	
-
-
-
 zbytewords:
 		makeemptywords 33
 		makebword 33, 	dstorez, 	dstorec, 	0

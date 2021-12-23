@@ -10,7 +10,9 @@ It is going to be quite specific to features of the ARM V8 64 bit processor, suc
 
 FORTH primitives are implemented as assembly language functions, the compiler converts high level FORTH words into list of tokens for the token interpreter(s) to execute.
 
-This is not a standard implementation, I am aiming to provide a reasonable but small set of FORTH like words that improve comfort, safety and convenience for the user of the language.
+This is not a standard implementation, I am aiming to provide a very small set of practical FORTH like words that improve comfort, safety and convenience for the user of the language.
+
+I expect to extend the ASM file as I write my Apps, I plan to test and script the App in FORTH.
 
 Untyped - Storage has no type, words are aware of the size of storage cells but not what they contain.
 
@@ -22,7 +24,7 @@ It only runs when a high level word is executing, otherwise the interpreter and 
 
 Each high level word invokes an interpreter to run itself, multiple different versions of the interpreter exist, and they can be selected after the word has been compiled.
 
-I am using a certain ammount of brute force and ignorance in the design of this program, which may not scale, but which works presently, in the spirit of getting it started.  
+I am using a certain ammount of brute force and ignorance in the current design of this program, which may not scale, but which works presently, in the spirit of getting it all started.  
 
 
 ### Startup
@@ -31,6 +33,7 @@ The forth.fs file is loaded when the application starts.
 
 This file should contain any high level words you want to add to the program.
 
+It is set up to clear the screen, and display the words, there are some words defined in the file, they are just examples you can remove if your own app will not use them.
 
 ### Values
 
@@ -224,6 +227,39 @@ e.g.
 
 ```
 
+### Little defining words
+
+As this is an interpeter it is almost always slower to use two words when one will do.
+
+It is also faster if a word does more, the overhead of the interpreter is calling the word in the first place.
+The compiler also does not optimize, so it is often up to the programmer to choose to use a faster word not up to the compiler to invent them on the fly.
+
+A good example is that 1 + is slower than 1+ and if you do 1 + millions of times, this will have a performance impact.
+
+For this reason FORTH interpreters often come with dozens of little optimized words.
+
+The approach I am taking is to provide a few words for defining those little words, so you can define the words your specific program actually benefits from.
+
+Shifting left and right
+
+You can define words that perform left and right shifts for faster multiplication and division.
+
+```FORTH
+3 SHIFTSL 8*
+```
+Defines the word 8* that SHIFTS the top of stack left 3 times, multiplying by 8.  SHIFTSR is the opposite word that does division.
+
+
+```FORTH
+1 ADDS 1+
+```
+
+Defines a fast word for adding 1 to the top of the stack, the opposite word is SUBS.
+
+Take a look though your app and if you find some common patterns define some of these to speed it up.
+
+
+
 ### Appending/building strings
 
 Often a string needs to be built from smaller parts
@@ -274,8 +310,7 @@ There is a hardly visible stack used for the local variables made available to e
 
 #### Stack values
 
-We also have stack values, these are extremely simple, and only allow values to be pushed or popped.
-There are none of the features of the main parameter stack.
+We also have stack values, these are extremely simple, and only allow values to be pushed or popped. There are none of the features of the main parameter stack.
 
 Like most stacks, the last thing added is the first thing removed LIFO (last in first out)
 
@@ -312,24 +347,6 @@ file_handles .
 file handles are a good use case, when opening a file, push the file handle, when closing the file, pop the file handle.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### Floating point support
 
 Floating point words begin with f e.g. f.
@@ -345,15 +362,66 @@ e.g.
 22.0 7.0 f/ f.
 ```
 
+#### LOOPS
+
+Most of the LOOPing words, only work inside a compiled word.
+
+##### Non Standard Looping in the interpreter
+
+A loop that works anywhere is the very simple n TIMESDO *word* loop.
+
+```FORTH 
+
+: DOT-DASH CHAR . EMIT CHAR - EMIT ;
+
+\\ TIMESDO works in the interpreter
+
+32 TIMESDO DOT-DASH
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+Ok
+
+```
+
+n TIMESDO  - executes the word that follows it, n times.
+It is simpler than other LOOPS and less powerful, it is also faster at doing the simple things it does.
+
+It also works in a compiled word e.g. 
+
+```FORTH 
+
+\\ Also works in a compiled word.
+
+: DASHED-LINE CR 32 TIMESDO DOT-DASH CR ;
+
+```
+
+
+
+
+
 #### Thoughts
 
-Having the interpreter and token compiler implemented in assembly language does provide some benefits, such as testing the token compiled code easilly, since the interpeter is not made of the token compiled code being tested.
+Having the interpreter and token compiler implemented in assembly language does provide some benefits, such as testing the token compiled code easilly, since the interpeter is not made out of the same token compiled code being tested.
 
 The interpreter in assembler, also means it is not as exposed to high level FORTH as it would be if it was written in FORTH.
 
 High level FORTH does have a lot of access to the system still, various interrnal objects are also exposed as VALUES to FORTH.
 
 In theory a version of the inner interpreter can be written in FORTH, I expect that would be far slower due to the high level loops, and the use of FORTH values instead of machine registers, very interesting to test.
+
+### Performance
+
+This implementation is using a simple token interpreter that is written in assembly language.
+I have paid some attention to the performance of the inner loop, it is easy to test as you can try out different versions and time the results.
+
+The design is a token interpreter, I chose to use 16bit tokens to represent words, rather than 64 bit addresses, the addresses would probably be faster, but that would be a different implementation, as lots of words are tuned for the token memory layout.
+
+It is a simple interpreter but FORTH is also a simple and lean language.
+
+At interpreting FORTH words the token interpreter seems significantly faster than Python 3 is at interpreting Python functions, I am not suggesting these are in any way equivalent tasks, just that people do find Python fast enough.
+
+Users of Python tend to be scripting C libraries and I intend to be scripting assembler and C functions.
+
 
 
 
