@@ -1,13 +1,11 @@
 ### Benchmark
 
 // Tests measure speed
-// FIB measures the inner interprers call overhead really well.
+// FIB measures the inner interpreters call overhead really well.
 
-: FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ;
+: FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ; FLAT FIB
 
-: t2 25 0 DO 34 FIB DROP LOOP ; // run many
-
-: FIB34 34 FIB DROP ;
+: FIB34 34 FIB DROP ; FLAT FIB34
 
 : t1 25 TIMESDO FIB34 ;
 
@@ -22,6 +20,11 @@ FASTER FIB // not traceable
 TIMEIT t1
 3864  : ms to run ( 38647  ) ns 
  
+
+// 23rd December
+TIMEIT t1
+3574  : ms to run ( 35741  ) ns 
+
 
 
 // PRIME SIEVE benchmark
