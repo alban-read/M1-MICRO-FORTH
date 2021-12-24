@@ -333,11 +333,57 @@ getline:
 	restore_registers
 	RET
 
+; accept text from user
+
+dacceptz:
+ 
+	ADRP	X0, input_file@PAGE
+	ADD		X0, X0, input_file@PAGEOFF
+	LDR		X2,	[X0]
+	ADRP	X1, acceptcap@PAGE		
+	ADD		X1, X1, acceptcap@PAGEOFF
+	ADRP	X0, acceptptr@PAGE	; ** accept_string
+	ADD		X0, X0, acceptptr@PAGEOFF
+	save_registers
+	BL		_getline
+	CMP		X0, #-1 ; end of file
+	B.ne	10f 
+
+	ADRP	X1, acceptlen@PAGE
+	ADD		X1, X1, acceptlen@PAGEOFF 
+	STR		X0, [X1]
+
+	; close file on end of file.
+	ADRP	X0, input_file@PAGE
+	ADD		X0, X0, input_file@PAGEOFF
+	LDR		X0,	[X0]
+	BL		_fclose
+
+	BL 		from_stdin ; revert to stdin
+10:
+    ; store count read in accepted
+
+	restore_registers
+
+	STP		LR,  XZR, [SP, #-16]!
+	STP		X12,  X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+	B intern_string_from_buffer
+ 
+	RET
+
+
 cls:
 dpagez:
 	ADRP	X0, clear_screen@PAGE	
 	ADD		X0, X0, clear_screen@PAGEOFF
 	B		sayit
+
+
+
+
+
+
 
 
 ; Ok prompt
@@ -6137,7 +6183,11 @@ ddropc: ;
 
 ztypez:
 	LDR		X0, [X16, #-8] 
+	CBZ		X0, nothing_to_say
 	B		sayit
+nothing_to_say:
+	RET
+
 
 ztypec:
 
@@ -7103,7 +7153,7 @@ toupdateit:
 	ADRP	X1, dSTRINGz@PAGE	; high level word.
 	ADD		X1, X1, dSTRINGz@PAGEOFF
 	CMP 	X2, X1
-	B.eq	155f 
+	B.eq	158f 
 
 
 	ADRP	X1, dWarrayaddz@PAGE	; high level word.
@@ -7251,6 +7301,16 @@ toupdateit:
 	STR		X1, [X0]  ; store 
 	SUB		X16, X16, #8
 	RET
+
+
+158:
+
+	LDR		X1, [X16, #-8] 
+	STR		X1, [X3]  ; store 
+	SUB		X16, X16, #8
+	RET
+
+
 
 160:
 	LDR		X2, [X16, #-8] 
@@ -7756,115 +7816,6 @@ ddotsz:
 
 
 ; store string at BUFFER$ into strings pool.
-; BUFFER$>
-
-dstfrombuffer:
-
-	STP		LR,  XZR, [SP, #-16]!
-	STP		X12,  X13, [SP, #-16]!
-	STP		X3,  X5, [SP, #-16]!
-
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	
-	ADRP	X13, short_strings@PAGE		
-	ADD		X13, X13, short_strings@PAGEOFF
-
-
-	; find a free slot or a match in the short strings
-
-140:
-
-	ADRP	X1, short_strings_end@PAGE		
-	ADD		X1, X1, short_strings_end@PAGEOFF
-	CMP		X13, X1  ; check for string space
-	B.gt 	490f
-
-	; is this next string slot free
-	LDRB	W0, [X13]
-	CBZ 	W0, 180f 
-
-	; no, is this string a duplicate ?
-	MOV		X5,  X13 ; save pos
-
-	; compare up to 256 bytes 16 at a time
-	.rept 16
-		LDP		X0, X1, [X13], #16
-		LDP		X2, X3, [X12], #16
-		CMP		X0, X2
-		B.ne	160f 
-		CMP		X1, X3
-		B.ne	160f 
-		CMP     X0, #0	; end of string
-		B.eq	150f
-	.endr
-
-
-	; the strings in the buffer and the slot are equal
-	; avoid adding any duplicates
-150:
-	MOV		X13,  X5 
-	B 	450f
-
-
-
-	; no, is this string a duplicate ?
-	MOV		X5,  X13 ; save pos
-
-	; compare up to 256 bytes 16 at a time
-	.rept 16
-		LDP		X0, X1, [X13], #16
-		LDP		X2, X3, [X12], #16
-		CMP		X0, X2
-		B.ne	160f 
-		CMP		X1, X3
-		B.ne	160f 
-		CMP     X0, #0	; end of string
-		B.eq	150f
-	.endr
-
-
-	; the strings in the buffer and the slot are equal
-	; avoid adding any duplicates
-150:
-	MOV		X13,  X5 
-	B 	450f
-
-450:	
-
-	MOV 	X0, X5
-	BL		stackit
-
-	LDP		X3, X5, [SP], #16	
-	LDP		X12, X13, [SP], #16	
-	LDP		LR, X15, [SP], #16	
-
-	RET
-
-490:
-	ADRP	X0, tcomer36@PAGE		
-	ADD		X0, X0, tcomer36@PAGEOFF
-	BL 		sayit_err	
-	LDP		X3, X5, [SP], #16	
-	LDP		X12, X13, [SP], #16	
-	LDP		LR, X15, [SP], #16	
-	MOV 	X0, #-1
-	RET
-
-500:	
-	LDP		X3, X5, [SP], #16	
-	LDP		X12, X13, [SP], #16	
-	LDP		LR, X15, [SP], #16	
-	
-	RET
-
-
-; appender 
-
-
-
-
-; store string at BUFFER$ into strings pool.
 ; APPEND$>
 
 dstfromappendbuffer:
@@ -8077,7 +8028,7 @@ dstrappend:
 
 500:
 
-	B 	dstfrombuffer
+	B 	intern_string_from_buffer
 
 	RET
 
@@ -8404,11 +8355,9 @@ dstrdotz:
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, X15, [SP], #16	
-	
 	RET
 
-
-
+ 
 dstrstksz: ; runtime S" .. " stash and return address
 
 	STP		LR,  XZR, [SP, #-16]!
@@ -8443,11 +8392,13 @@ dstrstksz: ; runtime S" .. " stash and return address
 
 	B 		100b
 
+
 120:
 
 	MOV 	W0, #0
 	STRB	W0, [X12]
 
+intern_string_from_buffer:
 
 	; exit if appending do not store
 	ADRP	X1, append_ptr@PAGE		
@@ -9634,6 +9585,7 @@ quadlits:
 
 .align 16
 string_buffer:
+.asciz "Strings"
 .zero 2048
 
  
@@ -9668,7 +9620,7 @@ append_buffer:
 	.zero 2048
 .align 16
 append_ptr:
-	.quad append_buffer
+	.quad 0		; 0 = not appending
 
 ; the word being processed
 .align 8
@@ -9694,7 +9646,21 @@ input_file:
 accepted:			
 				.quad	0
 				.quad	0
+ 
 
+.align 	8
+
+acceptptr: 		.quad string_buffer
+
+acceptcap:		.quad  2048
+
+
+
+
+.align 	8
+acceptlen:			
+				.quad	0
+				.quad	0
 
 
 .align 	8
@@ -9831,9 +9797,8 @@ hashdict:
 
 		makeword "ADDR" , daddrz, daddrc, 0
 
-		makeword "ACCEPT", daccept, 0,  0
-		makeword "ACCEPTED", dvaluez, 0,  accepted
-
+		makeword "ACCEPT", dacceptz, 0,  0
+ 
 		makeword "AGAIN" , dagainz, dagainc, 0
 
 		makeword "ABS" , dabsz, dabsc, 0
@@ -9953,6 +9918,7 @@ hdict:
 		makeword "IF", difz, difc,  0
 		makeword "INVERT", dinvertz, 0,  0
 		makeword "INCR", dincrz, dincrc,  0
+ 
 
 idict:
 		makeemptywords 66

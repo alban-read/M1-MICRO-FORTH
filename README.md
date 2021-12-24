@@ -5,7 +5,7 @@
 
 ## Thoughts
 
-AARCH64 is suprisingly different to ARM32
+AARCH64 is suprisingly different to ARM32.
 
 
 ### Inspiration
@@ -25,7 +25,7 @@ create small machine code primitive words
 
  .. allow new words to be composed, mainly by concatenation.
 
- 
+
 
 ### This is a non standard VARIANT of FORTH
 
@@ -64,7 +64,7 @@ The forth.fs file is loaded when the application starts.
 
 This file should contain any high level words you want to add to the program.
 
-It is set up to clear the screen, and display the words, there are some words defined in the file, they are just examples you can remove if your own app will not use them.
+It is set up to clear the screen, and display the words, there are some words defined in the file, they are just examples you can remove them if your own app will not use them.
 
 ### Values
 
