@@ -249,7 +249,7 @@ It is also faster if each word *does more*, the overhead of the interpreter is c
 
 The compiler also does not optimize, so it is often up to the programmer to choose to use a faster optimal word not up to the compiler to invent them on the fly.
 
-A good example is that `1 + ` is slower than `1+` and if you do 1 + millions of times, this will have a performance impact.
+A good example is that `1 + ` is slower than `1+` and if you do `1 +` millions of times, this will have a performance impact.
 
 For this reason FORTH interpreters often come with dozens of little optimized words.
 
