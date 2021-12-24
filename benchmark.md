@@ -9,6 +9,11 @@
 
 : t1 25 TIMESDO FIB34 ;
 
+// just for comparison, FFIB is a fast iterative assembler version, not measurable.
+: FFIB34 34 FFIB DROP ;
+: t2 25 TIMESDO FIB34 ;
+
+
 TIMEIT t1
 
 // 27th November 2021

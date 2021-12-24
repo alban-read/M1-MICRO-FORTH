@@ -4683,9 +4683,9 @@ B		300f
 
 dstackz:
 
-	LDR 	X0, [X1, #24] ; stack pos
+	LDR 	X0, [X1, #16] ; stack pos
 	SUB		X0, X0, #1
-	STR		X0, [X1, #24] ; stack pos
+	STR		X0, [X1, #16] ; stack pos
 	CMP 	X0, #0
 	B.lt	empty_stack 
 
@@ -4699,7 +4699,7 @@ dstackz:
 
 empty_stack:
 	MOV 	X0, #0
-	STR		X0, [X1, #24] ; stack pos
+	STR		X0, [X1, #16] ; stack pos
 	B	darrayaddz_index_error 
 
 dcreatstack:
@@ -6832,6 +6832,42 @@ dcreatevalc:
 	RET
 
 
+; INCR quickly and safely increment a value
+; e.g. INCR myValue
+
+dincrcz:
+
+	RET 
+
+
+ddecrcz:
+
+	RET
+
+
+dincrz: ; INTERPRETER increment
+
+	RET
+
+
+ddecrz: ; INTERPRETER decrement
+
+	RET 
+
+
+
+dincrc: ; COMPILE increment
+
+	RET
+
+
+ddecrc: ; COMPILE decrement
+
+	RET 
+
+
+
+
 
 ; TO safely change the values of variables and arrays.
 
@@ -7059,7 +7095,7 @@ toupdateit:
 100:	; push onto stack
 	LDR		X0, [X3] ; base address
 	LDR		X1, [X3, #32] ; max depth
-	LDR 	X2, [X3, #24] ; stack pos
+	LDR 	X2, [X3, #16] ; stack pos
 	CMP		X2,  X1
 	B.eq	darrayaddz_index_error
 
@@ -7070,9 +7106,9 @@ toupdateit:
 
 	SUB		X16, X16, #8
 
-	LDR 	X2, [X3, #24] ; stack pos
+	LDR 	X2, [X3, #16] ; stack pos
 	ADD		X2, X2, #1
-	STR 	X2, [X3, #24] ; stack pos
+	STR 	X2, [X3, #16] ; stack pos
 	RET
 
 120:
@@ -9671,6 +9707,8 @@ dend:
 		makeword "(CTO)", 				dctocz, 	0,  0	; 45
 		makeword "(LTO)", 				dltocz, 	0,  0	; 46
 		makeword "(TIMESDO)", 			dtimescz, 	0,  0	; 47
+		makeword "(INCR)", 				dincrcz, 	0,  0	; 48
+		makeword "(DECR)", 				ddecrcz, 	0,  0	; 49
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
@@ -9754,6 +9792,7 @@ cdict:
 		makeword "DUP", ddupz , 0, 0 
 		makeword "DROP", ddropz , 0, 0		
 		makeword "DEPTH", ddepthz , 0, 0 
+		makeword "DECR", ddecrz, ddecrc,  0
 
 		makeqvword 100
 		makeword "D", dvaraddz, dvaraddc,  8 * 68 + ivars	
@@ -9831,6 +9870,7 @@ hdict:
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
 		makeword "INVERT", dinvertz, 0,  0
+		makeword "INCR", dincrz, dincrc,  0
 
 idict:
 		makeemptywords 66
@@ -9839,7 +9879,7 @@ idict:
 
 jdict:
 		makeemptywords 64
-		makeword "KLAST", get_last_word, 0,  0
+	
 		makeqvword 107
 		makeword "K", dkloopz, dkloopc,  0
 	
@@ -9854,6 +9894,7 @@ kdict:
 		makeword "LOOP", 0 , dloopc, 0 
 		makeword "LIMIT", dlimited , 0, 0 
 		makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
+		makeword "LAST", get_last_word, 0,  0
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
 	
 ldict:
