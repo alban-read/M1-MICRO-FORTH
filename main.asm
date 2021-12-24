@@ -10,7 +10,7 @@
 ;; X30 aka LR (the return register)
 ;; X28 data section pointer
 ;; X0-X7 and D0-D7, are used to pass arguments to assembly functions, 
-;; X19-X28 callee saved
+;; X19-X28 callee 
 ;; X8 indirect result 
 
 ;; related to the interpreter
@@ -649,10 +649,15 @@ emitz:	; output tos as char
 X0emit:	
 	save_registers
 	BL		_putchar	
+	; we need to flush
+	ADRP	X8, ___stdoutp@GOTPAGE
+	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+	LDR		X0, [X8]
+	BL		_fflush
 	restore_registers
 	RET
 
-
+; lazy buffered version
 emitchz:	; output X0 as char
 	save_registers
 	BL		_putchar	
@@ -662,6 +667,58 @@ emitchz:	; output X0 as char
 emitchc:	; output X0 as char
 	RET
 
+; KEY for UNIX terminal
+; set the TERMIO and save it back.
+dkeyz:
+
+	save_registers
+	; save terminal state
+	MOV		X0, #0
+	ADRP	X1, saved_termios@PAGE	
+	ADD		X1, X1, saved_termios@PAGEOFF
+	BL		_tcgetattr ; saved TERMIOS
+ 
+	ADRP	X1, saved_termios@PAGE	
+	ADD		X1, X1, saved_termios@PAGEOFF
+	ADRP	X0, current_termios@PAGE	
+	ADD		X0, X0, current_termios@PAGEOFF
+	 
+	; X0=DEST current. X1=SRC saved, 72 bytes (sizeof TERMIOS)
+ 	MOV    	X2, #72
+	BL		_memcpy
+ 
+	; set terminal state for KEY
+	; do not wait or return and do not echo
+ 
+	ADRP	X0, current_termios@PAGE	
+	ADD		X0, X0, current_termios@PAGEOFF
+	LDR		X1, [X0, #24]
+	AND		X1, X1, #0xfffffffffffffeff ; & ~ICANON (do not wait for newline)
+	AND		X1, X1, #0xfffffffffffffff7 ; & ~ECHO (do not echo key)
+	STR		X1, [X0, #24]
+	MOV		X2, X0
+	MOV 	X0, #0
+	MOV     X1, #0
+	BL  	_tcsetattr
+
+	ADRP	X1, getchar_buf@PAGE	
+	ADD		X1, X1, getchar_buf@PAGEOFF
+	MOV     X0, #0
+	MOV     X2, #1
+	BL		_read	
+ 
+	MOV		X0, #0
+	MOV		X1, #0
+	ADRP	X2, saved_termios@PAGE	
+	ADD		X2, X2, saved_termios@PAGEOFF
+	BL		_tcsetattr
+	restore_registers
+
+	; stack the key pressed.
+ 	ADRP	X1, getchar_buf@PAGE	
+	ADD		X1, X1, getchar_buf@PAGEOFF
+	LDR		X0, [X1]
+	B 		stackit
 
 reprintz:
 	
@@ -1965,7 +2022,7 @@ exit_compiler: ; NORMAL success exit
 	;BL		X0print
 	;BL		saycompfin
 	MOV 	X15, #0
-	BL		beloud
+ 
 	B		advance_word ; back to main loop
 
 not_compiling:
@@ -9402,6 +9459,39 @@ spaces:	.ascii "										"
 	.zero 16
 
 
+; UNIX TERMINAL IO control
+; long is 8 bytes
+.align 8
+saved_termios:
+saved_c_iflag:		.quad 0		;0
+saved_c_oflag:		.quad 0		;8
+saved_c_cflag:		.quad 0		;16
+saved_c_lflag:		.quad 0		;24
+saved_cc_t:			.zero 20 	; 32
+saved_c_ispeed:  	.quad 0	; 52
+saved_c_ospeed:  	.quad 0	; 
+.zero 64
+
+.align 8
+current_termios:
+current_c_iflag:	.quad 0		;0
+current_c_oflag:	.quad 0		;4
+current_c_cflag:	.quad 0		;8
+current_c_lflag:	.quad 0		;12
+current_cc_t:	 	.zero 20 
+current_c_ispeed:  	.quad 0
+current_c_ospeed:  	.quad 0
+.zero 64
+
+.align 8
+getchar_buf:		.quad 0
+			
+
+
+
+
+
+
 ; this is the tokens stack
 ; code for token compiled words is compiled into here
 ; 
@@ -9873,7 +9963,7 @@ idict:
 jdict:
 		makeemptywords 64
 	
-	 
+	 	makeword "KEY", dkeyz, 0,  0
 		makeword "K", dkloopz, dkloopc,  0
 	
 kdict:

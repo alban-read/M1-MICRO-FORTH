@@ -88,5 +88,36 @@ Consider making number of LOCALS a word can have dynamic.
 
 : HIDE 0 ` 0 48 + C! ;
 
+x0 0
+x1 save state
+tcgetattr 
+
+bl	_tcgetattr
+and	x8, x8, #0xfffffffffffffeff
+and	x8, x8, #0xfffffffffffffff7
+
+    mov x0, #0
+    mov x1, chbuff
+	mov	x2, #1
+	bl	_read
+
+    x0 0
+x1 0
+x2 save_state
+tcgetattr 
+
+tcsetattr(0, 0, &oldstate);
+
+
+struct termios {
+	tcflag_t        c_iflag;        /* input flags */  long
+	tcflag_t        c_oflag;        /* output flags */ long
+	tcflag_t        c_cflag;        /* control flags */ long
+	tcflag_t        c_lflag;        /* local flags */ long < change 
+	cc_t            c_cc[NCCS];     /* control chars */ 20 bytes
+	speed_t         c_ispeed;       /* input speed */  long
+	speed_t         c_ospeed;       /* output speed */ long
+};
+
 
 
