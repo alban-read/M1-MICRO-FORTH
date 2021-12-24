@@ -12,13 +12,13 @@ The implementation is specific to features of the ARM V8 64 bit processor, such 
 
 FORTH primitives are implemented as assembly language functions, the compiler converts high level FORTH words into list of tokens for the token interpreter(s) to execute.
 
-This is not a standard implementation, I am aiming to provide a very small set of practical FORTH like words that improve comfort, safety and convenience for the user of the language.
+This is not a standard implementation, I am aiming to provide a *very small* set of practical FORTH like words that improve comfort, safety and convenience for the user of the language. Throwing in 'everything and the kitchen sink in case it is useful' is very contrary to original FORTH principles.
 
 I expect to extend the ASM file as I write my Apps, I plan to test and script the App in FORTH.
 
 Untyped - Storage has no type, words are aware of the size of storage cells but not what they contain.
 
-The syntax follows FORTH closely, including reverse polish notation, composition of functions by word concatenation, very similar control flow etc.
+The syntax follows FORTH closely, including reverse polish notation, composition of new words *functions* by word concatenation, very similar control flow etc.
 
 The inner (token) interpreter is not running all of the time in this implementation.
 
@@ -187,6 +187,9 @@ Is a VALUES view over the (64 bit) long literal space, where large integers, dou
 
 Strings are non standard.
 
+Strings are zero-terminated because that is the world we have lived in since UNIX was invented. To emphasize the *very major* differences, string literals here use single quotes.
+ 
+
 A string is created with an initial text value like this.
 ```FORTH
 ' This is my initial value ' STRING myString
@@ -249,7 +252,7 @@ It is also faster if each word *does more*, the overhead of the interpreter is c
 
 The compiler also does not optimize, so it is often up to the programmer to choose to use a faster optimal word not up to the compiler to invent them on the fly.
 
-A good example is that `1 + ` is slower than `1+` and if you do `1 +` millions of times, this will have a performance impact.
+A good example is that `1 + ` is slower than `1+` so if your word does `1 +` millions of times, this will have a performance impact.
 
 For this reason FORTH interpreters often come with dozens of little optimized words.
 
@@ -283,7 +286,7 @@ These words are meant to help make it less error prone.
 
 ```FORTH
 
-${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} TYPEZ  
+${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} $.  
 
 ```
 
@@ -411,7 +414,22 @@ It also works in a compiled word e.g.
 ```
 
 
+### Input and output.
 
+The IO is set for the UNIX terminal.
+
+The interpreter accepts lines from the terminal, with buffering, the input is often STDIN, although the input can sometimes be a file, as it is at startup.
+
+The various printing words, `. $. f. .' hey'` etc print to STDOUT, and they buffer for terminal efficiency.
+
+
+KEY - reads a user key press from STDIN, waits for single key press, does not echo or buffer.
+
+EMIT - writes the char to STDOUT, without delay, flushes STDOUT.
+
+Terminals accept a variety of commands.
+
+FORTH typically only implements `PAGE` to clear the screen and `AT-XY` to place the cursor.
 
 
 #### Thoughts
@@ -433,6 +451,6 @@ The design is a token interpreter, I chose to use 16bit tokens to represent word
 
 It is a simple interpreter but FORTH is also a simple and lean language.
 
-The token interpreter is reasonably competitive with other far more popular interpreted languages.
+The token interpreter is competitive with commonly used interpreted languages.
 
 

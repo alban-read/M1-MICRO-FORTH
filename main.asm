@@ -682,13 +682,12 @@ dkeyz:
 	ADD		X1, X1, saved_termios@PAGEOFF
 	ADRP	X0, current_termios@PAGE	
 	ADD		X0, X0, current_termios@PAGEOFF
-	 
 	; X0=DEST current. X1=SRC saved, 72 bytes (sizeof TERMIOS)
  	MOV    	X2, #72
 	BL		_memcpy
  
-	; set terminal state for KEY
-	; do not wait or return and do not echo
+	; set terminal state for KEY to read the keyboard now.
+	; do not wait for return and do not echo
  
 	ADRP	X0, current_termios@PAGE	
 	ADD		X0, X0, current_termios@PAGEOFF
@@ -703,8 +702,8 @@ dkeyz:
 
 	ADRP	X1, getchar_buf@PAGE	
 	ADD		X1, X1, getchar_buf@PAGEOFF
-	MOV     X0, #0
-	MOV     X2, #1
+	MOV     X0, #0 ; into start of buffer
+	MOV     X2, #1 ; 1 key
 	BL		_read	
  
 	MOV		X0, #0
@@ -9832,7 +9831,7 @@ hashdict:
 
 		makeword "ADDR" , daddrz, daddrc, 0
 
-
+		makeword "ACCEPT", daccept, 0,  0
 		makeword "ACCEPTED", dvaluez, 0,  accepted
 
 		makeword "AGAIN" , dagainz, dagainc, 0
