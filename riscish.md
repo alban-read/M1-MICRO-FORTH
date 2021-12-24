@@ -431,6 +431,40 @@ Terminals accept a variety of commands.
 
 FORTH typically only implements `PAGE` to clear the screen and `AT-XY` to place the cursor.
 
+##### Line input
+
+You can accept a line of text from the user with ACCEPT e.g.
+
+```FORTH
+
+\\ Empty String
+0 STRING myInput
+
+Ok
+ACCEPT TO myInput
+Test this then <- Typed in 
+
+Ok
+myInput $.
+Test this then
+```
+Exciting interactions become possible
+
+```FORTH
+: ask-name? .' What is your name ? ' CR ACCEPT TO myInput CR .' Hello :' myInput $. ;
+
+
+ask-name?
+What is your name ? 
+Alban
+
+Hello :Alban
+
+
+ ```
+
+
+
 
 #### Thoughts
 
