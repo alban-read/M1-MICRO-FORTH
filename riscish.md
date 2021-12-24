@@ -12,9 +12,9 @@ The implementation is specific to features of the ARM V8 64 bit processor, such 
 
 FORTH primitives are implemented as assembly language functions, the compiler converts high level FORTH words into list of tokens for the token interpreter(s) to execute.
 
-This is not a standard implementation, I am aiming to provide a *very small* set of practical FORTH like words that improve comfort, safety and convenience for the user of the language. Throwing in 'everything and the kitchen sink in case it is useful' is very contrary to original FORTH principles.
+This is not a standard implementation, I am aiming to provide a *very small* set of practical FORTH like words that improve comfort, safety and convenience for the user of the language (me.) Throwing in 'everything and the kitchen sink in case it is useful' is very contrary to original FORTH principles.
 
-I expect to extend the ASM file as I write my Apps, I plan to test and script the App in FORTH.
+I expect to extend the ASM file as I write my own Apps, I plan to test and script my Apps in FORTH.
 
 Untyped - Storage has no type, words are aware of the size of storage cells but not what they contain.
 
@@ -187,7 +187,7 @@ Is a VALUES view over the (64 bit) long literal space, where large integers, dou
 
 Strings are non standard.
 
-Strings are zero-terminated because that is the world we have lived in since UNIX was invented. To emphasize the *very major* differences, string literals here use single quotes.
+Strings are zero-terminated because that is the world we have lived in ever since UNIX was invented. To emphasize the *very major* differences, string literals here use single quotes.
  
 
 A string is created with an initial text value like this.
@@ -246,7 +246,7 @@ Looks up the first 0th string in the storage and $. types it to the terminal.
 
 ### Little defining words
 
-As this is an interpeter it is almost always slower to use two words if one word will do.
+As this is an interpeter it is almost always slower to use two words when one word will do.
 
 It is also faster if each word *does more*, the overhead of the interpreter is calling each word in the first place.
 
