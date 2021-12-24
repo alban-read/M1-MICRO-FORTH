@@ -3,7 +3,7 @@
 ;; ARM64 code November - December 2021
 ;; This is a small FORTH like interpreter for Apple Silicon
 ;; implemented in assembly language
-
+;; Copyright (c) Alban Read 2021 (excluding ARM copyright tagged functions)
 ;; reserved registers.
 ;; X18 reserved for OS
 ;; X29 frame ptr for OS/C
@@ -469,9 +469,11 @@ dotwords:
 	LDR		X0, [X2, #48]
 	CMP		X0, #-1
 	B.eq	10f
-
 	CMP		X0, #0
 	B.eq	15f
+	LDRB	W0, [X2, #48]
+	CBZ 	W0, 10f
+
 
 	ADD		X0, X2,  #48
 	STP		X2, X1, [SP, #-16]!
@@ -9724,9 +9726,9 @@ hashdict:
 
 		makeword "ADDS", creatadder, dcreat_invalid, 0	
 		
-		makeword "APPEND$", dvaraddz, dvaraddc,  append_buffer
+		makeword "APPEND$", dvaraddz, 0,  append_buffer
 		
-		makeword "APPEND^", dvaluez, dvaraddc,  append_ptr
+		makeword "APPEND^", dvaluez, 0,  append_ptr
 
 		makeword "ALLWORDS", alldotwords , 0, 0 
 
@@ -9741,7 +9743,7 @@ hashdict:
 		makeword "ADDR" , daddrz, daddrc, 0
 
 
-		makeword "ACCEPTED", dvaluez, dvaraddc,  accepted
+		makeword "ACCEPTED", dvaluez, 0,  accepted
 
 		makeword "AGAIN" , dagainz, dagainc, 0
 
@@ -9749,22 +9751,19 @@ hashdict:
 
 		makeword "AND" , dandz, 0, 0
 
-	 	makeqvword 97
-		
-		makeword "A", dvaraddz, dvaraddc,  8 * 65 + ivars	
+ 
 	
 	
 adict:
 
 		makeemptywords 84
-		makeword "BEQUIET", dvaraddz, dvaraddc,  bequiet
+		makeword "BEQUIET", dvaraddz, 0,  bequiet
 		makeword "BEGIN" , dbeginz, dbeginc, 0
-		makeword "BUFFER$", dvaraddz, dvaraddc,  string_buffer
+		makeword "BUFFER$", dvaraddz, 0,  string_buffer
 		makeword "BREAK",  dbreakz, dbreakc, 0
 		makeword "BL",  dconstz, dconstz, 32
 		
-		makeqvword 98
-		makeword "B", dvaraddz, dvaraddc,  8 * 66 + ivars	
+ 
 
 bdict:
 		makeemptywords 80
@@ -9779,14 +9778,13 @@ bdict:
 		makeword "CREATE", 	dcreatz, dcreatc, 0
 	
 		makeword "CR", 		saycr, 0, 0
-		makeqvword 99
-		makeword "C", 		dvaraddz, dvaraddc,  8 * 67 + ivars	
+ 
 
 cdict:
 		makeemptywords 80
 
 	
-		makeword "DP", dvaraddz, dvaraddc,  here	
+		makeword "DP", dvaraddz, 0,  here	
 		makeword "DO", 0 , doerc, 0 
 		makeword "DOWNDO", 0 , ddownerc, 0 
 		makeword "DUP", ddupz , 0, 0 
@@ -9794,8 +9792,7 @@ cdict:
 		makeword "DEPTH", ddepthz , 0, 0 
 		makeword "DECR", ddecrz, ddecrc,  0
 
-		makeqvword 100
-		makeword "D", dvaraddz, dvaraddc,  8 * 68 + ivars	
+		 
 
 ddict:
 		makeemptywords 80
@@ -9806,13 +9803,12 @@ ddict:
 		makeword "EMIT", emitz , 0, 0 
 		makeword "EXIT", dexitz, 	0,  0			
 		
-		makeqvword 101
-		makeword "E", dvaraddz, dvaraddc,  8 * 69 + ivars	
+ 
 
 edict:
 		makeemptywords 48
 		
-		makeqvword 102
+	 
 		makeword "f<>", fneqz, 0,  0 
 		makeword "f=", feqz, 0,  0 
 		makeword "f>=0", fgtzz, 0,  0 
@@ -9836,7 +9832,7 @@ edict:
 		makeword "FLAT", dflat, 0, 0
 		makeword "FALSE", dfalsez, 0,  0
 		makeword "FORGET", clean_last_word , 0, 0 
-		makeword "F", dvaraddz, dvaraddc,  8 * 70 + ivars	
+ 
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
@@ -9845,8 +9841,7 @@ edict:
 
 fdict:	
 		makeemptywords 79
-		makeqvword 103
-		makeword "G", dvaraddz, dvaraddc,  8 * 71 + ivars	
+ 
 gdict:
 		makeemptywords 78
 		makeword "HWARRAY", dHWcreatarray , dcreat_invalid, 0 
@@ -9855,18 +9850,16 @@ gdict:
 		makeword "HW@", dhatz, dhatc, 0
 		makeword "HW@IP", dhatipz, 0, 0
 
-		makeqvword 104
- 
-		makeword "H", dvaraddz, dvaraddc,  8 * 72 + ivars	
+	 
 hdict:
 	
 		makeemptywords 66
-		makeqvword 105
+ 
 		makeword "IP@", dipatz, dipatz,  0
 		makeword "IP!", dipstrz, dipstrz,  0
 		makeword "IP2+", dip2plusz, dip2plusz,  0
 		makeword "IP+", dipplusz, dipplusz,  0
-		makeword "IN", dvaluez, dvaraddc,  input_file
+		makeword "IN", dvaluez, 0,  input_file
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
 		makeword "INVERT", dinvertz, 0,  0
@@ -9874,13 +9867,13 @@ hdict:
 
 idict:
 		makeemptywords 66
-		makeqvword 106
+ 
 		makeword "J", djloopz, djloopc,  0
 
 jdict:
 		makeemptywords 64
 	
-		makeqvword 107
+	 
 		makeword "K", dkloopz, dkloopc,  0
 	
 kdict:
@@ -9893,7 +9886,7 @@ kdict:
 		makeword "LEAVE", 0 , dleavec, 0 
 		makeword "LOOP", 0 , dloopc, 0 
 		makeword "LIMIT", dlimited , 0, 0 
-		makeword "L", dvaraddz, dvaraddc,  8 * 76 + ivars	
+
 		makeword "LAST", get_last_word, 0,  0
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
 	
@@ -9906,8 +9899,7 @@ ldict:
 
 		makeemptywords 68
 
-		makeqvword 109
-		makeword "M", dvaraddz, dvaraddc,  8 * 77 + ivars	
+ 
 mdict:
 		makeemptywords 64
 
@@ -9916,16 +9908,14 @@ mdict:
 
 		makeword "NIP", dnipz, dnipc, 0	
 
-		makeqvword 110
-		makeword "N", dvaraddz, dvaraddc,  8 * 78 + ivars	
+	 
 
 ndict:	
 		makeemptywords 62
 
 		makeword "OR", dorz, 0, 0
 		makeword "OVER", doverz, doverc, 0
-		makeqvword 111
-		makeword "O", dvaraddz, dvaraddc,  8 * 79 + ivars	
+ 
 	
 odict:
 		makeemptywords 62
@@ -9938,16 +9928,13 @@ odict:
 
 		makeword "PICK", dpickz, dpickc, 0
 
-		makeqvword 112
-		makeword "P", dvaraddz, dvaraddc,  8 * 80 + ivars	
-
+	 
 
 pdict:
 
 
 		makeemptywords 62
-		makeqvword 113
-		makeword "Q", dvaraddz, dvaraddc,  8 * 81 + ivars	
+ 
 
 qdict:
 		makeemptywords 50
@@ -9962,8 +9949,7 @@ qdict:
 		makeword "R@", dratz , 0, 0 
 		makeword "RP@", fetchrpz , 0, 0 
 
-		makeqvword 114
-		makeword "R", dvaraddz, dvaraddc,  8 * 82 + ivars	
+	 
 
 rdict:
 
@@ -9988,8 +9974,7 @@ rdict:
 		makevarword "SP", dsp
 		makeword "SEE", dseez , 0, 0 
 
-		makeqvword 115 
-		makeword "S", dvaraddz, dvaraddc,  8 * 83 + ivars	
+ 
 
 sdict:
 		makeemptywords 50
@@ -10008,18 +9993,16 @@ sdict:
 		makeword "TROFF", dtroffz, 0, 0
 		makeword "TYPEZ", ztypez, ztypec, 0	
 		makeword "THEN", 0 , dendifc, 0 
-		makeword "THERE", dvaraddz, dvaraddc,  allot_ptr	
+		makeword "THERE", dvaraddz, 0,  allot_ptr	
  
-		makeqvword 116
-		makeword "T", dvaraddz, dvaraddc,  8 * 84 + ivars	
+ 
 
 tdict:
 
 		makeemptywords 50
-		makeqvword 117
-
+ 
 		makeword "UNTIL", duntilz, duntilc, 0	
-		makeword "U", dvaraddz, dvaraddc,  8 * 85 + ivars	
+ 
 	
 udict:
 
@@ -10032,9 +10015,7 @@ udict:
 		makeword "VERSION", announce , 0, 0
 		makeword "VARIABLE", dcreatvz , 0, 0
 
-		makeqvword 118
-		makeword "V", dvaraddz, dvaraddc,  8 * 86 + ivars	
-	
+	 
 vdict:
 
 		makeemptywords 48
@@ -10046,29 +10027,24 @@ vdict:
 		makeword "W!", dwstorz , 0, 0 
 		makeword "W@", dwatz , 0, 0 
 
-		makeqvword 119
-		makeword "W", dvaraddz, dvaraddc,  8 * 87 + ivars	
+		 
 		
 		
 wdict:
 
 		makeemptywords 48
 		
-		makeqvword 120
-		makeword "X", dvaraddz, dvaraddc,  8 * 88 + ivars	
+	 
 xdict:
 		makeemptywords 48
 		
- 
-		makeqvword 121
-		makeword "Y", dvaraddz, dvaraddc,  8 * 89 + ivars	
+  
 		
 
 ydict:
 		makeemptywords 34
 
-		makeqvword 122
-		makeword "Z", dvaraddz, dvaraddc,  8 * 90 + ivars	
+	 
 
 zdict:
 
@@ -10152,7 +10128,7 @@ zbytewords:
 		makebword 93, 	drsbz, 		drsbc, 		0
 		makebword 94, 	dtophatz, 	0, 	0
 		makebword 95, 	dunderscorez, 	0, 	0
-		makebword 96, 	dtickz, 		dtickz, 		0
+		makebword 96, 	dtickz, 0, 		0
 	
 
 		makeemptywords 123-96
