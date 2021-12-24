@@ -86,7 +86,7 @@ Consider making number of LOCALS a word can have dynamic.
 
 ```
 
-
+: HIDE 0 ` 0 48 + C! ;
 
 
 
