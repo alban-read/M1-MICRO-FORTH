@@ -9776,10 +9776,8 @@ adict:
 		makeword "BEGIN" , dbeginz, dbeginc, 0
 		makeword "BUFFER$", dvaraddz, 0,  string_buffer
 		makeword "BREAK",  dbreakz, dbreakc, 0
-		makeword "BL",  dconstz, dconstz, 32
+		 
 		
- 
-
 bdict:
 		makeemptywords 80
 		makeword "CHAR", 	dcharz, dcharc, 0
