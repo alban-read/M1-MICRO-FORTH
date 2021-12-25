@@ -1,24 +1,29 @@
 // forth.fs - this file is loaded when FORTH starts.
-// 
 TICKS VALUE start_ticks
 
-// Conceal words, used in implementations
-48 ADDS >NFA : HIDE 0 ` >NFA C! ; 
+// Navigate within a words header
+48 ADDS >NFA 
+32 ADDS >DATA1  
+40 ADDS >DATA2  
+16 ADDS >ARG2  
+ 8 ADDS >RUN
+24 ADDS >COMP
 
-// avoid being annoyed by Ok prompt
+: PRIVATE 0 ` >NFA C! ; 
+
+// avoid being annoyed by the Ok prompt
 : LOUD FALSE TO BEQUIET ; 
-: QUIET TRUE TO BEQUIET ;  HIDE BEQUIET
+: QUIET TRUE TO BEQUIET ;  PRIVATE BEQUIET QUIET
 
 // Display time spent in the program
 : UPTIME TICKS 
     start_ticks - s>f TPMS s>f f/ f.  .'  ms.'  ;
-HIDE start_ticks
+PRIVATE start_ticks
 
-
-// hide words under development still.
-HIDE DECR
-HIDE INCR
-HIDE MAP
+// hide any words under development still.
+PRIVATE DECR
+PRIVATE INCR
+PRIVATE MAP
 
 // Add common constants
 3.14159265359   CONSTANT PI
@@ -30,14 +35,11 @@ HIDE MAP
 1 SHIFTSL 2* 2 SHIFTSL 4* 3 SHIFTSL 8*
 1 SHIFTSR 2/ 2 SHIFTSR 4/ 3 SHIFTSR 8/
 
-: SQUARE DUP * ;
-
-: QUADRATIC  ( a b c x -- n )   
-    >R SWAP ROT R@ *  + R> *  + ;
-
 
 // announce ourselves
-PAGE .VERSION WORDS CR
-.' forth.fs for Apple Silicon loaded in '  UPTIME 
+PAGE 
+.' Small FORTH for Apple Silicon '
+.VERSION WORDS CR
+.' forth.fs  loaded in '  UPTIME 
  
  

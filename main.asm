@@ -4923,6 +4923,7 @@ dtickz: ; ' - get address of NEXT words data field
 
 
 
+
 dcharz: ; char - stack char code while interpreting
 
 10:	LDRB	W0, [X23]
@@ -5135,7 +5136,7 @@ dbranchc:
 
 
 
-dtickc: ; ' at compile time, turn address of word into literal
+dtickc: ; `` at compile time, turn address of word into literal
 
 
 100:	
@@ -5165,49 +5166,9 @@ dtickc: ; ' at compile time, turn address of word into literal
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
-
-	; found word, push litl and create literal address of word
-
-	MOV		X0, #2 ; #LITL
-	STRH	W0, [X15]
-	ADD		X15, X15, #2
-
-	; find or create literal
-	MOV		X0, X28	
-	ADRP	X1, quadlits@PAGE	
-	ADD		X1, X1, quadlits@PAGEOFF
-	MOV		X3, XZR
-
-10:
-	LDR		X2, [X1]
-	CMP		X2, X0
-	B.eq	80f
-	CMP		X2, #-1  
-	B.eq	70f
-	CMP		X2, #-2 ; end of pool ERROR  
-	B.eq	190f ; error out
-	ADD		X3, X3, #1
-	ADD		X1, X1, #8
-	B		10b	
-70:
-	; literal not present 
-	; free slot found, store lit and return value
-	STR		X0, [X1]
-	MOV		X0, X3
-	B		85f
-
-80:
-	; found the literal
-	MOV		X0, X3
-	B		85f
-
-
-85:
-	STRH	W0, [X15]	; value
-	ADD		X15, X15, #2
-
-	MOV		X0, #0		; no error
-	B		200f
+	MOV 	X0, X28 
+	BL 		longlitit
+	B 		200f
 
 
 170:	; next word in dictionary
@@ -10138,6 +10099,7 @@ zdict:
 		makeword ".'", dstrdotz, dstrdotc , 0
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
+		makeword "``", 0, dtickc , 0
 
 	
 zbytewords:
