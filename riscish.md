@@ -517,3 +517,284 @@ It is a simple interpreter but FORTH is also a simple and lean language.
 The token interpreter is competitive with commonly used interpreted languages.
 
 
+### Glossary of user words
+
+ADDS 
+
+7 ADDS 7+ 
+
+Create a word 7+ that adds 7 to the value on the stack.
+
+APPEND$ 
+
+Storage used when appending by the string builder.
+
+APPEND^ 
+
+Not zero if strings are being appended.
+
+ALLWORDS
+
+Lists all words, user and compiler words.
+
+ALLOT>  
+
+0 VARIABLE this_variable 
+n ALLOT> this_variable
+
+Adds n bytes of storage to a variable created earlier
+
+ALLOT
+
+0 VARIABLE room 200 ALLOT
+
+Adds n bytes of storage to the LAST word created
+
+
+ALLOTMENT 
+
+A view over the ALLOTMENT space, used to add data space to words.
+
+
+ARRAY
+
+n ARRAY myArray
+
+Creates an ARRAY of size n.
+
+ADDR 
+
+If you have the token number (16bits) for a word
+This calculates the address
+
+ACCEPT
+
+Gets a line from the user and interns it as a string, returning the address.
+
+AGAIN 
+
+Last part of a never ending indefinite loop in a compiled word.
+
+
+ABS 
+
+A maths function, applied to the top value on the stack.
+
+AND 
+
+A logical functon applied to the top two values on the stack.
+
+BEQUIET
+
+Stop saying OK all the time.
+
+BEGIN 
+
+The start of an indefinite loop in a compiled word.
+
+
+Converts the token for a word to its address (see NTH)
+
+
+BUFFER$
+
+A storage space used for STRINGs
+
+BREAK
+
+Sends a break signal, that should result in a low level debugger or a crash.
+Hazardous
+
+CHAR
+
+CHAR A .
+
+Converts an ASCII letter to a number 
+That prints 65.
+
+CARRAY 
+
+Like ARRAY one byte wide.
+See ARRAY
+
+CVALUES
+
+Like VALUES one byte wide.
+See VALUES
+
+C@ 
+
+Reads one byte of memory from the address on the top of the stack.
+Potential hazard. 
+
+C!
+
+Stores one byte of memory.
+Potential hazard. 
+
+
+CONSTANT 
+
+3.14159265359   CONSTANT PI
+
+An alias for VALUE that expresses a promise to never use TO.
+See VALUE.
+Nothing is immutable so why pretend.
+
+CREATE 
+
+Used to create a word header in the dictionary.
+Not often used.
+
+CR 
+
+Print a carriage return and line feed
+Moving the cursor down and to the left hand start of the next line.
+
+DO
+
+Part of a compiled definite loop.
+
+DOWNDO
+
+Part of a descending definite loop.
+
+DUP
+
+Duplicates the top value on the stack.
+
+DROP
+
+Drops the top value on the stack.
+
+DEPTH 
+
+Returns the depth of the stack.
+
+EXECUTE
+
+Calls the words function, using the address at the top of the stack.
+
+ELSE
+
+Part of a compiled IF .. ELSE .. THEN control flow.
+
+ENDIF 
+
+Another name for THEN 
+
+Part of a compiled IF .. ELSE .. ENDIF control flow.
+
+EMIT
+
+Prints the charachter that is the top value on the stack.
+
+EXIT
+
+Exits the current word, part of a compiled word.
+Also used to crash if you are in the interpreter, as you can not execute that.
+
+The F section lots of floating point maths words.
+
+FFIB 
+
+Calculates a FIB quickly, instead of being a benchmark.
+
+
+FASTER 
+
+Used to make a word run FASTER.
+
+FLAT 
+
+Used to create LOCALS access words.
+
+See LOCALS section.
+
+FALSE 
+
+Not TRUE
+
+FORGET
+
+Forgets the last word, and not very well.
+Does not tidy up any storage the last word has grabbed.
+
+FILLVALUES 
+
+Used to set all the elements in a VALUES to a value.
+
+FILLARRAY
+
+Used to set all the elements in an ARRAY to a value.
+
+FILL 
+
+A dangerouse but fast memory block filling word.
+A potential hazard.
+Copyrighted by ARM, who it seems feel free to Copyright a nice, useful but otherwise basic and entirely obvious algorithm, for some reason. Released as BSD licensed so at least we dont have to take them to court when we accidentally write the same entirely obvious code ourselves.
+
+HWARRAY
+
+This creates an array of Half Words, 16 bit values.
+See ARRAY
+
+HWVALUES
+
+This creates a VALUES of Half Words, 16 bit values.
+See VALUES
+
+
+HW!
+
+Used to dangerously store half words in memory.
+A potential hazard.
+
+HW@
+
+Used to dangerously read half words from memory.
+
+HW@IP
+
+A word of limited use, that reads the token of the word under the instruction pointer, mainly useless as it typically reads itself.
+Hazardous
+
+IP@ 
+
+Returns the current value of the instruction pointer
+May be useful when debugging a word.
+Hazardous.
+
+IP! 
+
+Sets the current value of the instruction pointer.
+May be useful when debugging a word.
+Hazardous
+
+IP+
+Hazardous
+
+IN 
+
+The file we are reading from, probably STDIN most of the time.
+
+I 
+
+The index for the current LOOP in a compiled word.
+
+IF
+
+Part of f IF .. ELSE .. THEN in a compiled word.
+
+INVERT
+
+Inverts the bits in the value on the top of the stack.
+
+
+
+
+
+
+
+
+
