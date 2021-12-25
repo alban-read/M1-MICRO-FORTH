@@ -59,7 +59,7 @@ create small machine code primitive words
     - A FLAT word is useful for recursive words.
         - ```FORTH : test 100 0 TO LOCALS ; // plain locals access ```
         - ```FORTH : cat-count ( -- n ) [ FLAT ] 6 LOCALS ; // use 6 for cat-count ```
-        - ```FORTH : set-cat-count ( n -- ) [ FLAT ] 6 TO LOCALS ; // set cat-count```
+        - ```FORTH : set-cat-count ( n -- ) [ FLAT ] 6 TO LOCALS ; // set cat-count ```
 - LOOPS
     - There is a simpler faster definite loop `n TIMESDO word` also available in the interpreter and compiler.
 - DO LOOP
