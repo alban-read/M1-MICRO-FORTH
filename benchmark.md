@@ -4,9 +4,10 @@
 // FIB measures the inner interpreters call overhead really well.
 // it is a benchmark of call speed.
 
-: FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ; FLAT FIB
+: FIB ( n -- n1 ) [ FLAT FIB ]
+  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ; 
 
-: FIB34 34 FIB DROP ; FLAT FIB34
+: FIB34 [ FLAT FIB34 ] 34 FIB DROP ; 
 
 : t1 25 TIMESDO FIB34 ;
 
@@ -26,6 +27,11 @@ TIMEIT t1
 TIMEIT t1
 3574  : ms to run ( 35741  ) ns 
 
+
+// 26th December
+TIMEIT t1
+3397  : ms to run ( 33978  ) ns 
+
 // just for comparison, FFIB is a fast iterative assembler version.
 // not useful as a benchmark.
 : FFIB34 [ FLAT ] 34 FFIB DROP ;
@@ -41,7 +47,10 @@ CREATE FLAGS 8190 ALLOT
 0 VARIABLE EFLAG
 FLAGS 8190 + EFLAG !
 
-: PRIMES  ( -- n )  FLAGS 8190 1 FILL  0 3  EFLAG @ FLAGS
+2 ADDS 2+
+
+: PRIMES  ( -- n )  [ FLAT PRIMES ]
+  FLAGS 8190 1 FILL  0 3  EFLAG @ FLAGS
   DO   I C@
        IF  DUP I + DUP EFLAG @ <
            IF    EFLAG @ SWAP
@@ -50,14 +59,18 @@ FLAGS 8190 + EFLAG !
            THEN  2+
        LOOP  DROP ;
 
-: BENCHMARK  0 1000 0 DO  PRIMES NIP  LOOP ;
+: BENCHMARK FLAGS 8190 + EFLAG ! 0 1000 0 DO  PRIMES NIP  LOOP ;
 
-: pt2 25 0 DO FLAGS 8190 + EFLAG ! BENCHMARK LOOP ;
+: t2 25 TIMESDO  BENCHMARK  ;
 
 // 432 ms Sat 4th December
 // t2 10357  : ms to run ( 103577  ) ns 
 // t2 8043 ms // after adding FILL.
 
+// 26th December
+// t2 7851  : ms to run ( 78510  ) ns 
+// t2 (FLAT) 6978  : ms to run ( 69781  ) ns 
+ 
 
 : FAC DUP 1> IF DUP 1- FAC * ELSE DROP 1 ENDIF ;
 : t3 100 FAC ;

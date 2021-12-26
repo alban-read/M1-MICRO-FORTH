@@ -21,7 +21,7 @@ Learn ARM64, have some fun, create useful things.
 
 create small machine code primitive words 
 
- .. allow them to be tested interactively
+ .. allow them to be tested *interactively*
 
  .. allow new words to be composed, mainly by concatenation.
 
@@ -42,6 +42,7 @@ create small machine code primitive words
         - ```FORTH ${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender ```
 - The dictionary is simplified into a single array for the headers :-
     - There are no vocabularies, few words are defined not thousands.
+    - The idea being to extend the ASM file for an app, and add words to the startup script to control/ test it, not to live in FORTH world.
 - The token space for 16bit tokens (compiled words) is separate from data.
     - The token compiler creates tokens in token space and literals in literal pools.
     - There are long literals, for integers and floats.
@@ -52,7 +53,7 @@ create small machine code primitive words
     - Arrays of values are supported
 - Locals 
     - A fixed sized 64 byte data block is available to every word.
-    - The LOCALS storage comes form a stack.
+    - The LOCALS storage comes from a stack.
     - There is an 8 item and 16 item VALUE view over the block.
     - The data is zero on entry to a word.
     - A FLAT word may share the LOCALS of its parent to provide accessor functions.

@@ -441,10 +441,6 @@ The loop can be nested and has an index value accessed by depth called I, J, K.
 ```
 
 
-
-
-
-
 ### Input and output.
 
 The IO is set for the UNIX terminal.
@@ -456,7 +452,16 @@ The various printing words, `. $. f. .' hey'` etc print to STDOUT, and they buff
 
 KEY - reads a user key press from STDIN, waits for single key press, does not echo or buffer.
 
-EMIT - writes the char to STDOUT, without delay, flushes STDOUT.
+EMIT - writes the char to STDOUT, without delay, (it flushes STDOUT).
+
+
+```FORTH
+KEY DUP EMIT .'  = ' . 
+```
+
+Display key pressed and its ASCII value.
+
+
 
 Terminals accept a variety of commands.
 

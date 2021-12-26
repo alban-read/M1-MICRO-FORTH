@@ -5095,10 +5095,8 @@ dzbranchz:
  
 dzbranchz_notrace:
 
-	LDR		X1, [X16, #-8]
-	SUB		X16, X16, #8	
-	CMP		X1, #0
-	B.ne	90f
+	LDR		X1, [X16, #-8]!
+	CBNZ	X1, 90f
 
 ; it is zero, branch forwards n tokens		
 80:
@@ -5106,7 +5104,6 @@ dzbranchz_notrace:
 	LDRH	W0, [X15, #2]	; offset to endif
 	SUB		W0, W0, #32		; avoid confusion 
 
- 
 	SUB		X0, X0, #2
 	ADD		X15, X15, X0	; change IP
 
@@ -5653,18 +5650,19 @@ flatrunintz:; interpret the list of tokens at X0
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
 	SUB		X15, X0, #2
-	MOV		X29, #64
+
 
 
 	; unrolling the loop here x16 makes this a lot faster, 
 10:	; next token
 	
-	.rept	16
-
+	.rept	32
+	
 		LDRH	W1, [X15, #2]!
-		CBZ		X1, 90f
-	 
-		MADD	X1, X29, X1, X27
+		CBZ		W1, 90f
+		LSL 	W1, W1, #6
+		
+		ADD		X1, X1, X27
 		LDP		X0, X2, [X1]
 		CBZ		X2, 10b
 	
@@ -5961,8 +5959,7 @@ dbreakc: ;
 
 
 dplusz: ; +
-	LDR		X0, [X16, #-8]
-	LDR		X1, [X16, #-16]
+	LDP		X0, X1, [X16, #-16]
 	ADD		X0, X0, X1
 	STR		X0, [X16, #-16]
 	SUB		X16, X16, #8
@@ -9834,8 +9831,7 @@ hashdict:
 
 		makeword "AND" , dandz, 0, 0
 
- 
-	
+
 	
 adict:
 
@@ -9863,8 +9859,6 @@ bdict:
 
 cdict:
 		makeemptywords 80
-
-	
 		makeword "DP", dvaraddz, 0,  here	
 		makeword "DO", 0 , doerc, 0 
 		makeword "DOWNDO", 0 , ddownerc, 0 
@@ -9873,8 +9867,7 @@ cdict:
 		makeword "DEPTH", ddepthz , 0, 0 
 		makeword "DECR", ddecrz, ddecrc,  0
 
-		 
-
+		
 ddict:
 		makeemptywords 80
 		
@@ -9885,8 +9878,6 @@ ddict:
 		makeword "EXIT", dexitz, 	0,  0		
 	 
 		
- 
-
 edict:
 		makeemptywords 48
 		
