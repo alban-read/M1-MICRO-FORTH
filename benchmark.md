@@ -2,17 +2,13 @@
 
 // Tests measure speed
 // FIB measures the inner interpreters call overhead really well.
+// it is a benchmark of call speed.
 
 : FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ; FLAT FIB
 
 : FIB34 34 FIB DROP ; FLAT FIB34
 
 : t1 25 TIMESDO FIB34 ;
-
-// just for comparison, FFIB is a fast iterative assembler version, not measurable.
-: FFIB34 34 FFIB DROP ;
-: t2 25 TIMESDO FIB34 ;
-
 
 TIMEIT t1
 
@@ -30,6 +26,12 @@ TIMEIT t1
 TIMEIT t1
 3574  : ms to run ( 35741  ) ns 
 
+// just for comparison, FFIB is a fast iterative assembler version.
+// not useful as a benchmark.
+: FFIB34 [ FLAT ] 34 FFIB DROP ;
+: t2 10000 10000 * TIMESDO FFIB34 ;
+TIMEIT t2
+245  : ms to run ( 2458  ) ns 
 
 
 // PRIME SIEVE benchmark
