@@ -34,10 +34,10 @@ create small machine code primitive words
 
 - Strings are completely different:-
     - string storage has its own pool, the string literal is ' a string '. 
-    - string words often include $ e.g $. not type
+    - string words often include $ e.g ```$.``` prints a string.
     - strings are zero terminated not counted as it is 2021.
     - There are words to make strings
-    - ' Hello World' STRING hello_world
+    - ```' Hello World' STRING hello_world```
     - There are words to build strings (from substrings)
         - ```FORTH ${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender ```
 - The dictionary is simplified into a single array for the headers :-
@@ -57,9 +57,9 @@ create small machine code primitive words
     - The data is zero on entry to a word.
     - A FLAT word may share the LOCALS of its parent to provide accessor functions.
     - A FLAT word is useful for recursive words.
-        - ```FORTH : test 100 0 TO LOCALS ; // plain locals access ```
-        - ```FORTH : cat-count ( -- n ) [ FLAT ] 6 LOCALS ; // use 6 for cat-count ```
-        - ```FORTH : set-cat-count ( n -- ) [ FLAT ] 6 TO LOCALS ; // set cat-count ```
+        - ``` : test 100 0 TO LOCALS ; // plain locals access ```
+        - ``` : cat-count ( -- n ) [ FLAT ] 6 LOCALS ; // use 6 for cat-count ```
+        - ``` : set-cat-count ( n -- ) [ FLAT ] 6 TO LOCALS ; // set cat-count ```
 - LOOPS
     - There is a simpler faster definite loop `n TIMESDO word` also available in the interpreter and compiler.
 - DO LOOP
@@ -77,7 +77,7 @@ create small machine code primitive words
 - I/O
     - Unix terminal KEY, EMIT, unbuffered, flushed.
     - Simplified ACCEPT to read lines
-    - ```FORTH 0 STRING user_name  ACCEPT to user_name .' Hi ' user_name $. CR ```
+    - ``` 0 STRING user_name  ACCEPT to user_name .' Hi ' user_name $. CR ```
 - The compiler
     - is implemented in assembly language.
     - every word has a slot for run time and compile time actions.
