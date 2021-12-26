@@ -28,6 +28,7 @@ PRIVATE MAP
 // Add common constants
 3.14159265359   CONSTANT PI
 
+ 
 // Add the very common fast add and subtract words
 1 ADDS 1+ 1 SUBS 1-
 

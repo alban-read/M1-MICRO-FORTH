@@ -201,6 +201,15 @@ myString $.
 ```
 Given the address $. will print the string.
 
+```FORTH
+
+'' STRING myEmptySting 
+
+```
+
+Is how to create an initially empty string.
+
+
 - A string should not normally be mutated, each unique string exists only once in the string pool, changing one would impact all usages everywhere in a program.
 
 - Strings can be compared with $= and $== which check if they are same and $COMPARE wich checks if one is equal, greater, or less than the other.
@@ -460,7 +469,7 @@ You can accept a line of text from the user with ACCEPT e.g.
 ```FORTH
 
 \\ Empty String
-0 STRING myInput
+'' STRING myInput
 
 Ok
 ACCEPT TO myInput
@@ -473,7 +482,8 @@ Test this then
 Exciting interactions become possible
 
 ```FORTH
-: ask-name? .' What is your name ? ' CR ACCEPT TO myInput CR .' Hello :' myInput $. ;
+'' STRING yourName
+: ask-name? .' What is your name ? ' CR ACCEPT TO yourName CR .' Hello :' yourName $. ;
 
 
 ask-name?
@@ -484,11 +494,6 @@ Hello :Alban
 
 
  ```
-
-
-
-
-
 
 
 #### Thoughts
