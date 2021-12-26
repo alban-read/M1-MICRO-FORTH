@@ -7790,6 +7790,17 @@ dstfromappendbuffer:
 	
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
+	; add offset based on first letter
+	LDRB	W0, [X12]	; first letter
+	CMP		W0, #'z'
+	B.gt 	710f
+	CMP		W0, #'a'
+	B.lt	710f
+	; * 256 slots per letter, * 256 bytes
+	SUB 	W0, W0, #90
+	LSL		X0, X0, #16  
+	ADD		X13, X13, X0 
+710: 
 
 
 	; find a free slot or a match in the short strings
@@ -8048,6 +8059,8 @@ dstrcmp:
 	CBZ		X12, 05f
 	CBZ		X13, 05f
 
+	CMP		X12, X13 	; structural identity
+	B.eq	05f
 
 	; compare up to 256 bytes 16 at a time
 	.rept 16
@@ -8232,6 +8245,18 @@ dstrdotz:
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
 
+	; add offset based on first letter
+	LDRB	W0, [X12]	; first letter
+	CMP		W0, #'z'
+	B.gt 	710f
+	CMP		W0, #'a'
+	B.lt	710f
+	; * 256 slots per letter, * 256 bytes
+	SUB 	W0, W0, #90 ; 7 * 256 for non alpha
+	LSL		X0, X0, #16  
+	ADD		X13, X13, X0 
+710: 
+
  
 	; find a free slot or a match in the short strings
 
@@ -8374,6 +8399,19 @@ intern_string_from_buffer:
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
 
+	; add offset based on first letter
+	LDRB	W0, [X12]	; first letter
+	CMP		W0, #'z'
+	B.gt 	710f
+	CMP		W0, #'a'
+	B.lt	710f
+	; * 256 slots per letter, * 256 bytes
+	SUB 	W0, W0, #90 
+	LSL		X0, X0, #16  
+	ADD		X13, X13, X0 
+710: 
+
+
 	; find a free slot or a match in the short strings
 
 140:
@@ -8509,6 +8547,19 @@ dstrdotc:
 	
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
+
+	; add offset based on first letter
+	LDRB	W0, [X12]	; first letter
+	CMP		W0, #'z'
+	B.gt 	710f
+	CMP		W0, #'a'
+	B.lt	710f
+	; * 256 slots per letter, * 256 bytes
+	SUB 	W0, W0, #90
+	LSL		X0, X0, #16  
+	ADD		X13, X13, X0 
+710: 
+
 
 	; find a free slot or a match in the short strings
 
@@ -8648,6 +8699,20 @@ dstrstksc: ; compile literal that returns its address.
 	
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
+
+
+	; add offset based on first letter
+	LDRB	W0, [X12]	; first letter
+	CMP		W0, #'z'
+	B.gt 	710f
+	CMP		W0, #'a'
+	B.lt	710f
+	; * 256 slots per letter, * 256 bytes
+	SUB 	W0, W0, #90
+	LSL		X0, X0, #16  
+	ADD		X13, X13, X0 
+710: 
+
 
 	; find a free slot or a match in the short strings
 
@@ -9398,11 +9463,6 @@ current_c_ospeed:  	.quad 0
 getchar_buf:		.quad 0
 			
 
-
-
-
-
-
 ; this is the tokens stack
 ; code for token compiled words is compiled into here
 ; 
@@ -9549,12 +9609,20 @@ string_buffer:
 .asciz "Strings"
 .zero 2048
 
- 
+ ; short strings are sparse and not sorted
+ ; the search at compile time is split over 27 buckets by first letter.
+ ; at runtime access is just direct.
+
 .align 16
 short_strings:
-.rept  4096
+.rept  8192
 	.zero	256
 .endr
+short_strings_overflow:
+.rept  2048
+	.zero	256
+.endr
+
 short_strings_end:
 .quad	-1
 .quad	-1
@@ -9814,7 +9882,8 @@ ddict:
 		makeword "ELSE", 0 , delsec, 0 
 		makeword "ENDIF", 0 , dendifc, 0 
 		makeword "EMIT", emitz , 0, 0 
-		makeword "EXIT", dexitz, 	0,  0			
+		makeword "EXIT", dexitz, 	0,  0		
+	 
 		
  
 
@@ -10070,7 +10139,8 @@ zdict:
  		makeword "$=", dstrequalz, 0,  0
 		makeword "$==", _dstrequalz, 0,  0
 		makeword "$compare", dstrcmp, 0,  0
-		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 4096
+		makeword "$''", 	stackit, 	stackit, 	0
+		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 10240
 	 
 		makeword "*/", dstarslshz, 0,  10
 		makeword "*/MOD", dstarslshzmod, 0,  10
@@ -10098,6 +10168,8 @@ zdict:
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
 		makeword "``", 0, dtickc , 0
+
+
 
 	
 zbytewords:

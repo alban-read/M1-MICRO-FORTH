@@ -203,7 +203,7 @@ Given the address $. will print the string.
 
 ```FORTH
 
-'' STRING myEmptySting 
+$'' STRING myEmptySting 
 
 ```
 
@@ -469,7 +469,7 @@ You can accept a line of text from the user with ACCEPT e.g.
 ```FORTH
 
 \\ Empty String
-'' STRING myInput
+$'' STRING myInput
 
 Ok
 ACCEPT TO myInput
@@ -482,7 +482,7 @@ Test this then
 Exciting interactions become possible
 
 ```FORTH
-'' STRING yourName
+$'' STRING yourName
 : ask-name? .' What is your name ? ' CR ACCEPT TO yourName CR .' Hello :' yourName $. ;
 
 
