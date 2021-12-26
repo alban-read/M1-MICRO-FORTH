@@ -238,9 +238,14 @@ string zero
 
 $. is a word that prints a string.
 
-The storage for the string text lives in the string pool a STRING word just points a name at it.
+The storage for the strings text lives in the string pool a STRING word just points a name at it.
 
 The string pool can be accessed using the special VALUE $$
+
+The string pool is a large sparse pool with strings distributed through it based on their first letter, this should help stop the compiler becomming horendously slow, when searching the pool.
+
+Compiled words just reference the strings address or index number.
+
 
 e.g. 
 

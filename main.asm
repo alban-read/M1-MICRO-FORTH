@@ -2262,7 +2262,7 @@ dlochsz:
 
 
 
-; SIMPLE non standard repeater
+; SIMPLE non standard single WORD repeater
 
 ; n TIMESDO word 
 ; execute single word, n times, as quickly as we can.
@@ -5657,7 +5657,7 @@ flatrunintz:; interpret the list of tokens at X0
 10:	; next token
 	
 	.rept	32
-	
+
 		LDRH	W1, [X15, #2]!
 		CBZ		W1, 90f
 		LSL 	W1, W1, #6
