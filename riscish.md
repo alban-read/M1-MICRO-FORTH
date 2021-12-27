@@ -320,6 +320,29 @@ ${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender
 In line with general FORTH principles the , is a word not a separator, and comes after the text being appended.  The single quote is a word and must be followed by a space. This reads text until the next single quote.
 
 
+### Slicing a string
+
+```FORTH 
+
+' this is the age of the train' 10 5 $slice $. 
+
+```
+returns 'train'
+
+Slicing uses only a single slice buffer, meaning the next slice writes right over 
+the previous one, slices can be appended to a string with $slice, inside an append list.
+
+
+```FORTH 
+' This is the age of the train ' STRING trains
+
+${ ' They said it was the age of the ' , trains 23 5 $slice, ' - yeah right.' , $}
+
+```
+Example of appending with $slice, between ${ and $}.
+
+
+
 #### Storage used when appending
 
 The BUFFER$ and APPEND$ storage is used while appending.
