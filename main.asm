@@ -7781,8 +7781,11 @@ ddotsz:
 ;; - zero terminated
 ;; - have 256 bytes for capacity.
 ;; use the larger shared BUFFER$ as a temp
-;; this compares the contents, which given our no duplicate rule is not 
-;; needed
+
+;; The most annoying problems with Strings, is 'where do they live' and for how long.
+;; Standard FORTH puts them into the alloted space in the dictionary, for ever.
+;; I am placing them in a giant string pool for ever instead.
+;; I feel like I need a string stack for temporaries and string operations. 
 
 
 
@@ -8060,7 +8063,7 @@ _dstrequalz:
 	RET
 
 ; length of string.
-; only works because we do align and pad all our strings 
+; only works because we do align and pad all of our strings 
 
 dstrlen:
 
@@ -8165,8 +8168,8 @@ dstrslice:
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
-	MOV 		X0, #0
-	B 			stackit
+	MOV 	X0, #0
+	B 		stackit
 	RET
 
 
@@ -8505,7 +8508,7 @@ dstrstksz: ; runtime S" .. " stash and return address
 
 intern_string_from_buffer:
 
-	; we have to intern if compiling.
+	; we have to intern if we are compiling.
 	CBNZ	X15, 128f
 	; exit if appending do not store
 	ADRP	X1, append_ptr@PAGE		
@@ -9718,7 +9721,7 @@ quadlits:
 	.quad  512
 	.quad  1024
 
-	.rept  2048	; <-- increase if literal pool full error arises.
+	.rept  8192	; <-- increase if literal pool full error arises.
 	.quad -1
 	.endr
 	.quad  -2 ; end of literal pool. 

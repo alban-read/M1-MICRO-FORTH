@@ -352,9 +352,9 @@ Slices can be appended to a string with $slice followed by a comma inside of an 
 
 // taking a slice in the appender.
 ${ 
-
-    br 14 12 $slice ,
-    br 12 0 $slice ,
+    ' Back ' ,
+    br 13 13 $slice ,
+    br 0 8 $slice ,
     ' said it was "' ,   
     trains 8 10 $slice ,
     ' " the "' ,
@@ -362,7 +362,13 @@ ${
 $}
 
 ```
+
 Example of appending with $slice between ${ and $}.
+
+This has the advantage of not spewing garbage into the string pool when interpeting.
+Although if compiled the strings still need to live somewhere.
+
+
 
 #### Storage used when appending
 
@@ -558,7 +564,7 @@ The interpreter in assembler, also means it is not as exposed to high level FORT
 
 High level FORTH does have a lot of access to the system still, various interrnal objects are also exposed as VALUES to FORTH.
 
-The implementation misses some of the self-extending powers of standard FORTH.
+The implementation misses some of the selfwords-extending powers of standard FORTH.
 The various compile time words are frozen forever in the assembly language file.
 
 
