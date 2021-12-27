@@ -6153,6 +6153,7 @@ ddropc: ;
 
 ztypez:
 	LDR		X0, [X16, #-8] 
+	SUB 	X16, X16, #8
 	CBZ		X0, nothing_to_say
 	B		sayit
 nothing_to_say:
@@ -7958,7 +7959,9 @@ dstrappender:
 	STR		X1, [X0]
 
 500:
-
+	ADRP	X0, not_appending_err@PAGE		
+	ADD		X0, X0, not_appending_err@PAGEOFF
+	B 		sayit_err
 	RET
 
 
@@ -7971,9 +7974,6 @@ dstrappendend:
 
 	B 	dstfromappendbuffer
 	RET
-
-
-
 
 
 ; dumb as a rock append
@@ -8095,6 +8095,60 @@ dstrlen:
 	RET
 
 
+; slices a string  
+ 
+
+dstrslice:
+
+	ADRP	X0, slice_string@PAGE		
+	ADD		X0, X0, slice_string@PAGEOFF
+
+	; Zap slice buffer
+	ADRP	X12, slice_string@PAGE		
+	ADD		X12, X12, slice_string@PAGEOFF
+	.rept	64
+		STP		XZR, XZR, [X12], #16
+	.endr
+
+5:
+	LDP		X3, X2, [X16, #-16]
+	SUB 	X16, X16, #16
+	LDR		X1, [X16, #-8]
+	SUB 	X16, X16, #8
+ 	;STR		X0, [X16, #-8] ; destination
+	CBZ		X2, 90f
+	CBZ		X3, 90f
+	ADD		X3, X1, X3 	; position in string.
+
+10:
+	LDRB 	W1, [X3], #1
+	STRB	W1,	[X0], #1
+	CBNZ	W1, 10b  
+	SUB 	X2, X2, #1
+	CBZ		X2, 20f
+
+20:
+	MOV 	W1, #0
+	STRB	W1, [X0]
+
+90:
+	STP		LR,  XZR, [SP, #-16]!
+	STP		X12, X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+
+	; now copy from slice to string buffer
+	; copy from string buffer to string
+	ADRP	X12, slice_string@PAGE		
+	ADD		X12, X12, slice_string@PAGEOFF
+	ADRP	X13, string_buffer@PAGE		
+	ADD		X13, X13, string_buffer@PAGEOFF
+	.rept 16
+		LDP		X0, X1, [X12], #16
+		STP		X0, X1, [X13], #16
+	.endr
+
+	B intern_string_from_buffer
+	RET
 
 
 dstrcmp:
@@ -9470,6 +9524,10 @@ word_desc17: .ascii "\t\t1 DIMENSION ARRAY OF BYTES"
 create_error: .ascii "\nError: use of CREATION words (VALUE, STRING etc) not allowed in compiled words."
 	.zero 16
 
+not_appending_err:
+.align	8
+.ascii "\nError: Not appending."
+	.zero 16
 
 .align 8
 clear_screen:
@@ -9673,13 +9731,18 @@ short_strings_end:
 .quad	-1
 .quad	-1
 
-
 long_strings:
 .rept  32
 	.zero	512
 .endr
 .quad	-1
 .quad	-1
+
+slice_string:
+	.zero 1024
+
+
+
 
 
 ; used for line input
@@ -10158,6 +10221,8 @@ zdict:
 		makeword "$==", _dstrequalz, 0,  0
 		makeword "$compare", dstrcmp, 0,  0
 		makeword "$len", dstrlen, 0,  0
+		makeword "$slice", dstrslice, 0,  0
+		makeword "$slice,", dstrslice, 0,  0
 		makeword "$''", 	stackit, 	stackit, 	0
 		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 10240
 	 

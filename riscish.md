@@ -306,7 +306,7 @@ ${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} $.
 
 The string is composed between the ${ Start building and $} end building words.
 
-Each element of text is added by the comma after it.
+Each element of text is added by the comma that follows after it.
 
 At the end the combined text is stored and its address is returned, so it can be named.
 
@@ -327,16 +327,27 @@ In line with general FORTH principles the , is a word not a separator, and comes
 ' this is the age of the train' 10 5 $slice $. 
 
 ```
-returns 'train'
+Prints 'train'
 
-Slicing uses only a single slice buffer, meaning the next slice writes right over 
-the previous one, slices can be appended to a string with $slice, inside an append list.
+Slicing uses a slice buffer, and the string pool for storage.
 
+To avoid cluttering the string pool with never to be collected slices you can use the appender function.
+ 
+To save the result from a slice send it somewhere, such as to a STRING e.g. 
+
+```FORTH 
+$'' STRING vehicle
+
+' this is the age of the train' 10 5 $slice TO vehicle
+```
+
+Slices can be appended to a string with $slice, (slice comma) inside of an append list.
+ 
 
 ```FORTH 
 ' This is the age of the train ' STRING trains
 
-${ ' They said it was the age of the ' , trains 23 5 $slice, ' - yeah right.' , $}
+${ ' They said it was the age of the ' , trains 23 5 $slice , ' - yeah right.' , $}
 
 ```
 Example of appending with $slice, between ${ and $}.
