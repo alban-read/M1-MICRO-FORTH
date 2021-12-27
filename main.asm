@@ -8103,7 +8103,7 @@ dstrslice:
 	ADRP	X0, slice_string@PAGE		
 	ADD		X0, X0, slice_string@PAGEOFF
 
-	; Zap slice buffer
+	; Clean slice buffer
 	ADRP	X12, slice_string@PAGE		
 	ADD		X12, X12, slice_string@PAGEOFF
 	.rept	64
@@ -8115,21 +8115,24 @@ dstrslice:
 	SUB 	X16, X16, #16
 	LDR		X1, [X16, #-8]
 	SUB 	X16, X16, #8
- 	;STR		X0, [X16, #-8] ; destination
-	CBZ		X2, 90f
-	CBZ		X3, 90f
-	ADD		X3, X1, X3 	; position in string.
-
+ 
+	CBZ		X3, 99f
+	CBZ		X1, 99f
+	ADD		X3, X1, X3 	 
+	ADD		X2, X2, #1
 10:
-	LDRB 	W1, [X3], #1
-	STRB	W1,	[X0], #1
-	CBNZ	W1, 10b  
 	SUB 	X2, X2, #1
 	CBZ		X2, 20f
+	LDRB 	W1, [X3], #1
+	STRB	W1,	[X0], #1
+
+	CBNZ	W1, 10b  
+
 
 20:
 	MOV 	W1, #0
 	STRB	W1, [X0]
+ 
 
 90:
 	STP		LR,  XZR, [SP, #-16]!
@@ -8140,6 +8143,7 @@ dstrslice:
 	; copy from string buffer to string
 	ADRP	X12, slice_string@PAGE		
 	ADD		X12, X12, slice_string@PAGEOFF
+
 	ADRP	X13, string_buffer@PAGE		
 	ADD		X13, X13, string_buffer@PAGEOFF
 	.rept 16
@@ -8148,6 +8152,10 @@ dstrslice:
 	.endr
 
 	B intern_string_from_buffer
+
+99: ; 0 in 0 out, 0 all the way.
+	MOV 		X0, #0
+	B 			stackit
 	RET
 
 
@@ -9707,6 +9715,11 @@ quadlits:
 ; string lits ASCII counted strings
 
 
+; any string activity below here is an insane bug, probably
+.align 16
+below_string_space:
+
+
 
 .align 16
 string_buffer:
@@ -9716,6 +9729,8 @@ string_buffer:
  ; short strings are sparse and not sorted
  ; the search at compile time is split over 27 buckets by first letter.
  ; at runtime access is just direct.
+
+
 
 .align 16
 short_strings:
@@ -9759,6 +9774,12 @@ append_buffer:
 .align 16
 append_ptr:
 	.quad 0		; 0 = not appending
+
+
+; most likely an error above here
+above_string_space:
+
+
 
 ; the word being processed
 .align 8

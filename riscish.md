@@ -341,18 +341,28 @@ $'' STRING vehicle
 ' this is the age of the train' 10 5 $slice TO vehicle
 ```
 
-Slices can be appended to a string with $slice, (slice comma) inside of an append list.
+Slices can be appended to a string with $slice followed by a comma inside of an append list.
  
 
 ```FORTH 
+
+' British Rail in the 1970s ' STRING br
+
 ' This is the age of the train ' STRING trains
 
-${ ' They said it was the age of the ' , trains 23 5 $slice , ' - yeah right.' , $}
+// taking a slice in the appender.
+${ 
+
+    br 14 12 $slice ,
+    br 12 0 $slice ,
+    ' said it was "' ,   
+    trains 8 10 $slice ,
+    ' " the "' ,
+    trains 23 5 $slice , ' " - yeah right.' , 
+$}
 
 ```
-Example of appending with $slice, between ${ and $}.
-
-
+Example of appending with $slice between ${ and $}.
 
 #### Storage used when appending
 
