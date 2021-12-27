@@ -40,6 +40,7 @@ create small machine code primitive words
     - ```' Hello World' STRING hello_world```
     - There are words to build strings (from substrings)
         - ```FORTH ${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender ```
+    - I have always detested the way FORTH handles strings, mainly because I always crash my programs when using them, so I am thinking hard about making them safe for use by humans.
 - The dictionary is simplified into a single array for the headers :-
     - There are no vocabularies, few words are defined not thousands.
     - The idea being to extend the ASM file for an app, and add words to the startup script to control/ test it, not to live in FORTH world.

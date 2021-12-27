@@ -1,13 +1,14 @@
 // forth.fs - this file is loaded when FORTH starts.
 TICKS VALUE start_ticks
 
-// Navigate within a words header
-48 ADDS >NFA 
+// Offsets from a words header
+ 8 ADDS >RUN
+16 ADDS >ARG2  
+24 ADDS >COMP
 32 ADDS >DATA1  
 40 ADDS >DATA2  
-16 ADDS >ARG2  
- 8 ADDS >RUN
-24 ADDS >COMP
+48 ADDS >NFA 
+
 
 : PRIVATE 0 ` >NFA C! ; 
 
@@ -24,6 +25,8 @@ PRIVATE start_ticks
 PRIVATE DECR
 PRIVATE INCR
 PRIVATE MAP
+
+: $empty? 0= IF TRUE ELSE C@ 0= THEN  ;
 
 // Add common constants
 3.14159265359   CONSTANT PI

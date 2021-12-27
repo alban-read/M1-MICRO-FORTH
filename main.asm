@@ -1147,12 +1147,24 @@ start_point: ; finds where to start searching the dictionary
 	CMP		W0, #'#'	
 	B.eq	150f
 
+	CMP		W0, #'$'	
+	B.eq	155f
+
 	CMP		W0, #'('	
 	B.ne	200f
+
 150:
 	ADRP	X28, hashdict@PAGE		
 	ADD		X28, X28, hashdict@PAGEOFF	
 	B		251f
+
+
+155:
+	ADRP	X28, dollardict@PAGE		
+	ADD		X28, X28, dollardict@PAGEOFF	
+	B		251f
+
+
 
 200:
 	; lower case and check for a..z
@@ -8047,6 +8059,43 @@ _dstrequalz:
 	STR		X0, [X16], #8
 	RET
 
+; length of string.
+; only works because we do align and pad all our strings 
+
+dstrlen:
+
+	LDR 	X1, [X16, #-8]
+	MOV     X2, X1
+	CBZ 	X1, 90f
+
+	; search for zero over N bytes 
+	.rept 128
+		LDR		X0, [X1]
+		CBZ		X0, 10f
+		ADD		X1, X1, #8
+	.endr
+	B 	10f
+
+10: ; back track
+	SUB 	X1, X1, #8
+	.rept 	8
+	LDRB	W0, [X1], #1
+	CBZ		W0, 80f
+	.endr
+
+80:
+	SUB 	X0, X1, X2
+	SUB 	X0, X0, #1
+	STR 	X0, [X16, #-8]
+	RET
+
+90:
+	MOV 	X0, #0
+	STR 	X0, [X16, #-8]
+	RET
+
+
+
 
 dstrcmp:
 
@@ -9736,7 +9785,7 @@ dend:
 		; these hash words are inline compile only
 	
 
-		; words that can take inline literals as arguments
+		; words that can take *inline* literals as arguments
 		makeword "(END)", dexitz, 0,  0					; 0 - never runs
 		makeword "(LITS)",  dlitz, dlitc,  0			; 1
 		makeword "(LITL)",  dlitlz, dlitlc,  0			; 2
@@ -9793,49 +9842,43 @@ dend:
 		makeword "(INCR)", 				dincrcz, 	0,  0	; 48
 		makeword "(DECR)", 				ddecrcz, 	0,  0	; 49
 
+
+
+
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
 
-		makeemptywords 84
+ 
+ 
 
+
+		makeemptywords 256
 
 hashdict:	
 
 		; end of inline compiled words, relax
 
-		makeemptywords 84
+		makeemptywords 256
 
 		makeword "ADDS", creatadder, dcreat_invalid, 0	
-		
 		makeword "APPEND$", dvaraddz, 0,  append_buffer
-		
 		makeword "APPEND^", dvaluez, 0,  append_ptr
-
 		makeword "ALLWORDS", alldotwords , 0, 0 
-
 		makeword "ALLOT>", allotoz , 0, 0 
-
 		makeword "ALLOT", allotlastz , 0, 0 
-
 		makeword "ALLOTMENT", dCarrayvalz, 0,  allot_space, 0, 256*1024
-
 		makeword "ARRAY", dcreatarray ,dcreat_invalid , 0 
-
 		makeword "ADDR" , daddrz, daddrc, 0
-
 		makeword "ACCEPT", dacceptz, 0,  0
- 
 		makeword "AGAIN" , dagainz, dagainc, 0
-
 		makeword "ABS" , dabsz, dabsc, 0
-
 		makeword "AND" , dandz, 0, 0
 
 
 	
 adict:
 
-		makeemptywords 84
+		makeemptywords 256
 		makeword "BEQUIET", dvaraddz, 0,  bequiet
 		makeword "BEGIN" , dbeginz, dbeginc, 0
 		makeword "BUFFER$", dvaraddz, 0,  string_buffer
@@ -9843,22 +9886,19 @@ adict:
 		 
 		
 bdict:
-		makeemptywords 80
+		makeemptywords 256
 		makeword "CHAR", 	dcharz, dcharc, 0
-
-
 		makeword "CARRAY", dCcreatarray , dcreat_invalid, 0 
 		makeword "CVALUES", dCcreatvalues , dcreat_invalid, 0 
 		makeword "C@", 		catz, 0, 0
 		makeword "C!", 		cstorz, 0, 0
 		makeword "CONSTANT", dcreatevalz , dcreat_invalid, 0
 		makeword "CREATE", 	dcreatz, dcreatc, 0
-	
 		makeword "CR", 		saycr, 0, 0
  
 
 cdict:
-		makeemptywords 80
+		makeemptywords 256
 		makeword "DP", dvaraddz, 0,  here	
 		makeword "DO", 0 , doerc, 0 
 		makeword "DOWNDO", 0 , ddownerc, 0 
@@ -9869,8 +9909,7 @@ cdict:
 
 		
 ddict:
-		makeemptywords 80
-		
+		makeemptywords 256 
 		makeword "EXECUTE", dcallz, dcallc, 0
 		makeword "ELSE", 0 , delsec, 0 
 		makeword "ENDIF", 0 , dendifc, 0 
@@ -9879,9 +9918,7 @@ ddict:
 	 
 		
 edict:
-		makeemptywords 48
-		
-	 
+		makeemptywords 256
 		makeword "f<>", fneqz, 0,  0 
 		makeword "f=", feqz, 0,  0 
 		makeword "f>=0", fgtzz, 0,  0 
@@ -9905,7 +9942,6 @@ edict:
 		makeword "FLAT", dflat, 0, 0
 		makeword "FALSE", dfalsez, 0,  0
 		makeword "FORGET", clean_last_word , 0, 0 
- 
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
@@ -9913,10 +9949,10 @@ edict:
 	
 
 fdict:	
-		makeemptywords 79
+		makeemptywords 256
  
 gdict:
-		makeemptywords 78
+		makeemptywords 256
 		makeword "HWARRAY", dHWcreatarray , dcreat_invalid, 0 
 		makeword "HWVALUES", dHWcreatvalues , dcreat_invalid, 0 
 		makeword "HW!", dhstorez, dhstorec,  0
@@ -9926,7 +9962,7 @@ gdict:
 	 
 hdict:
 	
-		makeemptywords 66
+		makeemptywords 256
  
 		makeword "IP@", dipatz, dipatz,  0
 		makeword "IP!", dipstrz, dipstrz,  0
@@ -9940,18 +9976,18 @@ hdict:
  
 
 idict:
-		makeemptywords 66
+		makeemptywords 256
  
 		makeword "J", djloopz, djloopc,  0
 
 jdict:
-		makeemptywords 64
+		makeemptywords 256
 	
 	 	makeword "KEY", dkeyz, 0,  0
 		makeword "K", dkloopz, dkloopc,  0
 	
 kdict:
-		makeemptywords 64
+		makeemptywords 256
 		
 	
 		makeqvword 108
@@ -9965,41 +10001,37 @@ kdict:
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
 	
 ldict:
-		makeemptywords 61
+		makeemptywords 256
 
 		makeword "MAP", dmaparray, 0, 0	
 		makeword "MOD", dmodz, dmodc, 0	
 		makeword "MS", dsleepz , 0, 0 
 
-		makeemptywords 68
+ 
 
  
 mdict:
-		makeemptywords 64
+		makeemptywords 256
 
 	
 		makeword "NTH", dnthz, dnthc, 0	
-
 		makeword "NIP", dnipz, dnipc, 0	
 
 	 
 
 ndict:	
-		makeemptywords 62
+		makeemptywords 256
 
 		makeword "OR", dorz, 0, 0
 		makeword "OVER", doverz, doverc, 0
  
 	
 odict:
-		makeemptywords 62
- 
+		makeemptywords 256
+
 		makeword "PAGE", dpagez, 0, 0
-
 		makevarword "PAD", zpad
-
 		makeword "PRINT", print, 0, 0
-
 		makeword "PICK", dpickz, dpickc, 0
 
 	 
@@ -10007,18 +10039,15 @@ odict:
 pdict:
 
 
-		makeemptywords 62
+		makeemptywords 256
  
 
 qdict:
-		makeemptywords 50
+		makeemptywords 256
 
 		makeword "REPRINT", reprintz , reprintc, 0 
 		makeword "REPEAT", drepeatz , drepeatc, 0 
-	
-
 		makeword "ROT", drotz , drotc, 0 
-
 		makeword "R>", dfromrz , dfromrc, 0 
 		makeword "R@", dratz , 0, 0 
 		makeword "RP@", fetchrpz , 0, 0 
@@ -10027,7 +10056,7 @@ qdict:
 
 rdict:
 
-		makeemptywords 50
+		makeemptywords 256
 		makeword "S'", dstrstksz , dstrstksc, 0 
 		makeword "SUBS", creatsubber, dcreat_invalid, 0	
 		makeword "STACK", dcreatstack , dcreat_invalid, 0 
@@ -10051,7 +10080,7 @@ rdict:
  
 
 sdict:
-		makeemptywords 50
+		makeemptywords 256
 
 		makeword "TOKENS", dHWarrayvalz, 0,  token_space, 0, 256*1024
 		makeword "TO", dtoz, dtoc, 0
@@ -10073,26 +10102,23 @@ sdict:
 
 tdict:
 
-		makeemptywords 50
- 
+		makeemptywords 256
 		makeword "UNTIL", duntilz, duntilc, 0	
  
 	
 udict:
 
-		makeemptywords 4
+		makeemptywords 256
 
 		makeword "VALUE", dcreatevalz , dcreat_invalid, 0
-
 		makeword "VALUES", dcreatvalues , dcreat_invalid, 0 
-
 		makeword "VERSION", announce , 0, 0
 		makeword "VARIABLE", dcreatvz , 0, 0
 
 	 
 vdict:
 
-		makeemptywords 48
+		makeemptywords 256
 		makeword "WARRAY", dWcreatarray , dcreat_invalid, 0 
 		makeword "WVALUES", dWcreatvalues , dcreat_invalid, 0 
 		makeword "WLOCALS", dlocalsWvalz, 0,  0, 0, 15
@@ -10106,23 +10132,24 @@ vdict:
 		
 wdict:
 
-		makeemptywords 48
+		makeemptywords 256
 		
 	 
 xdict:
-		makeemptywords 48
+		makeemptywords 256
 		
   
 		
 
 ydict:
-		makeemptywords 34
+		makeemptywords 256
 
 	 
 
 zdict:
 
-		makeemptywords 30
+		makeemptywords 256
+
 		makeword "${", dstrappendbegin , 0, 0 
 		makeword "$.", ztypez, ztypec, 0	
 		makeword "}$", dstrappendend , 0, 0 
@@ -10130,9 +10157,14 @@ zdict:
  		makeword "$=", dstrequalz, 0,  0
 		makeword "$==", _dstrequalz, 0,  0
 		makeword "$compare", dstrcmp, 0,  0
+		makeword "$len", dstrlen, 0,  0
 		makeword "$''", 	stackit, 	stackit, 	0
 		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 10240
 	 
+dollardict:
+	 	
+		 makeemptywords 256
+		
 		makeword "*/", dstarslshz, 0,  10
 		makeword "*/MOD", dstarslshzmod, 0,  10
 		 
