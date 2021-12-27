@@ -8096,9 +8096,14 @@ dstrlen:
 
 
 ; slices a string  
- 
+; x3 address. x2 pos, x1 count 
 
 dstrslice:
+
+	STP		LR,  XZR, [SP, #-16]!
+	STP		X12, X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+
 
 	ADRP	X0, slice_string@PAGE		
 	ADD		X0, X0, slice_string@PAGEOFF
@@ -8116,9 +8121,15 @@ dstrslice:
 	LDR		X1, [X16, #-8]
 	SUB 	X16, X16, #8
  
-	CBZ		X3, 99f
-	CBZ		X1, 99f
+ 
 	ADD		X3, X1, X3 	 
+
+	ADRP	X12, below_string_space@PAGE		
+	ADD		X12, X12, below_string_space@PAGEOFF
+	CMP 	X3, X12
+	B.lt 	99f
+
+
 	ADD		X2, X2, #1
 10:
 	SUB 	X2, X2, #1
@@ -8135,15 +8146,11 @@ dstrslice:
  
 
 90:
-	STP		LR,  XZR, [SP, #-16]!
-	STP		X12, X13, [SP, #-16]!
-	STP		X3,  X5, [SP, #-16]!
 
 	; now copy from slice to string buffer
 	; copy from string buffer to string
 	ADRP	X12, slice_string@PAGE		
 	ADD		X12, X12, slice_string@PAGEOFF
-
 	ADRP	X13, string_buffer@PAGE		
 	ADD		X13, X13, string_buffer@PAGEOFF
 	.rept 16
@@ -8154,6 +8161,10 @@ dstrslice:
 	B intern_string_from_buffer
 
 99: ; 0 in 0 out, 0 all the way.
+
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, XZR, [SP], #16	
 	MOV 		X0, #0
 	B 			stackit
 	RET
@@ -8494,11 +8505,15 @@ dstrstksz: ; runtime S" .. " stash and return address
 
 intern_string_from_buffer:
 
+	; we have to intern if compiling.
+	CBNZ	X15, 128f
 	; exit if appending do not store
 	ADRP	X1, append_ptr@PAGE		
 	ADD		X1, X1, append_ptr@PAGEOFF
 	LDR		X1, [X1]
 	CBNZ 	X1, 500f
+
+128:
 
 
 	ADRP	X12, string_buffer@PAGE		
@@ -10243,7 +10258,6 @@ zdict:
 		makeword "$compare", dstrcmp, 0,  0
 		makeword "$len", dstrlen, 0,  0
 		makeword "$slice", dstrslice, 0,  0
-		makeword "$slice,", dstrslice, 0,  0
 		makeword "$''", 	stackit, 	stackit, 	0
 		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 10240
 	 
