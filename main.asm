@@ -168,41 +168,46 @@
 	CBZ		X6, 	999f
 
 	STP		LR,  X0, [SP, #-16]!
-	STP		X1,  X12, [SP, #-16]!
+ 
 	
-	ADD		X12,  X1, #48
+	ADD		X2,  X1, #48
 	MOV		X0,  X1
 	BL		X0addrprln
-
+	 
 	LDRH	W0, [X15]
 	BL		X0halfpr
 
-	MOV		X0, X12
+ 
+	MOV		X0, X2
 	LDRH    W1, [X15,#-2] 
-	CBZ     W1, 20f
-	CMP		W1,	16
-	B.gt	20f
+ 
  	ADRP	X0, literal_name@PAGE	
 	ADD		X0, X0, literal_name@PAGEOFF	
 	
 20:
 	BL		X0prname
-	BL		ddotsz
 
-	LDP		X1, X12, [SP], #16	
+	BL		ddotsz
+998:
+ 
 	LDP		LR, X0, [SP], #16	
 999:
 .endm
  
 .macro  do_trace	
+
 	CBZ		X6, 	999f
 	STP		LR,  X0, [SP, #-16]!
 	
 	MOV		X0, X15
 	BL		X0addrprln
 		
+ 
+
 	LDRH	W0, [X15]
 	BL		X0halfpr
+
+
 	LDRH	W0, [X15]
 	LSL		W0, W0, #6		;  TOKEN*64 
 	ADD		X0, X0, X27		; + dend
@@ -224,13 +229,15 @@
 	
 20:
 	BL		X0prname
-
+ 
  	MOV		X0, X15
 	BL		X0prip
+	 
 
 	BL		ddotsz
 	BL		ddotrz
-	
+
+998:	
 	LDP		LR, X0, [SP], #16	
 999:
 
@@ -844,7 +851,7 @@ X0prname:
 
 
 X0halfpr:
-	MOV	X1, X0
+	MOV		X1, X0
 	B		12f	
 		
 12:
@@ -854,7 +861,7 @@ X0halfpr:
 	save_registers
 	STP		X1, X0, [SP, #-16]!
 	BL		_printf		
-	ADD	SP, SP, #16 
+	ADD		SP, SP, #16 
 	restore_registers  
 	RET
 
@@ -907,7 +914,7 @@ X0prip: ; print IP
 	RET
 
 X0addrprln: ; print address
-	MOV	X1, X0
+	MOV		X1, X0
 	B		12f
 
 lnaddrpr: ; prints int on top of stack 
@@ -922,7 +929,7 @@ lnaddrpr: ; prints int on top of stack
 	save_registers
 	STP		X1, X0, [SP, #-16]!
 	BL		_printf		
-	ADD	SP, SP, #16 
+	ADD		SP, SP, #16 
 	restore_registers  
 	RET
 
@@ -5830,7 +5837,7 @@ stepoutz:
 
 limitrunintz:; interpret the list of tokens at X0
 
-	trace_show_word		
+
 	STP		X0,  X1,  [X26],#16 ; data and word address
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
@@ -5840,7 +5847,7 @@ limitrunintz:; interpret the list of tokens at X0
 	; SAVE IP 
 
 	SUB		X15, X0, #2
-	MOV		X20, X15
+ 
 	 
 step_in_runz: ; take more steps
 
@@ -5871,7 +5878,7 @@ step_away:
 	BLR		X2		; with X0 as dat
 
 	; this is why we are a little slower.
-	do_trace
+	;do_trace
 
 	b		10b
 
@@ -5901,9 +5908,10 @@ runintcz: ; interpret the list of tokens at word +
 
 
 runintz:; interpret the list of tokens at X0
-	; until (END) #24
+ 
 
-	trace_show_word		
+ 
+
 	STP		X0,  X1,  [X26],#16 ; data and word address
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
@@ -5913,7 +5921,7 @@ runintz:; interpret the list of tokens at X0
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
 	SUB		X15, X0, #2
-	MOV		X20, X15
+ 
 
 	; unrolling the loop here x16 makes this a lot faster, 
 10:	; next token
@@ -5930,8 +5938,8 @@ runintz:; interpret the list of tokens at X0
 	
 		BLR		X2	 
 
-	; this is why we are a little slower.
-	do_trace
+ 
+		do_trace
 
 	.endr
 
@@ -6321,8 +6329,6 @@ ztypez:
 	LDR		X0, [X16, #-8] 
 	SUB 	X16, X16, #8
 	CBZ		X0, nothing_to_say
-
-
 	ADRP	X8, below_string_space@PAGE		
 	ADD		X8, X8, below_string_space@PAGEOFF
 	CMP 	X0, X8
@@ -9486,7 +9492,7 @@ tpradIP:	.ascii " IP[%8ld] "
 
 
 .align	8
-thalfpr:	.ascii ": [%6ld] "
+thalfpr:	.ascii ": [%12ld] "
 	.zero 16
 
 
@@ -10238,7 +10244,7 @@ cdict:
 		makeword "DUP", ddupz , 0, 0 
 		makeword "DROP", ddropz , 0, 0		
 		makeword "DEPTH", ddepthz , 0, 0 
-		makeword "DECR", ddecrz, ddecrc,  0
+		;makeword "DECR", ddecrz, ddecrc,  0
 		makeword "d" , dlocdz, 0, 0
 		makeword "d!" , dlocdsz, 0, 0
 
@@ -10317,10 +10323,10 @@ hdict:
 		makeword "IN", dvaluez, 0,  input_file
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
-		makeword "IFEXIT", difexitz, 	0,  0	
-		makeword "IFZEXIT", difzexitz, 	0,  0	
+		makeword "IF_EXIT", difexitz, 	0,  0	
+		makeword "IF_Z_EXIT", difzexitz, 	0,  0	
 		makeword "INVERT", dinvertz, 0,  0
-		makeword "INCR", dincrz, dincrc,  0
+		;makeword "INCR", dincrz, dincrc,  0
  
 
 idict:
@@ -10351,7 +10357,7 @@ kdict:
 ldict:
 		makeemptywords 256
 
-		makeword "MAP", dmaparray, 0, 0	
+		;makeword "MAP", dmaparray, 0, 0	
 		makeword "MOD", dmodz, dmodc, 0	
 		makeword "MS", dsleepz , 0, 0 
 
@@ -10378,7 +10384,7 @@ odict:
 		makeemptywords 256
 
 		makeword "PAGE", dpagez, 0, 0
-		makevarword "PAD", zpad
+ 
 		makeword "PRINT", print, 0, 0
 		makeword "PICK", dpickz, dpickc, 0
 

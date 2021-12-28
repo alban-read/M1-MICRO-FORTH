@@ -129,3 +129,6 @@ struct termios {
 
 Things that crash 
 [ without ] because ] lacks a space like [ that]
+
+
+: V++ ` >DATA1 DUP @ 1+ SWAP ! ;

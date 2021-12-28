@@ -454,7 +454,7 @@ STRING test
 : positions   
    pos
    DUP . SPACE 
-   DUP IFZEXIT
+   DUP IF_Z_EXIT
    1+ 44 SWAP  
    // jump back to top
    TAIL

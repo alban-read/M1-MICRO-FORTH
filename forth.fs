@@ -10,7 +10,7 @@ TICKS VALUE start_ticks
 48 ADDS >NAME
 
 
-: PRIVATE 0 ` >NFA C! ; 
+: PRIVATE 0 ` >NAME C! ; 
 
 // avoid being annoyed by the Ok prompt
 : LOUD FALSE TO BEQUIET ; 
@@ -21,10 +21,7 @@ TICKS VALUE start_ticks
     start_ticks - s>f TPMS s>f f/ f.  .'  ms.'  ;
 PRIVATE start_ticks
 
-// hide any words under development still.
-PRIVATE DECR
-PRIVATE INCR
-PRIVATE MAP
+
 
 : $empty? 0= IF TRUE ELSE C@ 0= THEN  ;
 
@@ -34,6 +31,7 @@ PRIVATE MAP
  
 // Add the very common fast add and subtract words
 1 ADDS 1+ 1 SUBS 1-
+2 ADDS 2+ 1 SUBS 2-
 
 // Add the very common fast shifts 
 1 SHIFTSL 2* 2 SHIFTSL 4* 3 SHIFTSL 8*
