@@ -74,3 +74,34 @@ FLAGS 8190 + EFLAG !
 
 : FAC DUP 1> IF DUP 1- FAC * ELSE DROP 1 ENDIF ;
 : t3 100 FAC ;
+
+
+
+: pos  
+  a! b! 
+  BEGIN
+   a C@ c!
+   a++
+   c b = IF a 1- LEAVE THEN 
+  c 0= UNTIL ;
+
+
+' This is, a string, with some commas, and a full stop. To seek for. ' 
+STRING test 
+
+
+  : pos
+    DUP 255 + SWAP DO 
+      // I . CHAR = EMIT I C@ . CR
+      DUP I C@ = 0 I C@ = OR IF DROP I EXIT THEN
+    LOOP ;
+
+  : t1 46 test pos DROP ;
+
+  : t3 10000 1 DO ( CR I . SPACE .' test run ' CR  ) t1  LOOP ;
+
+  : t2 46 test $pos DROP ;
+
+  : t4 100000 1 DO t2 LOOP ;
+
+ 
