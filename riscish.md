@@ -399,11 +399,11 @@ STRING test
   c 0= UNTIL ;
  
 : positions   
-   BEGIN
    pos
-   DUP IFEXIT
+   DUP . SPACE 
+   DUP IFZEXIT
    1+ 44 SWAP  
-   AGAIN
+   CODE^ 2 - IP!
  ;
 
 44 test positions
@@ -536,13 +536,17 @@ The loop can be nested and has an index value accessed by depth called I, J, K.
 
 #### Loop Issues
 
-LEAVE not supported inside BEGIN .. UNTIL.
+LEAVE is supported ONCE in a word inside loops.
+You can not have multiple LEAVES.
+Mainly because it is horrible to code.
+And Partly because multiple EXIT is garbage anyway.
+But mainly because it is horrible to code.
 
 
 #### recursion
 
 Recusion is always an option as well.
-
+Just call yourself.
 
 
 
