@@ -189,35 +189,50 @@ A word can refer to itself
 
 There are two special LOCAL variables that allow a word to see it is own address.
 
+These are 
 
-These are CODE^ which points to the words token code.
+- CODE^ which points to the words token code.
 
-And SELF^ which points to the words dictionary header.
+- SELF^ which points to the words dictionary header.
 
 In a FLAT word, these usefully both point at the parent words CODE and HEADER.
 
-An odd way to make a word repeat itself is to do this
+An odd way to make a word repeat itself is to do this.
 
+```FORTH
 CODE^ 2 - IP! 
+```
 
 Using a flat word we can use this information to create a new control flow word.
 
+```FORTH
 : TAIL [ FLAT TAIL ] CODE^ 2 - IP! ;
+```
 
-This sets the instruction pointer to just above the parent words code.
-The interpreters next step will be to start running the word again from the top.
+- This sets the instruction pointer to just above the parent words code.
+
+- The interpreters next step will be to start running the parent word again from the top.
 
 
 SELF^ may be more useful, as a word can use it to look inside its own dictionary header.
 
 A word can print its own name for example with 
 
+```FORTH
 SELF^ 48 + $. 
+```
 
-These two values are store on the LOCALS stack.
+Again a new flat word could be created to print its parents name
 
+```FORTH
 
+48 ADDS >NAME
 
+: .name [ FLAT .name ] SELF^ >NAME $. ;
+
+```
+
+These two values are stored on the LOCALS stack, below the locals.
 
 
 #### TOKENS

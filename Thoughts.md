@@ -127,4 +127,5 @@ struct termios {
 };
 
 
-
+Things that crash 
+[ without ] because ] lacks a space like [ that]
