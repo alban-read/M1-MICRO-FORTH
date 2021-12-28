@@ -381,18 +381,20 @@ STRING test
 : pos  
   a! b! 
   BEGIN
-   a BUFFER$ < IF .' error' EXIT THEN 
    a C@ c!
    a 1+ a! 
    c b = IF a 1- EXIT THEN 
-  c 0= UNTIL ;
+  c 0= UNTIL 0 ;
  
 : positions   
-  44 test pos
-  BEGIN 
+   BEGIN
+   pos
    DUP 0= IF EXIT THEN 
-   DUP . 1+ 44 SWAP 
- AGAIN ;
+   1+ 44 SWAP  
+   AGAIN
+ ;
+
+44 test positions
 
 #### Storage used when appending
 
