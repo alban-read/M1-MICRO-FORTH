@@ -369,6 +369,30 @@ This has the advantage of not spewing garbage into the string pool when interpet
 Although if compiled the strings still need to live somewhere.
 
 
+### Strings searching
+
+#### Position
+
+' This is, a string, with some commas, and a full stop. To seek for. ' 
+STRING test 
+
+44 test 
+
+: pos  
+  a! b! 
+  BEGIN
+   a BUFFER$ < IF .' error' EXIT THEN 
+   a C@ c!
+   a 1+ a! 
+   c b = IF a 1- EXIT THEN 
+  c 0= UNTIL ;
+ 
+: positions   
+  44 test pos
+  BEGIN 
+   DUP 0= IF EXIT THEN 
+   DUP . 1+ 44 SWAP 
+ AGAIN ;
 
 #### Storage used when appending
 
@@ -494,6 +518,18 @@ The loop can be nested and has an index value accessed by depth called I, J, K.
 : TABLE  CR 11 1 DO  11 1 DO  I J *  .  SPACE LOOP CR LOOP ;
 
 ```
+
+
+#### Loop Issues
+
+LEAVE not supported inside BEGIN .. UNTIL.
+
+
+#### recursion
+
+Recusion is always an option as well.
+
+
 
 
 ### Input and output.
