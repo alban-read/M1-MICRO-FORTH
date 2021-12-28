@@ -6321,6 +6321,14 @@ ztypez:
 	LDR		X0, [X16, #-8] 
 	SUB 	X16, X16, #8
 	CBZ		X0, nothing_to_say
+
+
+	ADRP	X8, below_string_space@PAGE		
+	ADD		X8, X8, below_string_space@PAGEOFF
+	CMP 	X0, X8
+	B.lt 	nothing_to_say
+
+
 	B		sayit
 nothing_to_say:
 	RET
