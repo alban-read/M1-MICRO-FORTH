@@ -2,6 +2,13 @@
 ### Thoughts and ideas for a safer, saner, practical FORTH for Aarch64 desktops.
 
 
+Using getline for terminal input is a bit weak.
+But do I want to be in a terminal anyway?
+I would like up arrow to at least work.
+
+
+
+
 VALUES not VARIABLEs
 
 A decent STRING type value for strings

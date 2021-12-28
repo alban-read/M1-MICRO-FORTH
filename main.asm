@@ -24,7 +24,7 @@
 
 ;; X27 dend (start of dictionary)
 ;; X28 dictionary - current word header in the dictionary searcj=h
-;; X29 the value 64. (perhaps wasteful)
+;; X29 the start of the current word.
 
 ;; X22 word (text)
 ;; X23 also used for text
@@ -1379,6 +1379,25 @@ searchall:
 	RET
 
 
+; RESET try and RESET as much as possible to a sane state.
+dresetz:
+	CBNZ    X15, 10f	; only from interpreter level
+	LDP		LR, X15, [SP], #16	; unwind as we are never returning
+
+	reset_data_stack
+	reset_return_stack
+	;  disable tracing, X6 = 0
+	MOV		X6, #0
+	BL 		beloud
+	B 		input
+	 
+	;  disable tracing, X6 = 0
+	MOV		X6, #0
+
+10:
+	RET
+
+
 ;; start running here
 
 main:	
@@ -2284,6 +2303,27 @@ dlochsz:
 	STR		X0, [X26, #-64]
 	RET
 
+; SELF. CODE.
+dlociz:	;   
+	LDR		X0, [X26, #-72]	
+	STR		X0, [X16], #8
+	RET
+
+dlochiz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-72]
+	RET
+
+
+dlocjz:	;  CODE 
+	LDR		X0, [X26, #-80]	
+	STR		X0, [X16], #8
+	RET
+
+dlochjz:
+	LDR		X0,	[X16, #-8]!
+	STR		X0, [X26, #-80]
+	RET
 
 
 ; SIMPLE non standard single WORD repeater
@@ -5599,8 +5639,6 @@ dlimited:
 	RET
 
 
-
-
 ; run with parents locals
 dflat:
 
@@ -5676,17 +5714,20 @@ fastrunintz:; interpret the list of tokens at X0
 	; until (END)
 
 	; zero locals
+	STP		X0,  X1,  [X26],#16 ; data and word address
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 
 
+
+ 
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
 
 	SUB		X15, X0, #2
-	MOV		X29, #64
+ 
 
 	
 
@@ -5696,9 +5737,10 @@ fastrunintz:; interpret the list of tokens at X0
 	.rept	16
 
 		LDRH	W1, [X15, #2]!
-		CBZ		X1, 90f
-	 
-		MADD	X1, X29, X1, X27
+		CBZ		W1, 90f
+		LSL 	W1, W1, #6
+		
+		ADD		X1, X1, X27
 		LDP		X0, X2, [X1]
 		CBZ		X2, 10b
 	
@@ -5711,7 +5753,7 @@ fastrunintz:; interpret the list of tokens at X0
 
 90:
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #64
+	SUB		X26, X26, #80
 	RET
 
 
@@ -5724,6 +5766,7 @@ flatrunintz:; interpret the list of tokens at X0
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
 	SUB		X15, X0, #2
+	MOV		X20, X15
 
 
 
@@ -5763,6 +5806,7 @@ stepoutz:
 limitrunintz:; interpret the list of tokens at X0
 
 	trace_show_word		
+	STP		X0,  X1,  [X26],#16 ; data and word address
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
@@ -5771,6 +5815,7 @@ limitrunintz:; interpret the list of tokens at X0
 	; SAVE IP 
 
 	SUB		X15, X0, #2
+	MOV		X20, X15
 	 
 step_in_runz: ; take more steps
 
@@ -5781,7 +5826,7 @@ step_in_runz: ; take more steps
 step_away:
 	CBZ		X15, 98f	; we finished 
 	STP		LR,  XZR, [SP, #-16]!
-	MOV		X29, #64
+ 
 
 	; unrolling the loop here x16 makes this a lot faster, 
 10:	; next token
@@ -5790,13 +5835,15 @@ step_away:
 	SUB     X25, X25, #1
 	CBZ		X25, 80f
 	LDRH	W1, [X15, #2]!
-	CBZ		X1, 90f
-	
-	MADD	X1, X29, X1, X27
+
+	CBZ		W1, 90f
+	LSL 	W1, W1, #6
+		
+	ADD		X1, X1, X27
 	LDP		X0, X2, [X1]
 	CBZ		X2, 10b
-
-	BLR	X2		
+	
+	BLR		X2		; with X0 as dat
 
 	; this is why we are a little slower.
 	do_trace
@@ -5808,7 +5855,7 @@ step_away:
 	RET
 
 90:
-	SUB		X26, X26, #64
+	SUB		X26, X26, #80
 	LDP		LR, XZR, [SP], #16	
 	RET
 
@@ -5816,7 +5863,7 @@ step_away:
 	LDP		LR, XZR, [SP], #16
 	MOV		X15, #0
 98:
-	SUB		X26, X26, #64
+	SUB		X26, X26, #80
 	RET
 
 ; traceable version
@@ -5832,6 +5879,7 @@ runintz:; interpret the list of tokens at X0
 	; until (END) #24
 
 	trace_show_word		
+	STP		X0,  X1,  [X26],#16 ; data and word address
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
@@ -5840,7 +5888,7 @@ runintz:; interpret the list of tokens at X0
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
 	SUB		X15, X0, #2
-	MOV		X29, #64
+	MOV		X20, X15
 
 	; unrolling the loop here x16 makes this a lot faster, 
 10:	; next token
@@ -5848,14 +5896,15 @@ runintz:; interpret the list of tokens at X0
 	.rept	16
 	
 		LDRH	W1, [X15, #2]!
-		CBZ		X1, 90f
-	 
-		MADD	X1, X29, X1, X27
+		CBZ		W1, 90f
+		LSL 	W1, W1, #6
+		
+		ADD		X1, X1, X27
 		LDP		X0, X2, [X1]
 		CBZ		X2, 10b
 	
-		BLR	X2		
-	
+		BLR		X2	 
+
 	; this is why we are a little slower.
 	do_trace
 
@@ -5867,11 +5916,11 @@ dendz:	; EXIT interpreter - called by exit
 
 90:
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #64
+	SUB		X26, X26, #80
 	RET
 
 
-difexitz: ; EXIT
+difexitz: ; IFEXIT
 
 	CBZ     X15, 190f
 	LDR 	X0, [X16, #-8]
@@ -5879,22 +5928,37 @@ difexitz: ; EXIT
 	CBZ		X0, 170f
 	; unwind stack
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #64 ; if flat we should not do that.
+	SUB		X26, X26, #80 ; if flat we should not do that.
 	
 170:	
 	RET
 
 
+difzexitz: ; IF0EXIT
+
+	CBZ     X15, 190f
+	LDR 	X0, [X16, #-8]
+	SUB 	X16, X16, #8
+	CBNZ	X0, 170f
+	; unwind stack
+	LDP		LR, X15, [SP], #16	
+	SUB		X26, X26, #80 ; if flat we should not do that.
+	
+170:	
+	RET
+
+
+
 dexitz: ; EXIT
 	CBZ     X15, 190f
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #64
+	SUB		X26, X26, #80
 	RET
 
 dexitc: ; EXIT compiles end
 	MOV		X0, #0 ; (EXIT)
 	STRH	W0, [X15]
-	SUB		X26, X26, #128
+	SUB		X26, X26, #160
 190:
 	RET
 
@@ -10116,6 +10180,8 @@ bdict:
 		makeword "CR", 		saycr, 0, 0
 		makeword "c" , dloccz, 0, 0
 		makeword "c!" , dloccsz, 0, 0
+		makeword "CODE^" , dlocjz, 0, 0
+	
 		
  
 
@@ -10130,6 +10196,8 @@ cdict:
 		makeword "DECR", ddecrz, ddecrc,  0
 		makeword "d" , dlocdz, 0, 0
 		makeword "d!" , dlocdsz, 0, 0
+
+	
 
 		
 ddict:
@@ -10198,13 +10266,14 @@ hdict:
 		makeemptywords 256
  
 		makeword "IP@", dipatz, dipatz,  0
-		makeword "IP!", dipstrz, dipstrz,  0
-		makeword "IP2+", dip2plusz, dip2plusz,  0
-		makeword "IP+", dipplusz, dipplusz,  0
+		makeword "IP!", dipstrz, 0,  0
+		makeword "IP2+", dip2plusz, 0,  0
+		makeword "IP+", dipplusz, 0,  0
 		makeword "IN", dvaluez, 0,  input_file
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
 		makeword "IFEXIT", difexitz, 	0,  0	
+		makeword "IFZEXIT", difzexitz, 	0,  0	
 		makeword "INVERT", dinvertz, 0,  0
 		makeword "INCR", dincrz, dincrc,  0
  
@@ -10281,11 +10350,12 @@ qdict:
 
 		makeword "REPRINT", reprintz , reprintc, 0 
 		makeword "REPEAT", drepeatz , drepeatc, 0 
+	 
 		makeword "ROT", drotz , drotc, 0 
 		makeword "R>", dfromrz , dfromrc, 0 
 		makeword "R@", dratz , 0, 0 
 		makeword "RP@", fetchrpz , 0, 0 
-
+		makeword "RESET", dresetz , 0, 0 
 	 
 
 rdict:
@@ -10310,6 +10380,7 @@ rdict:
 	 	makeword "SP@", fetchspz , 0, 0 
 		makevarword "SP", dsp
 		makeword "SEE", dseez , 0, 0 
+		makeword "SELF^" , dlociz, 0, 0
 
  
 
