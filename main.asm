@@ -381,9 +381,14 @@ dpagez:
 
 
 
+; intern a copy of a string.
 
-
-
+intern:
+	; string assumed to be in string_buffer
+	STP		LR,  XZR, [SP, #-16]!
+	STP		X12,  X13, [SP, #-16]!
+	STP		X3,  X5, [SP, #-16]!
+	B intern_string_from_buffer
 
 
 ; Ok prompt
@@ -2005,8 +2010,15 @@ exit_compiler_compile_time_err:
 
 exit_compiler_unbalanced_loops:
 	BL		clean_last_word
+
+	BL		saycr
+	BL		ddotsz
+	BL		saycr
+	BL		ddotrz
+	BL		saycr
 	reset_data_stack
-	ADRP	X0, tcomer30@PAGE	
+	;
+ 	ADRP	X0, tcomer30@PAGE	
 	ADD		X0, X0, tcomer30@PAGEOFF
 	B		carry_on
 
@@ -2766,7 +2778,7 @@ dmloopc:
 ; AGAIN/REPEAT must fix up branch offsets.
 
 dbeginz: ; BEGIN runtime
-
+	CBZ 	X15, 190f
 	MOV		X2,  #'B' ;  BEGIN 
 	STP		X2,  X15, [X14], #16
 
@@ -2782,10 +2794,10 @@ dbeginc: ; COMPILE BEGIN
 	RET
  
 
-; : t2 BEGIN 1+ DUP DUP . CR 10 >  UNTIL .' fini ' DROP ;
+; : t2 BEGIN 1+ DUP DUP . CR 10 >  UNTIL .' fini '  ;
 
 duntilz: ; UNTIL runtime
-
+	CBZ     X15, 170f
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
 	CMP		X2, #'B' ;BEGIN
 	B.ne	190f ; UNTIL needs BEGIN
@@ -2799,6 +2811,7 @@ duntilz: ; UNTIL runtime
 
 	; not true
 	MOV		X15, X5	; back we go
+170:	
 	RET
 
 	; true I am finishing
@@ -2808,13 +2821,52 @@ duntilz: ; UNTIL runtime
 
  
 
-duntilc:
+duntilc: ; COMPILE in UNTIL
 
+
+	STP		LR,  X12, [SP, #-16]!
+	
+	LDP		X1, X12,  [X14, #-16] ; X5 is branch
+	CMP		X1, #13 ; (LEAVE) we MAY have a leave to patch
+	B.ne 	20f
+
+	; FIX UP (LEAVE)
+	SUB		X0, X15, X12 ; dif between REPEAT/AGAIN and (LEAVE).
+	ADD		X0, X0, #2
+	STRH	W0, [X12]	 ; store that
+
+20:
+	SUB		X14, X14, #16
+	CMP		X1, #'B' ; was that a BEGIN we saw?
+	B.eq 	30f
+	
+	; check under leave
+	LDP		X0, XZR,  [X14, #-16] ; X5 is branch
+	SUB		X14, X14, #16
+	CMP		X0, #'B' ; BEGIN - WE MUST HAVE a BEGIN or error
+	B.ne	190f
+
+30:
+ 
+	MOV		X0, #0
+	LDP		LR, X12, [SP], #16	
+ 
 	RET
+
+190:	; UNTIL needs BEGIN
+
+	ADRP	X0, tcomer23@PAGE	
+	ADD		X0, X0, tcomer23@PAGEOFF
+	BL		sayit
+	LDP		LR, X12, [SP], #16	
+	MOV		X0, #-1
+	RET
+
+
 
 		; : t3 BEGIN  1 + DUP 10 < WHILE DUP . CR REPEAT ;
 dwhilez: ; WHILE needs a foward branch to REPEAT
-
+	CBZ     X15, 170f
 	do_trace
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
@@ -2836,11 +2888,12 @@ dwhilez: ; WHILE needs a foward branch to REPEAT
 	LDRH	W5, [X15]
 	SUB		X5, X5, #2
 	ADD		X15, X15, X5 ; jump to REPEAT
-
+170:
 	RET 
 
 
 180:
+ 
  	ADD		X15, X15, #2
 	RET
 
@@ -2892,7 +2945,7 @@ dwhilec: ; COMPILE (WHILE)
 ; BEGIN -- f WHILE -- REPEAT
 
 drepeatz: ; REPEAT
-
+	CBZ     X15, 170f
 	do_trace
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
@@ -2900,7 +2953,7 @@ drepeatz: ; REPEAT
 	B.ne	190f
 
 	MOV		X15, X5	; back we go
- 
+170:
 	RET
 
 
@@ -2917,9 +2970,10 @@ drepeatc:	; COMPILE REPEAT
 	SUB		X0, X15, X12 ; BEGIN - WHILE - REPEAT
 	ADD		X0, X0, #2
 	STRH	W0, [X12]	 ; store that
+	SUB 	X14, X14, #16
 
 30:
-	MOV		X0, #0
+	MOV		X0, #0 
 	LDP		LR, X12, [SP], #16	
  
 RET
@@ -2944,11 +2998,13 @@ RET
 
 dagainz:	; AGAIN
 
+	CBZ		X15, 190f ; NOOP in interpreter
+
 	do_trace
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
 	CMP		X2, #'B' ;BEGIN
 	B.ne	190f
-
+ 
 	MOV		X15, X5	; back we go
  
 	RET
@@ -2976,20 +3032,22 @@ dagainc:	; COMPILE AGAIN
 	STRH	W0, [X12]	 ; store that
 
 20:
-	CMP		X0, #'B' ; was that a BEGIN we saw?
+	SUB		X14, X14, #16
+	CMP		X1, #'B' ; was that a BEGIN we saw?
 	B.eq 	30f
 	
-	SUB		X14, X14, #16
+	; check under leave
 	LDP		X0, XZR,  [X14, #-16] ; X5 is branch
 	SUB		X14, X14, #16
 	CMP		X0, #'B' ; BEGIN - WE MUST HAVE a BEGIN or error
 	B.ne	190f
 
 30:
+ 
 	MOV		X0, #0
 	LDP		LR, X12, [SP], #16	
  
-RET
+	RET
 
 190:	; AGAIN needs BEGIN
 
@@ -3003,8 +3061,11 @@ RET
 
 
 ; LEAVE (LEAVE) runtime
-; : t2 BEGIN 1+ DUP 10 > IF LEAVE THEN DUP . CR AGAIN .' fini ' DROP ;
+; : t2 BEGIN 1+ DUP 10 > IF LEAVE THEN DUP . CR AGAIN .' fini ' ;
+; : t3 BEGIN 1+ DUP 10 > IF EXIT THEN DUP . CR AGAIN .' fini ' ;
+
 dleavez:	; just LEAVE the enclosing loop
+	CBZ     X15, 170f
 	STP		LR,  X5, [SP, #-16]!
 	do_trace
 
@@ -3031,6 +3092,7 @@ dleavez:	; just LEAVE the enclosing loop
 	do_trace
 
 	LDP		LR, X5, [SP], #16	
+170:
 	RET
 
 
@@ -5809,8 +5871,22 @@ dendz:	; EXIT interpreter - called by exit
 	RET
 
 
+difexitz: ; EXIT
+
+	CBZ     X15, 190f
+	LDR 	X0, [X16, #-8]
+	SUB 	X16, X16, #8
+	CBZ		X0, 170f
+	; unwind stack
+	LDP		LR, X15, [SP], #16	
+	SUB		X26, X26, #64 ; if flat we should not do that.
+	
+170:	
+	RET
+
 
 dexitz: ; EXIT
+	CBZ     X15, 190f
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #64
 	RET
@@ -5819,6 +5895,7 @@ dexitc: ; EXIT compiles end
 	MOV		X0, #0 ; (EXIT)
 	STRH	W0, [X15]
 	SUB		X26, X26, #128
+190:
 	RET
 
 
@@ -8098,8 +8175,44 @@ dstrlen:
 	RET
 
 
+dstrpos:
+
+	LDP		X1, X0, [X16, #-16]
+
+	; search for N over N bytes 
+	.rept 128
+		LDR		X2, [X1]
+		CMP		X2, X0
+		B.eq	10f
+		ADD		X1, X1, #8
+	.endr
+	B 	10f
+
+10: ; back track
+	SUB 	X1, X1, #8
+	.rept 	8
+	LDRB	W2, [X1], #1
+	CMP		X2, X0
+	B.eq	80f
+
+	.endr
+
+80:
+ 
+	STR		X1, [X16], #8
+	RET
+
+90:
+	MOV 	X0, #0
+	STR		X0, [X16], #8
+	RET
+
+
 ; slices a string  
 ; x3 address. x2 pos, x1 count 
+; I feel like the original immutable value ought to be the backing storage for slices.
+; rather than creating an actual copy.
+; more figuring out needed.
 
 dstrslice:
 
@@ -8151,7 +8264,7 @@ dstrslice:
 90:
 
 	; now copy from slice to string buffer
-	; copy from string buffer to string
+	; later copy from string buffer to string
 	ADRP	X12, slice_string@PAGE		
 	ADD		X12, X12, slice_string@PAGEOFF
 	ADRP	X13, string_buffer@PAGE		
@@ -9794,7 +9907,7 @@ append_ptr:
 	.quad 0		; 0 = not appending
 
 
-; most likely an error above here
+; most likely an error to read a string above here
 above_string_space:
 
 
@@ -9975,6 +10088,9 @@ hashdict:
 		makeword "AGAIN" , dagainz, dagainc, 0
 		makeword "ABS" , dabsz, dabsc, 0
 		makeword "AND" , dandz, 0, 0
+		makeword "a" , dlocaz, 0, 0
+		makeword "a!" , dlocasz, 0, 0
+		
 
 
 	
@@ -9985,7 +10101,8 @@ adict:
 		makeword "BEGIN" , dbeginz, dbeginc, 0
 		makeword "BUFFER$", dvaraddz, 0,  string_buffer
 		makeword "BREAK",  dbreakz, dbreakc, 0
-		 
+		makeword "b" , dlocbz, 0, 0
+		makeword "b!" , dlocbsz, 0, 0
 		
 bdict:
 		makeemptywords 256
@@ -9997,6 +10114,9 @@ bdict:
 		makeword "CONSTANT", dcreatevalz , dcreat_invalid, 0
 		makeword "CREATE", 	dcreatz, dcreatc, 0
 		makeword "CR", 		saycr, 0, 0
+		makeword "c" , dloccz, 0, 0
+		makeword "c!" , dloccsz, 0, 0
+		
  
 
 cdict:
@@ -10008,6 +10128,8 @@ cdict:
 		makeword "DROP", ddropz , 0, 0		
 		makeword "DEPTH", ddepthz , 0, 0 
 		makeword "DECR", ddecrz, ddecrc,  0
+		makeword "d" , dlocdz, 0, 0
+		makeword "d!" , dlocdsz, 0, 0
 
 		
 ddict:
@@ -10016,7 +10138,9 @@ ddict:
 		makeword "ELSE", 0 , delsec, 0 
 		makeword "ENDIF", 0 , dendifc, 0 
 		makeword "EMIT", emitz , 0, 0 
-		makeword "EXIT", dexitz, 	0,  0		
+		makeword "EXIT", dexitz, 	0,  0	
+		makeword "e" , dlocez, 0, 0
+		makeword "e!" , dlocesz, 0, 0	
 	 
 		
 edict:
@@ -10048,10 +10172,14 @@ edict:
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
+		makeword "f" , dlocfz, 0, 0
+		makeword "f!" , dlocfsz, 0, 0	
 	
 
 fdict:	
 		makeemptywords 256
+		makeword "g" , dlocgz, 0, 0
+		makeword "g!" , dlocgsz, 0, 0	
  
 gdict:
 		makeemptywords 256
@@ -10060,6 +10188,9 @@ gdict:
 		makeword "HW!", dhstorez, dhstorec,  0
 		makeword "HW@", dhatz, dhatc, 0
 		makeword "HW@IP", dhatipz, 0, 0
+		makeword "h" , dlochz, 0, 0
+		makeword "h!" , dlochsz, 0, 0	
+ 
 
 	 
 hdict:
@@ -10073,6 +10204,7 @@ hdict:
 		makeword "IN", dvaluez, 0,  input_file
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
+		makeword "IFEXIT", difexitz, 	0,  0	
 		makeword "INVERT", dinvertz, 0,  0
 		makeword "INCR", dincrz, dincrc,  0
  
@@ -10260,8 +10392,10 @@ zdict:
 		makeword "$==", _dstrequalz, 0,  0
 		makeword "$compare", dstrcmp, 0,  0
 		makeword "$len", dstrlen, 0,  0
+		makeword "$pos", dstrpos, 0,  0
 		makeword "$slice", dstrslice, 0,  0
 		makeword "$''", 	stackit, 	stackit, 	0
+		makeword "$intern", 	intern, 	intern, 	0
 		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 10240
 	 
 dollardict:

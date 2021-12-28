@@ -173,6 +173,18 @@ Obviously accessor words could do a lot more, like checking that the given speed
 Without FLAT, set-speed and speed would each read their own LOCALS a level above test and test would not work.
 
 
+#### Simple LOCALS access
+
+You can read LOCALS also using predefined accessors called a..h 
+And set them with n a..h! 
+e.g.
+```FORTH
+10 a! a .
+```
+Prints 10.
+
+
+
 #### TOKENS
 
 Is a VALUES view over the HW (half/word 16 bit) token space, this is where the compiler stores tokens for words it compiles.
@@ -383,13 +395,13 @@ STRING test
   BEGIN
    a C@ c!
    a 1+ a! 
-   c b = IF a 1- EXIT THEN 
-  c 0= UNTIL 0 ;
+   c b = IF a 1- LEAVE THEN 
+  c 0= UNTIL ;
  
 : positions   
    BEGIN
    pos
-   DUP 0= IF EXIT THEN 
+   DUP IFEXIT
    1+ 44 SWAP  
    AGAIN
  ;
