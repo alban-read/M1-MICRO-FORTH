@@ -1502,9 +1502,19 @@ short_words:
 	CMP		W0, #':'	; do we enter the compiler ?
 	B.eq	enter_compiler
 
-	CMP		W0, #';'	; do we exit the compiler ?
-	B.eq	exit_compiler
+	; helps prevent crashes if there is a typo  
+semicheck:
+	CMP		W0, #';'	
+	B.ne	endsemicheck
 
+	ADRP	X0, tcomer39@PAGE
+	ADD		X0, X0, tcomer39@PAGEOFF
+	BL		sayit_err	 
+	CBNZ	X15, semicheck2
+	B 		endsemicheck
+semicheck2: ; if compiler awake..
+	BL		clean_last_word
+endsemicheck:
 
 	; check if we need to enter the compiler loop.
 	CBZ		X15, fw1  	; compiler is not working on a word.
@@ -5581,7 +5591,6 @@ duntracable:
 ; switch to tracable mode for N steps
 dlimited:
 
-
 	save_registers
 
 	BL		advancespaces
@@ -5678,12 +5687,13 @@ dflat:
 	CMP		X0, X8
 	B.eq	140f
 	
-	B 		200f
+	B 		180f
+
 140:
 
-	ADRP	X8, flatrunintz@PAGE	
-	ADD		X8, X8, flatrunintz@PAGEOFF
-	STR		X8, [X28, #8]	
+	ADRP	X0, flatrunintz@PAGE	
+	ADD		X0, X0, flatrunintz@PAGEOFF
+	STR		X0, [X28, #8]	
 	B		200f
 
 
@@ -5691,8 +5701,23 @@ dflat:
 	SUB		X28, X28, #64
 	B		120b
 
+
+180:	; error out 
+
+
+	restore_registers
+	ADRP	X0, tcomer38@PAGE	
+	ADD		X0, X0, tcomer38@PAGEOFF
+	B		sayit_err
+
+
 190:	; error out 
-	MOV	X0, #-1
+ 
+	restore_registers
+	ADRP	X0, tcomer37@PAGE	
+	ADD		X0, X0, tcomer37@PAGEOFF
+	B		sayit_err
+ 
 
 200:
 	restore_registers
@@ -5819,9 +5844,9 @@ limitrunintz:; interpret the list of tokens at X0
 	 
 step_in_runz: ; take more steps
 
-	ADRP	X8, step_limit@PAGE	
-	ADD		X8, X8, step_limit@PAGEOFF
-	LDR     X25, [X8] ; steps to run for 
+	ADRP	X0, step_limit@PAGE	
+	ADD		X0, X0, step_limit@PAGEOFF
+	LDR     X25, [X0] ; steps to run for 
 	 
 step_away:
 	CBZ		X15, 98f	; we finished 
@@ -9610,11 +9635,23 @@ tcomer35: .ascii "\nError in x FILLARRAY nnnnn  - the nnnnn word not found."
 	.zero 16
 
    .align	8
-tcomer36: .ascii "\nError out of string space"
+tcomer36: .ascii "\nError out of string space."
 	.zero 16
 
  
+   .align	8
+tcomer37: .ascii "\nError FLAT expects name."
+	.zero 16
 
+  
+   .align	8
+tcomer38: .ascii "\nError FLAT expects a high level word."
+	.zero 16
+
+   .align	8
+tcomer39: .ascii "\nError ; - while not compiling."
+	.zero 16
+ 
 
 .align	8
 tforget: .ascii "\nForgeting last_word word: "
