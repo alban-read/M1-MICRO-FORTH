@@ -98,10 +98,10 @@ STRING test
 
   : t1 46 test pos DROP ;
 
-  : t3 10000 1 DO ( CR I . SPACE .' test run ' CR  ) t1  LOOP ;
+  : t3 100000 1 DO ( CR I . SPACE .' test run ' CR  ) t1  LOOP ;
 
   : t2 46 test $pos DROP ;
 
   : t4 100000 1 DO t2 LOOP ;
 
- 
+ : t

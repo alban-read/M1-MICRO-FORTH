@@ -132,3 +132,117 @@ Things that crash
 
 
 : V++ ` >DATA1 DUP @ 1+ SWAP ! ;
+
+	;ADRP	X0, sp1@PAGE		
+	;ADD		X0, X0, sp1@PAGEOFF
+	;MOV 	X1, #0
+	;MOV     X2, 512
+	;LSL		X2, X2, #3
+
+	;BL fill_mem
+
+		;ADRP	X0, rp1@PAGE		
+	;ADD		X0, X0, rp1@PAGEOFF
+	;MOV 	X1, #0
+	;MOV     X2, 512
+	;LSL		X2, X2,#3ßß
+	;BL fill_mem
+
+
+
+; get len the dumb way
+	LDRB 	W0,  [X2, #63]
+	CBNZ	W0,  2010f
+	SUB 	X3,  X3, #15
+	B 		2000f
+2010:
+	LDRB 	W0,  [X2, #62]
+	CBNZ	W0,  2011f
+	SUB 	X3,  X3, #14
+	B 		2000f
+2011:
+	LDRB 	W0,  [X2, #61]
+	CBNZ	W0,  2012f
+	SUB 	X3,  X3, #13
+	B 		2000f
+2012:
+	LDRB 	W0,  [X2, #60]
+	CBNZ	W0,  2013f
+	SUB 	X3,  X3, #12
+	B 		2000f
+2013:
+	LDRB 	W0,  [X2, #59]
+	CBNZ	W0,  2014f
+	SUB 	X3,  X3, #12
+	B 		2000f
+2014:
+	LDRB 	W0,  [X2, #58]
+	CBNZ	W0,  2015f
+	SUB 	X3,  X3, #11
+	B 		2000f
+2015:
+	LDRB 	W0,  [X2, #57]
+	CBNZ	W0,  2016f
+	SUB 	X3,  X3, #10
+	B 		2000f
+2016:
+	LDRB 	W0,  [X2, #56]
+	CBNZ	W0,  2017f
+	SUB 	X3,  X3, #9
+	B 		2000f
+2017:
+	LDRB 	W0,  [X2, #55]
+	CBNZ	W0,  2018f
+	SUB 	X3,  X3, #8
+	B 		2000f
+2018:
+	LDRB 	W0,  [X2, #54]
+	CBNZ	W0,  2019f
+	SUB 	X3,  X3, #7
+	B 		2000f
+2019:
+	LDRB 	W0,  [X2, #53]
+	CBNZ	W0,  2020f
+	SUB 	X3,  X3, #6
+	B 		2000f
+2020:
+	LDRB 	W0,  [X2, #52]
+	CBNZ	W0,  2021f
+	SUB 	X3,  X3, #5
+	B 		2000f
+2021:
+	LDRB 	W0,  [X2, #51]
+	CBNZ	W0,  2022f
+	SUB 	X3,  X3, #4
+	B 		2000f
+2022:
+	LDRB 	W0,  [X2, #50]
+	CBNZ	W0,  2023f
+	SUB 	X3,  X3, #3
+	B 		2000f
+2023:
+	LDRB 	W0,  [X2, #49]
+	CBNZ	W0,  2024f
+	SUB 	X3,  X3, #2
+	B 		2000f
+2024:
+	LDRB 	W0,  [X2, #48]
+	CBNZ	W0,  2025f
+	SUB 	X3,  X3, #1
+  	B 		2000f 
+
+2025:
+	B 		2030f
+
+2000:
+
+	CMP 	W3, #0
+	B.gt	2030f
+	MOV 	W3, #80
+	save_registers
+	BL		saycr
+	restore_registers
+ 
+
+2030:
+
