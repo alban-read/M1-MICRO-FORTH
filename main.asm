@@ -54,9 +54,11 @@
 	STP		LR,  X16, [SP, #-16]!
 	STP		X6,  X7,  [SP, #-16]!
 	STP		X4,  X5,  [SP, #-16]!
+	STP		X2,  X3,  [SP, #-16]!
 .endm
 
 .macro restore_registers  
+	LDP		X2, X3, [SP], #16
 	LDP		X4, X5, [SP], #16
 	LDP		X6, X7, [SP], #16
 	LDP		LR, X16, [SP], #16
@@ -523,26 +525,60 @@ dotwords:
 	ADRP	X2, hashdict@PAGE	
 	ADD		X2, X2, hashdict@PAGEOFF
 
+	ADRP	X8, rmargin@PAGE	
+	ADD		X8, X8, rmargin@PAGEOFF
+	LDR 	X3, [X8]
+
 20:	ADD		X2, X2, #64
 	LDR		X0, [X2, #48]
 	CMP		X0, #-1
 	B.eq	10f
 	CMP		X0, #0
 	B.eq	15f
+
 	LDRB	W0, [X2, #48]
 	CBZ 	W0, 10f
 
 
-	ADD		X0, X2,  #48
+	LDRB	W0, [X2, #48]
+	ADD		X0, X2,  #48 
+
+	MOV 	X4, X0
+	MOV     X5, X0
+510:
+	LDRB	W0, [X5], #1
+	CBZ		W0, 520f
+	B 		510b
+520:
+
+	SUB 	X8, X5, X4
+	SUB 	X3, X3, X8
+	
+ 
+	MOV 	X0, X4	 
+530:
 	STP		X2, X1, [SP, #-16]!
+ 
 	save_registers
 	BL		_fputs	
- 
+	restore_registers
 	MOV		X0, #32
+	save_registers
 	BL		_putchar
 	restore_registers
-	LDP		X2, X1, [SP], #16
+	CMP		X3, #0
+	B.gt	540f
+	save_registers
+	BL		saycr
+	restore_registers
+	ADRP	X8, rmargin@PAGE	
+	ADD		X8, X8, rmargin@PAGEOFF
+	LDR 	X3, [X8]
+540:
 
+ 
+	LDP		X2, X1, [SP], #16
+ 
 
 10:	; skip non word
 	B		20b  
@@ -1393,6 +1429,21 @@ dresetz:
 
 	reset_data_stack
 	reset_return_stack
+	
+	ADRP	X0, sp1@PAGE		
+	ADD		X0, X0, sp1@PAGEOFF
+	MOV 	X1, #0
+	MOV     X2, 512
+	LSL		X2, X2, #3
+	BL      fill_mem
+	
+	ADRP	X0, rp1@PAGE		
+	ADD		X0, X0, rp1@PAGEOFF
+	MOV 	X1, #0
+	MOV     X2, 512
+	LSL		X2, X2,#3
+	BL 		fill_mem
+
 	;  disable tracing, X6 = 0
 	MOV		X6, #0
 	BL 		beloud
@@ -1433,6 +1484,30 @@ init:
 	ADRP	X26, lsp@PAGE		
 	ADD		X26, X26, lsp@PAGEOFF
   
+
+	ADRP	X0, sp1@PAGE		
+	ADD		X0, X0, sp1@PAGEOFF
+	MOV 	X1, #0
+	MOV     X2, 512
+	LSL		X2, X2, #3
+	BL      fill_mem
+	
+	ADRP	X0, rp1@PAGE		
+	ADD		X0, X0, rp1@PAGEOFF
+	MOV 	X1, #0
+	MOV     X2, 512
+	LSL		X2, X2,#3
+	BL 		fill_mem
+
+	ADRP	X0, allot_space@PAGE		
+	ADD		X0, X0, allot_space@PAGEOFF
+	MOV 	X1, #0
+	MOV     X2, 256
+	LSL		X2, X2, #10
+	BL 		fill_mem
+
+	
+
 
 	;  disable tracing, X6 = 0
 	MOV		X6, #0
@@ -1644,9 +1719,6 @@ compiler:
 	; yes, from here we compile a new word.
 
 enter_compiler:
-
-
-
 
 	; look for the name of the new word we are compiling.
 	BL 		advancespaces
@@ -2767,20 +2839,18 @@ ddownloopercmp:
 	loop_continues
 
 	MOV		X15, X12
-
 	RET
 
 
 loops_end:  ; loop end
 	
 	SUB		X14, X14, #32 ; unstack loop value
-	
-
-
 	RET
 
 do_loop_err:
 	reset_return_stack
+
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	; unstack word
 	ADRP	X0, tcomer18@PAGE	
 	ADD		X0, X0, tcomer18@PAGEOFF
@@ -2975,7 +3045,7 @@ dwhilez: ; WHILE needs a foward branch to REPEAT
 	ADRP	X0, tcomer23@PAGE	
 	ADD		X0, X0, tcomer23@PAGEOFF
 	BL		sayit
-
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	RET
 
@@ -3178,6 +3248,7 @@ dleavez:	; just LEAVE the enclosing loop
 190:	; not leaving a loop? leave whole word.
 	do_trace
 	LDP		LR, X5, [SP], #16	
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	RET
 
@@ -5837,8 +5908,6 @@ flatrunintz:; interpret the list of tokens at X0
 	SUB		X15, X0, #2
 	MOV		X20, X15
 
-
-
 	; unrolling the loop here x16 makes this a lot faster, 
 10:	; next token
 	
@@ -6715,10 +6784,17 @@ hwstorz:  ; ( n address -- )
 	SUB		X16, X16, #16
 	RET
 
+; used for reading char BYTE sized values, from words, strings and allotment.
 
 catz: ;  ( address -- n ) fetch var.
 	LDR		X0, [X16, #-8] 
 	CBZ		X0, itsnull
+ 
+	ADRP	X12, below_string_space@PAGE		
+	ADD		X12, X12, below_string_space@PAGEOFF
+	CMP 	X0, X12
+	B.lt	itsnull
+
 	LDRB	W0, [X0]
 	STR		X0, [X16, #-8]
 	RET
@@ -7583,6 +7659,7 @@ dtoz:
 
 	CMP		X21, #0		; end of list?
 	B.eq	190f		; not found 
+
 	CMP		X21, #-1	; undefined entry in list?
 	b.eq	170f
 
@@ -7596,7 +7673,7 @@ dtoz:
 	restore_registers
 
 	MOV		X3,  X28
-	; 
+	
 	B 		toupdateit
 
 
@@ -7605,8 +7682,13 @@ dtoz:
 	B		120b
 
 190:	; error out 
-	MOV		X0, #0
- 
+	restore_registers
+	SUB 	X16, X16, #8
+	ADRP	X0, tcomer40@PAGE
+	ADD		X0, X0, tcomer40@PAGEOFF
+	B		sayit_err	 
+	
+
 	RET
 
 
@@ -7896,12 +7978,30 @@ dconstc: ; value of constant
 	RET
 
 
+loopdepth:
+	LDR		X1, [SP]
+	SUB		X0, X14, X1	  ; local words R depth
+	STR 	X0, [X16], #8
+	RET
+
+
 diloopz: ; special I loop variable
+
+	LDR		X1, [SP]
+	SUB		X0, X14, X1	  ; local words R depth
+	CMP		X0, #32
+	B.lt 	loop_index_err
+
 	LDP		X0, X1,  [X14, #-16]
 	LDP		X2, XZR, [X14, #-32]	
 	B		loop_var_check	
 
 djloopz: ; special J loop variable
+
+ 	LDR		X1, [SP]
+	SUB		X0, X14, X1	  ; local words R depth
+	CMP		X0, #64
+	B.lt 	loop_index_err
 
 	LDP		X0, X1,  [X14, #-48]
 	LDP		X2, XZR, [X14, #-64]	
@@ -7909,6 +8009,11 @@ djloopz: ; special J loop variable
 
 
 dkloopz: ; special K loop variable
+
+ 	LDR		X1, [SP]
+	SUB		X0, X14, X1	  ; local words R depth
+	CMP		X0, #96	
+	B.lt 	loop_index_err
 
 	LDP		X0, X1,  [X14, #-80]
 	LDP		X2, XZR, [X14, #-96]	
@@ -7930,8 +8035,11 @@ stack_loop_var:
 	RET
 
  
+
+
 loop_index_err:
 	reset_return_stack
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	; unstack word
 	ADRP	X0, tcomer17@PAGE	
 	ADD		X0, X0, tcomer17@PAGEOFF
@@ -8337,18 +8445,26 @@ dstrpos:
 	LDP		X0, X1, [X16, #-16]
 	SUB 	X16, X16, #16
 
-	CBZ		X1, 88f
+	CBZ		X1, 20f
 	ADRP	X12, below_string_space@PAGE		
 	ADD		X12, X12, below_string_space@PAGEOFF
 	CMP 	X1, X12
-	B.lt 	88f
+	B.lt 	20f
 
 	.rept 	256
 	LDRB	W2, [X1], #1
 	CMP		X2, X0
 	B.eq	80f
-	CBZ     X2, 20f 
+	CBZ     X2, 10f 
 	.endr
+
+10:
+	; not found
+	MOV 	X0, #256
+	STR		X0, [X16], #8
+	RET
+
+
 20:
 	MOV 	X0, #0
 	STR		X0, [X16], #8
@@ -8357,7 +8473,6 @@ dstrpos:
 80:
 	SUB 	X1, X1, #1
 	STR		X1, [X16], #8
-88:
 	RET
 
 
@@ -9445,10 +9560,12 @@ dcreat_invalid:
  
 
 
+;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 .data 
 
 
-; floats
+; floats	
 
 .align 8
 fc1:		.double 	1.0
@@ -9463,7 +9580,7 @@ last_word:
 	.quad	0
 
 
-.data
+.data 
 
 .align 8
  
@@ -9472,6 +9589,8 @@ dpage: .zero 4
 zstdin: .zero 16
 
 ;; text literals
+
+ 
 
 .align 8
 literal_name:
@@ -9716,6 +9835,10 @@ tcomer38: .ascii "\nError FLAT expects a high level word."
 tcomer39: .ascii "\nError ; - while not compiling."
 	.zero 16
  
+   .align	8
+tcomer40: .ascii "\nError TO expected a VALUE word to follow."
+	.zero 16
+
 
 .align	8
 tforget: .ascii "\nForgeting last_word word: "
@@ -9843,6 +9966,9 @@ spaces:	.ascii "										"
 	.zero 16
 
 
+
+.data
+
 ; UNIX TERMINAL IO control
 ; long is 8 bytes
 .align 8
@@ -9871,7 +9997,7 @@ current_c_ospeed:  	.quad 0
 getchar_buf:		.quad 0
 			
 
-; this is the tokens stack
+; this is the tokens pool
 ; code for token compiled words is compiled into here
 ; 
 ;  
@@ -9900,7 +10026,7 @@ lsp:
 
 
 
-; The ALLOTMENT
+; The ALLOTMENT for random data
 
 
 .align 	8
@@ -9915,6 +10041,7 @@ allot_limit:	; allotments went too far
 
 
 
+.data 
 
 ; this is the data stack
 .align  8
@@ -9952,14 +10079,18 @@ dsp:	.quad sp1
 ; this is the return stack
 ; used for loop constructs and local variables.
 
+.data
+
 .align  8
 rps:	.zero 8*8	
 rpu:	.zero 8
-rp1:	.zero 4096*8  
+rp1:	.zero 512*8  
 rpo:	.zero 8
 rp0:	.zero 8*8
 rsp:	.quad rp1
 
+
+.data
 ; global, single letter, integer variables
 .align 16
 ivars:	.zero 256*16	
@@ -10044,10 +10175,12 @@ long_strings:
 .quad	-1
 .quad	-1
 
+.align 16
 slice_string:
 	.zero 1024
 
-
+.align 16
+rmargin: 	.quad 80
 
 
 
@@ -10394,6 +10527,7 @@ kdict:
 		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
 		makeword "LEAVE", 0 , dleavec, 0 
 		makeword "LOOP", 0 , dloopc, 0 
+		makeword "LDEPTH", loopdepth ,0 , 0 
 		makeword "LIMIT", dlimited , 0, 0 
 
 		makeword "LAST", get_last_word, 0,  0
