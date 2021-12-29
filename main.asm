@@ -2571,14 +2571,16 @@ ddoerz:
 	LDP 	X0, X1,  [X16, #-16]  
 	SUB		X16, X16, #16
 
+	; stack loop arguments for LOOP and I,J,K to read
 	; Stack arguments 21, literal address, start, limit
 	MOV		X2,  #21 ; DO
 	STP		X2,  X12, [X14], #16
 	STP		X0,  X1,  [X14], #16
 
-	; Check my arguments
+	; Check my loop arguments
 	CMP		X0, X1
-	B.lt	skip_do_loop
+	B.lt	skip_do_loop 
+	; if no need to loop skip
 
 	B		200f
 
@@ -2610,11 +2612,14 @@ ddowndoerz:
 	; Check my arguments
 	CMP		X0, X1
 	B.gt	skip_do_loop
+	; if no need to loop skip
 
 	B		200f
 
 
 dochecker:
+
+// only in the case where the arguments mean no loop needed
 
 skip_do_loop:
 	
@@ -2796,8 +2801,9 @@ ddownerc:
 	STRH W0, [X15] ; replace code
 	RET
 
+// check for LEAVE at COMPILE TIME 
+dloopc:		; COMPILE time LOOP
 
-dloopc:
 	MOV	X0, #19
 	STRH W0, [X15] ; replace code
 
@@ -2805,10 +2811,11 @@ dloopc:
 	CMP		X1, #13 ; (LEAVE) we MAY have a leave to patch
 	B.ne 	20f
 
-	SUB		X0, X15, X12 ; dif between REPEAT/AGAIN and (LEAVE).
+	SUB		X0, X15, X12 ; dif between LOOP and (LEAVE).
 	ADD		X0, X0, #2
 	STRH	W0, [X12]	 ; store that
 	SUB		X14, X14, #16
+
 20:
 
 	RET
