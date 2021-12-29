@@ -386,7 +386,7 @@ In line with general FORTH principles the , is a word not a separator, and comes
 
 ```FORTH 
 
-' this is the age of the train' 10 5 $slice $. 
+' this is the age of the train' 23 5 $slice $. 
 
 ```
 Prints 'train'
@@ -400,7 +400,7 @@ To save the result from a slice send it somewhere, such as to a STRING e.g.
 ```FORTH 
 $'' STRING vehicle
 
-' this is the age of the train' 10 5 $slice TO vehicle
+' this is the age of the train' 23 5 $slice TO vehicle
 ```
 
 Slices can be appended to a string with $slice followed by a comma inside of an append list.
