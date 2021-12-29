@@ -5235,7 +5235,7 @@ delsec: ;  at compile time inlines the ELSE branch
 	B.ne	190f
 
 	; drop if and stack else
-	SUB	X14, X14, #16
+	SUB		X14, X14, #16
 	MOV		X2, #4 ; (ELSE)
 	STP		X2,  X15, [X14], #16 ; store ELSE address
 
@@ -5413,7 +5413,7 @@ dtraqz:
 
 
 dtickerz:
-	MRS	X0, cntpct_el0
+	MRS		X0, cntpct_el0
 	B		stackit
 
 
@@ -5583,7 +5583,7 @@ duntracable:
 120:
 	LDR		X21, [X28, #48] ; name field
 
-	CMP		X21, #0		; end of list?
+	CMP		X21, #0			; end of list?
 	B.eq	190f			; not found 
 	CMP		X21, #-1		; undefined entry in list?
 	b.eq	170f
@@ -5647,7 +5647,7 @@ dlimited:
 120:
 	LDR		X21, [X28, #48] ; name field
 
-	CMP		X21, #0		; end of list?
+	CMP		X21, #0			; end of list?
 	B.eq	190f			; not found 
 	CMP		X21, #-1		; undefined entry in list?
 	b.eq	170f
@@ -5707,7 +5707,7 @@ dflat:
 120:
 	LDR		X21, [X28, #48] ; name field
 
-	CMP		X21, #0		; end of list?
+	CMP		X21, #0			; end of list?
 	B.eq	190f			; not found 
 	CMP		X21, #-1		; undefined entry in list?
 	b.eq	170f
@@ -5948,9 +5948,6 @@ runintcz: ; interpret the list of tokens at word +
 
 runintz:; interpret the list of tokens at X0
  
-
- 
-
 	STP		X0,  X1,  [X26],#16 ; data and word address
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
@@ -6985,7 +6982,6 @@ stackit: ; push x0 to stack.
 	RET
 
 ; interpreter pointer exposed
-; these are useful perhaps when testing.
 
 ; IP@
 dipatz:
@@ -8263,6 +8259,14 @@ _dstrequalz:
 
 	CBZ		X12, 160f
 	CBZ		X13, 160f
+ 
+	ADRP	X1, below_string_space@PAGE		
+	ADD		X1, X1, below_string_space@PAGEOFF
+	CMP 	X12, X1
+	B.lt 	160f
+	CMP 	X13, X1
+	B.lt 	160f
+
 	
 	; compare up to 256 bytes 16 at a time
 	.rept 16
@@ -8287,13 +8291,18 @@ _dstrequalz:
 	RET
 
 ; length of string.
-; only works because we do align and pad all of our strings 
-
+ 
 dstrlen:
 
 	LDR 	X1, [X16, #-8]
 	MOV     X2, X1
 	CBZ 	X1, 90f
+
+	ADRP	X12, below_string_space@PAGE		
+	ADD		X12, X12, below_string_space@PAGEOFF
+	CMP 	X1, X12
+	B.lt 	98f
+
 
 	; search for zero over N bytes 
 	.rept 128
@@ -8319,6 +8328,7 @@ dstrlen:
 90:
 	MOV 	X0, #0
 	STR 	X0, [X16, #-8]
+98:
 	RET
 
 
@@ -8326,6 +8336,13 @@ dstrpos:
 
 	LDP		X0, X1, [X16, #-16]
 	SUB 	X16, X16, #16
+
+	CBZ		X1, 88f
+	ADRP	X12, below_string_space@PAGE		
+	ADD		X12, X12, below_string_space@PAGEOFF
+	CMP 	X1, X12
+	B.lt 	88f
+
 	.rept 	256
 	LDRB	W2, [X1], #1
 	CMP		X2, X0
@@ -8340,6 +8357,7 @@ dstrpos:
 80:
 	SUB 	X1, X1, #1
 	STR		X1, [X16], #8
+88:
 	RET
 
 
