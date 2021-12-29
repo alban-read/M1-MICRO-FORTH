@@ -430,37 +430,7 @@ Example of appending with $slice between ${ and $}.
 This has the advantage of not spewing garbage into the string pool when interpeting.
 Although if compiled the strings still need to live somewhere.
 
-
-### Strings searching
-
-#### Position
-
-' This is, a string, with some commas, and a full stop. To seek for. ' 
-STRING test 
-
-44 test 
-
-: pos  
-  a! b! 
-  BEGIN
-   a C@ c!
-   a 1+ a! 
-   c b = IF a 1- LEAVE THEN 
-  c 0= UNTIL ;
  
-: TAIL [ FLAT TAIL ] CODE^ 2 - IP! ;
-
-
-: positions   
-   pos
-   DUP . SPACE 
-   DUP IF_Z_EXIT
-   1+ 44 SWAP  
-   // jump back to top
-   TAIL
- ;
-
-44 test positions
 
 #### Storage used when appending
 
@@ -687,7 +657,11 @@ The design is a token interpreter, I chose to use 16bit tokens to represent word
 
 It is a simple interpreter but FORTH is also a simple and lean language.
 
-The token interpreter is competitive with commonly used interpreted languages.
+The relationship appears much the same as ever, simple interpreters are 10 times slower,
+simple machine code is ten times faster, optimized machine code, 100 times faster.
+
+There are FORTH compilers that generate code that is closer in speed to machine code.
+
 
 
 ### Glossary of user words
