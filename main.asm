@@ -2250,6 +2250,12 @@ dlocasz:
 	STR		X0, [X26, #-8]
 	RET
 
+dlocasppz:
+	LDR		X0, [X26, #-8]	
+	ADD		X0, X0, #1
+	STR		X0, [X26, #-8]
+	RET
+
 dlocbz:	; LOCAL B
 	LDR		X0, [X26, #-16]	
 	STR		X0, [X16], #8
@@ -3310,6 +3316,29 @@ ddepthz:
 ddepthc:
 
 	RET
+
+
+
+ddepthrz: 
+
+	ADRP	X0, rpu@PAGE		
+	ADD		X0, X0, rpu@PAGEOFF
+	CMP		X14, X0
+	b.gt	50f	
+
+	; reset stack we are under
+	reset_return_stack
+	
+50:
+	ADRP	X8, rsp@PAGE		
+	ADD		X8, X8, rsp@PAGEOFF
+	LDR		X0, [X8]
+	SUB		X0, X14,X0
+
+	LSR		X0, X0, #3
+	STR		X0, [X16], #8	
+	RET
+ 
 
 
 get_last_word:
@@ -5746,17 +5775,16 @@ fastrunintz:; interpret the list of tokens at X0
 	; until (END)
 
 	; zero locals
+
 	STP		X0,  X1,  [X26],#16 ; data and word address
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 
-
-
- 
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
+	STP		X14, XZR, [SP, #-16]! 
 
 	SUB		X15, X0, #2
  
@@ -5784,6 +5812,7 @@ fastrunintz:; interpret the list of tokens at X0
 
 
 90:
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80
 	RET
@@ -5797,6 +5826,7 @@ flatrunintz:; interpret the list of tokens at X0
 
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
+	STP		X14, XZR, [SP, #-16]! 
 	SUB		X15, X0, #2
 	MOV		X20, X15
 
@@ -5822,6 +5852,7 @@ flatrunintz:; interpret the list of tokens at X0
 	b		10b
 
 90:
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	RET
 
@@ -5892,6 +5923,7 @@ step_away:
 	RET
 
 95: ; we finish so mark IP as invalid
+
 	LDP		LR, XZR, [SP], #16
 	MOV		X15, #0
 98:
@@ -5920,6 +5952,7 @@ runintz:; interpret the list of tokens at X0
 
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
+	STP		X14, XZR, [SP, #-16]! 
 	SUB		X15, X0, #2
  
 
@@ -5948,6 +5981,7 @@ runintz:; interpret the list of tokens at X0
 dendz:	; EXIT interpreter - called by exit
 
 90:
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80
 	RET
@@ -5960,6 +5994,7 @@ difexitz: ; IFEXIT
 	SUB 	X16, X16, #8
 	CBZ		X0, 170f
 	; unwind stack
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80 ; if flat we should not do that.
 	
@@ -5974,6 +6009,7 @@ difzexitz: ; IF0EXIT
 	SUB 	X16, X16, #8
 	CBNZ	X0, 170f
 	; unwind stack
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80 ; if flat we should not do that.
 	
@@ -5984,6 +6020,7 @@ difzexitz: ; IF0EXIT
 
 dexitz: ; EXIT
 	CBZ     X15, 190f
+	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80
 	RET
@@ -8280,34 +8317,22 @@ dstrlen:
 
 dstrpos:
 
-	LDP		X1, X0, [X16, #-16]
-
-	; search for N over N bytes 
-	.rept 128
-		LDR		X2, [X1]
-		CMP		X2, X0
-		B.eq	10f
-		ADD		X1, X1, #8
-	.endr
-	B 	10f
-
-10: ; back track
-	SUB 	X1, X1, #8
-	.rept 	8
+	LDP		X0, X1, [X16, #-16]
+	SUB 	X16, X16, #16
+	.rept 	256
 	LDRB	W2, [X1], #1
 	CMP		X2, X0
 	B.eq	80f
-
+	CBZ     X2, 20f 
 	.endr
-
-80:
- 
-	STR		X1, [X16], #8
-	RET
-
-90:
+20:
 	MOV 	X0, #0
 	STR		X0, [X16], #8
+	RET
+ 
+80:
+	SUB 	X1, X1, #1
+	STR		X1, [X16], #8
 	RET
 
 
@@ -9834,8 +9859,6 @@ here:
 
 	.zero 16
 
-
-	
 token_space:
 	.zero	256*1024*2
 
@@ -9844,14 +9867,11 @@ token_space_top:
 	.zero 16
 
 
-
 ; this is the locals stack
-; words get their own 8 locals nested up to 250 levels deep
-; locals are zero on entry, and exist only while a word runs.
 
 .align  8
 lsp:	 
-				.zero	16*1024
+				.zero	16*4096
 
 
 
@@ -9910,7 +9930,7 @@ dsp:	.quad sp1
 .align  8
 rps:	.zero 8*8	
 rpu:	.zero 8
-rp1:	.zero 512*8  
+rp1:	.zero 4096*8  
 rpo:	.zero 8
 rp0:	.zero 8*8
 rsp:	.quad rp1
@@ -10205,7 +10225,7 @@ hashdict:
 		makeword "AND" , dandz, 0, 0
 		makeword "a" , dlocaz, 0, 0
 		makeword "a!" , dlocasz, 0, 0
-		
+		makeword "a++" , dlocasppz, 0, 0
 
 
 	
@@ -10401,7 +10421,7 @@ qdict:
 
 		makeword "REPRINT", reprintz , reprintc, 0 
 		makeword "REPEAT", drepeatz , drepeatc, 0 
-	 
+	 	makeword "RDEPTH", ddepthrz , 0, 0 
 		makeword "ROT", drotz , drotc, 0 
 		makeword "R>", dfromrz , dfromrc, 0 
 		makeword "R@", dratz , 0, 0 
