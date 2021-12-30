@@ -626,13 +626,17 @@ resetline:
 	RET
 
 advancespaces: ; byte ptr in x23, advance past spaces until zero
-10:	LDRB	W0, [X23]
+
+	 
+
+10:	LDRB	W0, [X23] 
 	CMP		W0, #0
 	B.eq	90f	
 	CMP		W0, #32
-	b.ne	90f
+	b.gt	90f
 	ADD		X23, X23, #1
-	B		10b
+	B 		10b
+
 90:	RET
 
 absz:		
@@ -1109,6 +1113,8 @@ collectword:  ; byte ptr in x23, x22
 10:	LDRB	W0, [X23], #1
 	CMP		W0, #32
 	b.eq	90f
+	CMP		W0, #9
+	B.eq	90f
 	CMP		W0, #10
 	B.eq	90f
 	CMP		W0, #12
@@ -3840,6 +3846,12 @@ dseez:
 	CMP		X0, X2
 	B.eq	see_HLW1
 
+	ADRP	X2, flatrunintz@PAGE		
+	ADD		X2, X2, flatrunintz@PAGEOFF
+	LDR		X0, [X28, #8]
+	CMP		X0, X2
+	B.eq	see_HLW1
+
 
 	B		160f
 
@@ -5919,6 +5931,8 @@ flatrunintz:; interpret the list of tokens at X0
 		CBZ		X2, 10b
 	
 		BLR		X2		; with X0 as data and X1 as address	
+	
+		do_trace
 
 	.endr
 
@@ -5982,7 +5996,7 @@ step_away:
 	BLR		X2		; with X0 as dat
 
 	; this is why we are a little slower.
-	;do_trace
+	do_trace
 
 	b		10b
 
@@ -6088,11 +6102,38 @@ difzexitz: ; IF0EXIT
 
 
 
+
+dexitpz: ; EXITP (Exit and Exit parent)
+	CBZ     X15, 190f
+	LDP		X14, XZR, [SP], #16
+	LDP		LR, X15, [SP], #16	
+	SUB		X26, X26, #80
+	LDP		X14, XZR, [SP], #16
+	LDP		LR, X15, [SP], #16	
+	SUB		X26, X26, #80
+	RET
+
+dexitfpz: ; EXITFP (Exit and Exit parent, FLAT)
+	CBZ     X15, 190f
+	LDP		X14, XZR, [SP], #16
+	LDP		LR, X15, [SP], #16	
+	LDP		X14, XZR, [SP], #16
+	LDP		LR, X15, [SP], #16	
+	RET
+
+
+
 dexitz: ; EXIT
 	CBZ     X15, 190f
 	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80
+	RET
+
+dexitfz: ; EXITF
+	CBZ     X15, 190f
+	LDP		X14, XZR, [SP], #16
+	LDP		LR, X15, [SP], #16	
 	RET
 
 dexitc: ; EXIT compiles end
@@ -6740,14 +6781,14 @@ itsnull: ; error word_desc13
 	STR		X0, [X16, #-8]
 	ADRP	X0, word_desc13@PAGE		
 	ADD		X0, X0, word_desc13@PAGEOFF
-	B		sayit
+	B		sayit_err
 
 
 itsnull2: ; error word_desc13
 	SUB		X16, X16, #16
 	ADRP	X0, word_desc13@PAGE		
 	ADD		X0, X0, word_desc13@PAGEOFF
-	B		sayit
+	B		sayit_err
 
 storz:  ; ( n address -- )
 	LDR		X0, [X16, #-8] 
@@ -10433,6 +10474,9 @@ ddict:
 		makeword "ENDIF", 0 , dendifc, 0 
 		makeword "EMIT", emitz , 0, 0 
 		makeword "EXIT", dexitz, 	0,  0	
+		makeword "EXITP", dexitpz, 	0,  0	
+		makeword "EXITF", dexitfz, 	0,  0	
+		makeword "EXITFP", dexitfpz, 	0,  0	
 		makeword "e" , dlocez, 0, 0
 		makeword "e!" , dlocesz, 0, 0	
 	 
@@ -10794,10 +10838,16 @@ zbytewords:
 		.quad -1	
 		.quad 0	
 		.quad 0	
-
 		.quad 0 
 		.quad 0
 		.quad 0
+
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
 		.quad 0	
 		.quad 0	
 
