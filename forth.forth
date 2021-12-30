@@ -1,4 +1,4 @@
-// forth.fs - this file is loaded when FORTH starts.
+// This file is loaded as FORTH starts.
 TICKS VALUE start_ticks
 
 // Offsets from a words header
@@ -17,12 +17,14 @@ TICKS VALUE start_ticks
 : QUIET TRUE TO BEQUIET ;  PRIVATE BEQUIET QUIET
 
 // Display time spent in the program
+
 : UPTIME TICKS 
     start_ticks - s>f TPMS s>f f/ f.  .'  ms.'  ;
+
 PRIVATE start_ticks
 
 
-
+// STRINGS 
 : $empty? 0= IF TRUE ELSE C@ 0= THEN  ;
 
 // Add common constants
