@@ -8145,7 +8145,7 @@ loopdepth:
 
 
 diloopz: ; special I loop variable
-
+	CBZ		X15, dont_crash_in_interpreter
 	LDR		X1, [SP]
 	SUB		X0, X14, X1	  ; local words R depth
 	CMP		X0, #32
@@ -8156,7 +8156,7 @@ diloopz: ; special I loop variable
 	B		loop_var_check	
 
 djloopz: ; special J loop variable
-
+	CBZ		X15, dont_crash_in_interpreter
  	LDR		X1, [SP]
 	SUB		X0, X14, X1	  ; local words R depth
 	CMP		X0, #64
@@ -8169,6 +8169,7 @@ djloopz: ; special J loop variable
 
 dkloopz: ; special K loop variable
 
+	CBZ		X15, dont_crash_in_interpreter
  	LDR		X1, [SP]
 	SUB		X0, X14, X1	  ; local words R depth
 	CMP		X0, #96	
@@ -8216,6 +8217,8 @@ djloopc: ; special J loop variable
 dkloopc: ; special K loop variable
 	RET
 
+dont_crash_in_interpreter:
+	RET
 
 ; stack display
 
