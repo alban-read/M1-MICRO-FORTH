@@ -558,7 +558,6 @@ dotwords:
 	MOV 	X0, X4	 
 530:
 	STP		X2, X1, [SP, #-16]!
- 
 	save_registers
 	BL		_fputs	
 	restore_registers
@@ -575,8 +574,6 @@ dotwords:
 	ADD		X8, X8, rmargin@PAGEOFF
 	LDR 	X3, [X8]
 540:
-
- 
 	LDP		X2, X1, [SP], #16
  
 
@@ -10527,7 +10524,7 @@ kdict:
 		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
 		makeword "LEAVE", 0 , dleavec, 0 
 		makeword "LOOP", 0 , dloopc, 0 
-		makeword "LDEPTH", loopdepth ,0 , 0 
+		;makeword "LDEPTH", loopdepth ,0 , 0 
 		makeword "LIMIT", dlimited , 0, 0 
 
 		makeword "LAST", get_last_word, 0,  0
@@ -10563,8 +10560,6 @@ odict:
 		makeemptywords 256
 
 		makeword "PAGE", dpagez, 0, 0
- 
-		makeword "PRINT", print, 0, 0
 		makeword "PICK", dpickz, dpickc, 0
 
 	 
@@ -10578,7 +10573,7 @@ pdict:
 qdict:
 		makeemptywords 256
 
-		makeword "REPRINT", reprintz , reprintc, 0 
+	 	makeword "RMARGIN", dvaluez, 0,  rmargin	
 		makeword "REPEAT", drepeatz , drepeatc, 0 
 	 	makeword "RDEPTH", ddepthrz , 0, 0 
 		makeword "ROT", drotz , drotc, 0 
@@ -10629,7 +10624,7 @@ sdict:
 		makeword "TPS",  dconstz, dconstz, 24000000
 		makeword "TRON", dtronz, 0, 0
 		makeword "TROFF", dtroffz, 0, 0
-		makeword "TYPEZ", ztypez, ztypec, 0	
+		;makeword "TYPEZ", ztypez, ztypec, 0	
 		makeword "THEN", 0 , dendifc, 0 
 		makeword "THERE", dvaraddz, 0,  allot_ptr	
  

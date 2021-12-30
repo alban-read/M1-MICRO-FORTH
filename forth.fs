@@ -38,10 +38,10 @@ PRIVATE start_ticks
 1 SHIFTSR 2/ 2 SHIFTSR 4/ 3 SHIFTSR 8/
 
 
+
 // announce ourselves
-PAGE 
+// PAGE 
 .' Small FORTH for Apple Silicon '
 .VERSION WORDS CR
 .' forth.fs  loaded in '  UPTIME 
- 
  
