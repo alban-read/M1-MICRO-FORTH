@@ -250,8 +250,8 @@
 
 .align 8
 ;; VERSION OF THE APP
-ver:	.double 0.621
-tver:	.ascii  "Version %2.2f\n"
+ver:	.double 0.734
+tver:	.ascii  "M1 MICRO FORTH %2.2f TOKEN THREADED 2021\n"
 	.zero	4
 
 .text
@@ -6585,9 +6585,11 @@ ddropc: ;
 
 
 ztypez:
+
 	LDR		X0, [X16, #-8] 
 	SUB 	X16, X16, #8
 	CBZ		X0, nothing_to_say
+
 	ADRP	X8, below_string_space@PAGE		
 	ADD		X8, X8, below_string_space@PAGEOFF
 	CMP 	X0, X8
@@ -6595,12 +6597,13 @@ ztypez:
 
 
 	B		sayit
+
 nothing_to_say:
 	RET
 
 
 ztypec:
-
+	RET
 
 ddupz: ;  
 	LDR		X0, [X16, #-8] 
@@ -10369,7 +10372,7 @@ zword: .zero 64
 .align 8
 
 startup_file:	
-	.asciz "forth.fs"
+	.asciz "forth.forth"
 
 
 mode_read:	
@@ -10527,7 +10530,7 @@ hashdict:
 		makeword "ADDS", creatadder, dcreat_invalid, 0	
 		makeword "APPEND$", dvaraddz, 0,  append_buffer
 		makeword "APPEND^", dvaluez, 0,  append_ptr
-		makeword "ALLWORDS", alldotwords , 0, 0 
+		;makeword "ALLWORDS", alldotwords , 0, 0 
 		makeword "ALLOT>", allotoz , 0, 0 
 		makeword "ALLOT", allotlastz , 0, 0 
 		makeword "ALLOTMENT", dCarrayvalz, 0,  allot_space, 0, 256*1024
@@ -10625,6 +10628,7 @@ edict:
 		makeword "FLATTRACE", dflattrace, 0, 0
 		makeword "FALSE", dfalsez, 0,  0
 		makeword "FORGET", clean_last_word , 0, 0 
+		makeword "FINAL^", dvaraddz, 0,  startdict
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
@@ -10815,7 +10819,7 @@ vdict:
 		makeword "WARRAY", dWcreatarray , dcreat_invalid, 0 
 		makeword "WVALUES", dWcreatvalues , dcreat_invalid, 0 
 		makeword "WLOCALS", dlocalsWvalz, 0,  0, 0, 15
-		makeword "WORDS", dotwords , 0, 0 
+		;makeword "WORDS", dotwords , 0, 0 
 		makeword "WHILE", 0 , dwhilec, 0 
 		makeword "W!", dwstorz , 0, 0 
 		makeword "W@", dwatz , 0, 0 
@@ -10844,7 +10848,7 @@ zdict:
 		makeemptywords 256
 
 		makeword "${", dstrappendbegin , 0, 0 
-		makeword "$.", ztypez, ztypec, 0	
+		makeword "$.", ztypez, 0, 0	
 		makeword "}$", dstrappendend , 0, 0 
 		makeword "$}", dstrappendend , 0, 0 
  		makeword "$=", dstrequalz, 0,  0

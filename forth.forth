@@ -33,15 +33,49 @@ PRIVATE start_ticks
 1 ADDS 1+ 1 SUBS 1-
 2 ADDS 2+ 1 SUBS 2-
 
-// Add the very common fast shifts 
-1 SHIFTSL 2* 2 SHIFTSL 4* 3 SHIFTSL 8*
-1 SHIFTSR 2/ 2 SHIFTSR 4/ 3 SHIFTSR 8/
+
+
+// ----------------------------------------------
+// display and count public words
+// respect the right margin
+
+: reset [ FLAT reset ]
+	RMARGIN 1 TO LOCALS ;
+  
+: -margin ( n -- ) [ FLAT -margin ]
+	1 LOCALS SWAP 1+ - 1 TO LOCALS ;
+
+: reset? ( n -- ) [ FLAT reset? ]
+	1 LOCALS 0< ;
+ 
+: _words
+	reset 
+     DO 
+		I >NAME C@ DUP 0> SWAP 255 <> AND IF
+		 	I >NAME $. SPACE a++
+			I >NAME $len -margin
+			reset? IF CR reset THEN   
+		 THEN 
+	64 +LOOP 
+	CR a . SPACE .' - Counted words. '
+	;
+
+: WORDS FINAL^ `` (  _words ;
+
+: ALLWORDS FINAL^ `` (END)  _words ;
+
+PRIVATE _words
+PRIVATE reset    
+PRIVATE -margin 
+PRIVATE reset? 
+
+// ----------------------------------------------
 
 
 
 // announce ourselves
-// PAGE 
-.' Small FORTH for Apple Silicon '
-.VERSION WORDS CR
+PAGE 
+.VERSION 
+CR WORDS CR
 .' forth.fs  loaded in '  UPTIME 
  

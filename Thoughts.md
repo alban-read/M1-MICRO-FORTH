@@ -246,9 +246,26 @@ Things that crash
 
 2030:
 
-
-
- 
-
-
+  : reset [ FLAT reset ]
+	RMARGIN 1 TO LOCALS ;
   
+  : -margin ( n -- ) [ FLAT -margin ]
+	1 LOCALS SWAP - 1 TO LOCALS ;
+
+ : reset? ( n -- ) [ FLAT reset? ]
+	1 LOCALS 0< ;
+
+ : first `` (END) ;
+	
+
+  : .countwords
+	reset 
+	LAST first DO 
+		I >NAME C@ DUP 0> SWAP 255 <> AND IF
+		 	I >NAME $. SPACE a++
+			I >NAME $len -margin
+			reset? IF CR reset THEN   
+		 THEN 
+	64 +LOOP 
+	CR a . SPACE .' - Counted words. '
+	;
