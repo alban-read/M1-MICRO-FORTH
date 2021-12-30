@@ -2,7 +2,7 @@
 TICKS VALUE start_ticks
 
 // Offsets from a words header
- 8 ADDS >RUN
+8 ADDS >RUN
 16 ADDS >ARG2  
 24 ADDS >COMP
 32 ADDS >DATA1  

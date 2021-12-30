@@ -34,7 +34,7 @@ TIMEIT t1
 
 // just for comparison, FFIB is a fast iterative assembler version.
 // not useful as a benchmark.
-: FFIB34 [ FLAT ] 34 FFIB DROP ;
+: FFIB34 [ FLAT FFIB34 ] 34 FFIB DROP ;
 : t2 10000 10000 * TIMESDO FFIB34 ;
 TIMEIT t2
 245  : ms to run ( 2458  ) ns 

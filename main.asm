@@ -5848,6 +5848,83 @@ dflat:
 
 
 
+; run with parents locals
+dflattrace:
+
+	save_registers
+
+	BL		advancespaces
+	BL		collectword
+
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0			; end of list?
+	B.eq	190f			; not found 
+	CMP		X21, #-1		; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	; is it high level
+	LDR		X0, [X28, #8]	; words code
+	ADRP	X8, runintz@PAGE	
+	ADD		X8, X8, runintz@PAGEOFF
+	CMP		X0, X8
+	B.eq	140f
+
+	ADRP	X8, fastrunintz@PAGE	
+	ADD		X8, X8, fastrunintz@PAGEOFF
+	STR		X8, [X28, #8]	; words code is now fast
+	CMP		X0, X8
+	B.eq	140f
+	
+	B 		180f
+
+140:
+
+	ADRP	X0, flattracerunintz@PAGE	
+	ADD		X0, X0, flattracerunintz@PAGEOFF
+	STR		X0, [X28, #8]	
+	B		200f
+
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+
+180:	; error out 
+
+
+	restore_registers
+	ADRP	X0, tcomer38@PAGE	
+	ADD		X0, X0, tcomer38@PAGEOFF
+	B		sayit_err
+
+
+190:	; error out 
+ 
+	restore_registers
+	ADRP	X0, tcomer37@PAGE	
+	ADD		X0, X0, tcomer37@PAGEOFF
+	B		sayit_err
+ 
+
+200:
+	restore_registers
+	RET
+
+
+
 
 ; fast not traceable, otherwise the same as runintz below.
 
@@ -5907,9 +5984,7 @@ fastrunintz:; interpret the list of tokens at X0
 
 
 ; flat - no local stacking
-
-
-flatrunintz:; interpret the list of tokens at X0
+flattracerunintz:; interpret the list of tokens at X0
 
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
@@ -5934,6 +6009,38 @@ flatrunintz:; interpret the list of tokens at X0
 	
 		do_trace
 
+	.endr
+
+	b		10b
+
+90:
+	LDP		X14, XZR, [SP], #16
+	LDP		LR, X15, [SP], #16	
+	RET
+
+flatrunintz:; interpret the list of tokens at X0
+
+	; SAVE IP 
+	STP		LR,  X15, [SP, #-16]!
+	STP		X14, XZR, [SP, #-16]! 
+	SUB		X15, X0, #2
+	MOV		X20, X15
+
+	; unrolling the loop here x16 makes this a lot faster, 
+10:	; next token
+	
+	.rept	32
+
+		LDRH	W1, [X15, #2]!
+		CBZ		W1, 90f
+		LSL 	W1, W1, #6
+		
+		ADD		X1, X1, X27
+		LDP		X0, X2, [X1]
+		CBZ		X2, 10b
+	
+		BLR		X2		; with X0 as data and X1 as address	
+	
 	.endr
 
 	b		10b
@@ -6469,6 +6576,10 @@ ddropz: ;
 	SUB		X16, X16, #8
 	RET
 
+ddrop2z: ;  
+	SUB		X16, X16, #16
+	RET
+
 ddropc: ;	
 	RET	
 
@@ -6496,6 +6607,13 @@ ddupz: ;
 	STR		X0, [X16], #8
 	RET
 	
+
+
+ddup2z: ;  
+	LDP		X0, X1, [X16, #-16] 
+	STP		X0, X1,  [X16], #16
+	RET
+
 
 dqdupc: ;	
 	RET	
@@ -10504,6 +10622,7 @@ edict:
 		makeword "FFIB", dtstfib, 0,  0
 		makeword "FASTER", duntracable, 0, 0
 		makeword "FLAT", dflat, 0, 0
+		makeword "FLATTRACE", dflattrace, 0, 0
 		makeword "FALSE", dfalsez, 0,  0
 		makeword "FORGET", clean_last_word , 0, 0 
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
@@ -10768,7 +10887,8 @@ dollardict:
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
 		makeword "``", 0, dtickc , 0
-
+		makeword "2DUP", ddup2z , 0, 0 
+		makeword "2DROP", ddrop2z , 0, 0 
 
 
 	

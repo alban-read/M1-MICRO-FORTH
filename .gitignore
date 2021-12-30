@@ -11,3 +11,6 @@ main2.asm
 .DS_Store
 main copy.asm
 main.asm2
+NEXT-WORD
+RUN
+IF
