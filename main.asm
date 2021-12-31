@@ -248,6 +248,8 @@
 
 .data
 
+data_base:
+
 .align 8
 ;; VERSION OF THE APP
 ver:	.double 0.734
@@ -1761,7 +1763,7 @@ scan_words:
 
 	CBZ		X6, faster_mode
 
-	ADRP	X1, runintz@PAGE	; high level word.	
+	ADRP	X1, runintz@PAGE	
 	ADD		X1, X1, runintz@PAGEOFF
 	STR		X1, [X28, #8]
 	B		set_word_runtime
@@ -2262,6 +2264,9 @@ dratz:
 	LDR		X0, [X14, #-8]
 	STR		X0, [X16], #8
 	RET
+
+
+
 
 
 fetchspz: ; fetch stack pointer to stack
@@ -4865,6 +4870,10 @@ compile_dCarrayaddz_fill:
 
 	ADRP	X12, allot_ptr@PAGE	
 	ADD		X12, X12, allot_ptr@PAGEOFF
+
+	ADRP	X13, allot_last@PAGE	
+	ADD		X13, X13, allot_last@PAGEOFF
+
 	LDR		X1, [X12] ; pointer to memory 
 	LSL		X0, X0, X3	; x n
 	ADD		X0, X1, X0 
@@ -4872,7 +4881,13 @@ compile_dCarrayaddz_fill:
 	ADD		X0, X0, #7
 	AND		X0, X0, #-8
 	STR		X0, [X12]	; bump pointer
-	STR		X0, [X28]	; word points to alloted data
+
+	LDR		X0, [X13]
+	STR		X0, [X28]	; word points to last allotted
+
+	; update last for next allotment
+	LDR		X0, [X12]
+	STR		X0, [X13]
 
 	ADRP	X12, allot_limit@PAGE	
 	ADD		X12, X12, allot_limit@PAGEOFF
@@ -5760,7 +5775,8 @@ dlimited:
 
 
 170:	; next word in dictionary
-	SUB		X28, X28, #64
+	SUB		X28, X28, #64 
+
 	B		120b
 
 190:	; error out 
@@ -6882,6 +6898,20 @@ datc: ;  "@"
 	RET		
 
 	
+dalign8:
+	LDR		X0, [X16, #-8] 
+	ADD		X0, X0, #7
+	AND		X0, X0, #-8
+	STR		X0, [X16, #-8]
+	RET
+
+dalign16:
+	LDR		X0, [X16, #-8] 
+	ADD		X0, X0, #15
+	AND		X0, X0, #-16
+	STR		X0, [X16, #-8]
+	RET
+
 atz: ;  ( address -- n ) fetch var.
 	LDR		X0, [X16, #-8] 
 	CBZ		X0, itsnull
@@ -6949,8 +6979,8 @@ catz: ;  ( address -- n ) fetch var.
 	LDR		X0, [X16, #-8] 
 	CBZ		X0, itsnull
  
-	ADRP	X12, below_string_space@PAGE		
-	ADD		X12, X12, below_string_space@PAGEOFF
+	ADRP	X12, data_base@PAGE		
+	ADD		X12, X12, data_base@PAGEOFF
 	CMP 	X0, X12
 	B.lt	itsnull
 
@@ -9609,110 +9639,27 @@ ddelc:	; del (127)
 ; 0 VARIABLE test  200 ALLOT> test
 ; 
 allotoz: 
-
-10:		; ALLOT the memory allocation
-
-	LDR		X0, [X16, #-8]		; CELLS
-	SUB		X16, X16, #8
-	ADRP	X12, allot_ptr@PAGE	
-	ADD		X12, X12, allot_ptr@PAGEOFF
-	LDR		X1, [X12] ; pointer to memory 
-	ADD		X0, X1, #16 
-	ADD		X0, X0, #7
-	AND		X0, X0, #-8
-	STR		X0, [X12]	; bump pointer
-	MOV		X3, X0		; save to update variable pointer
-	ADRP	X12, allot_limit@PAGE	
-	ADD		X12, X12, allot_limit@PAGEOFF
-	CMP		X0, X12
-	B.gt	allot_memory_full
-
-
-100:	
-	save_registers
-	
-	BL		advancespaces
-	BL		collectword
- 
-	BL		empty_wordQ
-	B.eq	190f
-
-	BL		start_point
-
-120:
-	LDR		X21, [X28, #48] ; name field
-
-	CMP		X21, #0		; end of list?
-	B.eq	190f			; not found 
-	CMP		X21, #-1		; undefined entry in list?
-	b.eq	170f
-
-	; check word
-	BL		get_word
-	LDR		X21, [X28, #48] ; name field
-	CMP		X21, X22		; is this our word?
-	B.ne	170f
-
-
-	; found word, update memory address for word,
-
-	MOV		X0, X28  
-	STR		X3, [X28] ; variable now has ALLOT address
-
-	restore_registers
-
-	B		stackit
-
-170:	; next word in dictionary
-	SUB		X28, X28, #64
-	B		120b
-
-190:	; error out 
- 
-	restore_registers
-
-	MOV 	X0, #-1
 	RET
+ 
 
 
 allot_memory_full: ; display err
+
+
+	; undo allot
+	ADRP	X8, allot_last@PAGE	
+	ADD		X8, X8, allot_last@PAGEOFF
+	LDR		X1, [X8]
+	ADRP	X8, allot_ptr@PAGE	
+	ADD		X8, X8, allot_ptr@PAGEOFF
+	STR		X1, [X8]
 
 	ADRP	X0, tcomer31@PAGE	
 	ADD		X0, X0, tcomer31@PAGEOFF
 	B		sayit
 	
-	
-; e.g. CREATE fred 200 ALLOT
-allotlastz: 
-
-10:		; ALLOT the memory allocation
-
-	LDR		X0, [X16, #-8]		; CELLS
-	SUB		X16, X16, #8
-
-	ADRP	X12, allot_ptr@PAGE	
-	ADD		X12, X12, allot_ptr@PAGEOFF
-	LDR		X1, [X12] ; pointer to memory
-
-	ADD		X0, X0, #7
-	AND		X0, X0, #-8
-	ADD		X0, X1, #16
-	STR		X0, [X12]	; bump pointer
-	MOV		X3, X0		; save to update variable pointer
-
-	ADRP	X12, allot_limit@PAGE	
-	ADD		X12, X12, allot_limit@PAGEOFF
-	CMP		X0, X12
-	B.gt	allot_memory_full
-
-	ADRP	X1, last_word@PAGE		
-	ADD		X1, X1, last_word@PAGEOFF
-	LDR		X1, [X1]
-	STR		X3, [X1] ; word now has ALLOT address
+	   
  
-	RET
-
-
 // creation words are invalid in a compiled word
 dcreat_invalid:
 
@@ -9720,6 +9667,32 @@ dcreat_invalid:
 	ADD		X0, X0, create_error@PAGEOFF
 	B 		sayit_err
  
+
+
+dallotablez: ; Can we allot to this word type
+
+	LDR		X2, [X16, #-8]
+	LDR     X2, [X2,#8 ]
+
+	ADRP	X1, dvaluez@PAGE	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f
+
+	ADRP	X1, dvaraddz@PAGE	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f
+
+
+	MOV     X2, #0
+	STR		X2, [X16, #-8]
+	RET
+
+150:
+	MOV 	X2, #-1
+	STR		X2, [X16, #-8]
+	RET
 
 
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -10002,6 +9975,14 @@ tcomer40: .ascii "\nError TO expected a VALUE word to follow."
 	.zero 16
 
 
+   .align	8
+tcomer41: .ascii "\nError n ALLOT> word, expected a variable or value word."
+	.zero 16
+
+   .align	8
+tcomer42: .ascii "\nError n ALLOT, expected the last word to be a variable or value word."
+	.zero 16
+
 .align	8
 tforget: .ascii "\nForgeting last_word word: "
 	.zero 16
@@ -10194,6 +10175,8 @@ lsp:
 .align 	8
 
 
+allot_last:		.quad	allot_space
+				.zero 	32
 allot_ptr:		.quad	allot_space
 				.zero 	32
 allot_space:	;  allotable bytes
@@ -10533,10 +10516,15 @@ hashdict:
 		makeword "ADDS", creatadder, dcreat_invalid, 0	
 		makeword "APPEND$", dvaraddz, 0,  append_buffer
 		makeword "APPEND^", dvaluez, 0,  append_ptr
-		;makeword "ALLWORDS", alldotwords , 0, 0 
-		makeword "ALLOT>", allotoz , 0, 0 
-		makeword "ALLOT", allotlastz , 0, 0 
+ 
+		makeword "ALIGN8", dalign8 , 0, 0 
+		makeword "ALIGN16", dalign16 , 0, 0 
+ 
+		makeword "ALLOT^", dvaluez , 0, allot_ptr
+		makeword "ALLOT.LAST^", dvaluez , 0, allot_last
+		makeword "ALLOT.LIMIT^", dvaluez , 0, allot_limit
 		makeword "ALLOTMENT", dCarrayvalz, 0,  allot_space, 0, 256*1024
+		makeword "ALLOT?", dallotablez , 0, 0
 		makeword "ARRAY", dcreatarray ,dcreat_invalid , 0 
 		makeword "ADDR" , daddrz, daddrc, 0
 		makeword "ACCEPT", dacceptz, 0,  0

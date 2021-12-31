@@ -71,7 +71,20 @@ PRIVATE reset
 PRIVATE -margin 
 PRIVATE reset? 
 
+
 // ----------------------------------------------
+// ALLOT space to variable or created word
+// e.g. CREATE test 100 ALLOT
+// applies to last word created.
+
+	: ALLOT ( n -- )
+	  LAST ALLOT? IF
+		ALLOT^ + 16 + ALIGN8 TO ALLOT^ 
+		ALLOT.LAST^ LAST !
+		ALLOT^ TO ALLOT.LAST^
+	  ELSE .' Not allotable ' 
+	  THEN 
+	;
 
 
 

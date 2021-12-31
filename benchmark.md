@@ -34,7 +34,7 @@ TIMEIT t1
 
 // just for comparison, FFIB is a fast iterative assembler version.
 // not useful as a benchmark.
-: FFIB34 [ FLAT FFIB34 ] 34 FFIB DROP ;
+: FFIB34 [ FLAT FFIB34] 34 FFIB DROP ;
 : t2 10000 10000 * TIMESDO FFIB34 ;
 TIMEIT t2
 245  : ms to run ( 2458  ) ns 
@@ -47,7 +47,7 @@ CREATE FLAGS 8190 ALLOT
 0 VARIABLE EFLAG
 FLAGS 8190 + EFLAG !
 
-2 ADDS 2+
+ 
 
 : PRIMES  ( -- n )  [ FLAT PRIMES ]
   FLAGS 8190 1 FILL  0 3  EFLAG @ FLAGS
