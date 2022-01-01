@@ -583,16 +583,32 @@ The interpreter accepts lines from the terminal, with buffering, the input is of
 The various printing words, `. $. f. .' hey'` etc print to STDOUT, and they buffer for terminal efficiency.
 
 
-KEY - reads a user key press from STDIN, waits for single key press, does not echo or buffer.
+KEY - reads a user key press from STDIN
 
-EMIT - writes the char to STDOUT, without delay, (it flushes STDOUT).
+EMIT - writes the char to STDOUT, without delay.
+
+
+KEY really needs NOECHO to be set
+After using KEY use RETERM to return the terminal to normal.
+
+KEY? returns true if a key is pending, it can be used in a LOOP like this.
 
 
 ```FORTH
-KEY DUP EMIT .'  = ' . 
+: .keys NOECHO 
+     BEGIN 
+	 	KEY? IF
+		  KEY DUP DUP EMIT CHAR = EMIT . 32 EMIT FLUSH 
+		  81 = IF RETERM EXIT THEN
+		THEN 
+		100 MS 
+	AGAIN
+ ;
+
+
 ```
 
-Display key pressed and its ASCII value.
+This will display key pressed and its multiple ASCII value(s).
 
 
 

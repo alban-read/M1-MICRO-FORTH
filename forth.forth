@@ -18,8 +18,9 @@ TICKS VALUE start_ticks
 
 // Display time spent in the program
 
-: UPTIME TICKS 
-    start_ticks - s>f TPMS s>f f/ f.  .'  ms.'  ;
+: UPTIME 
+	TICKS start_ticks - 
+	s>f TPMS s>f f/ f.  .'  ms.'  ;
 
 PRIVATE start_ticks
 
@@ -39,7 +40,6 @@ PRIVATE start_ticks
 
 // ----------------------------------------------
 // display and count public words
-// respect the right margin
 
 : reset [ FLAT reset ]
 	RMARGIN 1 TO LOCALS ;
@@ -72,25 +72,26 @@ PRIVATE -margin
 PRIVATE reset? 
 
 
-// ----------------------------------------------
-// ALLOT space to variable or created word
-// e.g. CREATE test 100 ALLOT
-// applies to last word created.
+// -------------------------------
+// ALLOT bytes to a variable
 
-	: ALLOT ( n -- )
-	  LAST ALLOT? IF
-		ALLOT^ + 16 + ALIGN8 TO ALLOT^ 
+: ALLOT ( n -- )
+	LAST ALLOT? IF
+		ALLOT^ + 8 + ALIGN8 TO ALLOT^ 
 		ALLOT.LAST^ LAST !
 		ALLOT^ TO ALLOT.LAST^
-	  ELSE .' Not allotable ' 
-	  THEN 
-	;
-
-
+	ELSE
+		CR LAST >NAME $. SPACE 
+		.' is not allotable '
+	THEN 
+;
 
 // announce ourselves
 PAGE 
+32 TEXT.COLR
 .VERSION 
+34 TEXT.COLR 
 CR WORDS CR
 .' forth.fs  loaded in '  UPTIME 
  
+33 TEXT.COLR 

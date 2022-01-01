@@ -29,6 +29,7 @@
 ;; X22 word (text)
 ;; X23 also used for text
 
+   
 
 .macro reset_data_stack
 	ADRP	X1, sp1@PAGE		
@@ -390,6 +391,32 @@ dpagez:
 	ADD		X0, X0, clear_screen@PAGEOFF
 	B		sayit
 
+datxyz:
+	ADRP	X0, screen_at@PAGE	
+	ADD		X0, X0, screen_at@PAGEOFF
+	save_registers
+ 	LDP 	X1, X2, [X16,#-16]
+	STP		X1, X2, [SP, #-16]!
+	BL		_printf		
+	ADD		SP, SP, #16 
+	restore_registers  
+	SUB 	X16, X16, #16
+	RET
+
+
+datcolr:
+	ADRP	X0, screen_textcolour@PAGE	
+	ADD		X0, X0, screen_textcolour@PAGEOFF
+	save_registers
+	MOV     X2, #0
+	MOV     X1, #33
+ 	LDR 	X1, [X16, #-8]
+	STP		X1, XZR, [SP, #-16]!
+	BL		_printf		
+	ADD		SP, SP, #16 
+	restore_registers  
+	SUB 	X16, X16, #8
+	RET
 
 
 ; intern a copy of a string.
@@ -764,17 +791,50 @@ emitchz:	; output X0 as char
 emitchc:	; output X0 as char
 	RET
 
-; KEY for UNIX terminal
-; set the TERMIO and save it back.
-dkeyz:
 
+dmstr:
+	ADRP	X0, monster@PAGE	
+	ADD		X0, X0, monster@PAGEOFF
+	ADRP	X8, ___stdoutp@GOTPAGE
+	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+	LDR		X1, [X8]
 	save_registers
-	; save terminal state
-	MOV		X0, #0
-	ADRP	X1, saved_termios@PAGE	
-	ADD		X1, X1, saved_termios@PAGEOFF
-	BL		_tcgetattr ; saved TERMIOS
- 
+	BL		_fputs
+	restore_registers
+	RET
+
+dflushz:
+	save_registers
+	ADRP	X8, ___stdoutp@GOTPAGE
+	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+	LDR		X0, [X8] 
+	BL		_fflush
+	restore_registers
+	RET
+
+
+
+dlargefont:
+	ADRP	X0, largefont@PAGE	
+	ADD		X0, X0, largefont@PAGEOFF
+	ADRP	X8, ___stdoutp@GOTPAGE
+	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+	LDR		X1, [X8]
+	save_registers
+	BL		_fputs
+	; we need to flush
+	ADRP	X8, ___stdoutp@GOTPAGE
+	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+	LDR		X0, [X8]
+	BL		_fflush
+	restore_registers
+	RET
+
+
+
+noecho:
+	save_registers
+
 	ADRP	X1, saved_termios@PAGE	
 	ADD		X1, X1, saved_termios@PAGEOFF
 	ADRP	X0, current_termios@PAGE	
@@ -782,10 +842,6 @@ dkeyz:
 	; X0=DEST current. X1=SRC saved, 72 bytes (sizeof TERMIOS)
  	MOV    	X2, #72
 	BL		_memcpy
- 
-	; set terminal state for KEY to read the keyboard now.
-	; do not wait for return and do not echo
- 
 	ADRP	X0, current_termios@PAGE	
 	ADD		X0, X0, current_termios@PAGEOFF
 	LDR		X1, [X0, #24]
@@ -796,18 +852,31 @@ dkeyz:
 	MOV 	X0, #0
 	MOV     X1, #0
 	BL  	_tcsetattr
+	restore_registers
+	RET
 
-	ADRP	X1, getchar_buf@PAGE	
-	ADD		X1, X1, getchar_buf@PAGEOFF
-	MOV     X0, #0 ; into start of buffer
-	MOV     X2, #1 ; 1 key
-	BL		_read	
- 
+
+reterm:
+ 	save_registers
 	MOV		X0, #0
 	MOV		X1, #0
 	ADRP	X2, saved_termios@PAGE	
 	ADD		X2, X2, saved_termios@PAGEOFF
 	BL		_tcsetattr
+	restore_registers
+	RET
+
+
+; KEY for UNIX terminal
+; set the TERMIO and save it back.
+dkeyz:
+
+	save_registers
+	ADRP	X1, getchar_buf@PAGE	
+	ADD		X1, X1, getchar_buf@PAGEOFF
+	MOV     X0, #0 ; into start of buffer
+	MOV     X2, #1 ; 1 key
+	BL		_read	
 	restore_registers
 
 	; stack the key pressed.
@@ -815,6 +884,30 @@ dkeyz:
 	ADD		X1, X1, getchar_buf@PAGEOFF
 	LDR		X0, [X1]
 	B 		stackit
+
+
+
+
+
+; KEY? for UNIX terminal
+; I could not be *botherd* (polite term) with
+; translating FD_ISSET and assorted C MACROS. 
+; See KBHIT.C
+
+dkeyqz:
+
+	save_registers
+	BL 		_kb_hit
+  	ADRP	X1, bytes_waiting@PAGE	
+	ADD		X1, X1, bytes_waiting@PAGEOFF
+	STR		X0, [X1]
+	restore_registers
+  	ADRP	X1, bytes_waiting@PAGE	
+	ADD		X1, X1, bytes_waiting@PAGEOFF
+	LDR		X0, [X1]
+	B 		nequalzz
+
+
 
 reprintz:
 	
@@ -1058,17 +1151,14 @@ word2fnumber:	; converts ascii at word to float number
 	B			chkoverflow
 	RET
 
-dsleepz: ; sleep	
-	
-	LDR		X0, [X16, #-8]
-	SUB		X16, X16, #8	
-		
-12:
+dsleepz: ; sleep for ms		
 	save_registers
-	STP		X1, X0, [SP, #-16]!
-	BL		_sleep 
-	ADD		SP, SP, #16 
+	LDR		X0, [X16, #-8]
+	MOV 	X1, #1000
+	MUL 	X0, X0, X1
+	BL		_usleep 
 	restore_registers  
+	SUB		X16, X16, #8	
 	RET
 
 chkunderflow: ; check for stack underflow
@@ -1472,6 +1562,14 @@ main:
 
 init:	
  
+
+	; save terminal state
+	MOV		X0, #0
+	ADRP	X1, saved_termios@PAGE	
+	ADD		X1, X1, saved_termios@PAGEOFF
+	BL		_tcgetattr ; saved TERMIOS
+ 
+
 	ADRP	X27, dend@PAGE	;; <-- dictionary end
 	ADD		X27, X27, dend@PAGEOFF
 
@@ -6735,6 +6833,26 @@ lessthanz:
 dltc: ;  "<"  
 	RET		
 
+
+
+dnequalzz:	; 0<>
+
+	LDR		X0, [X16, #-8] 
+	SUB		X16, X16, #8
+nequalzz:
+
+	CMP		X0, #0
+	B.eq	20f
+	MOV		X0, XZR  
+	B		10f
+10:
+	MVN		X0, XZR   
+20:
+	STR		X0, [X16], #8
+	RET
+
+
+
 dequalzz:	; 0=
 
 	LDR		X0, [X16, #-8] 
@@ -6768,6 +6886,7 @@ dgtzz:	; 0>
 
 	LDR		X0, [X16, #-8] 
 	SUB		X16, X16, #8
+egtzz:	
 	CMP		X0, #0
 	B.gt	10f
 	MOV		X0, XZR ; true
@@ -6799,6 +6918,8 @@ dnoteqz:	; <>
 
 	LDR		X0, [X16, #-8] 
 	LDR		X1, [X16, #-16]
+
+ 
 	CMP 	X0, X1		
 	B.eq	10f
 	MVN		X0, XZR ; true
@@ -10102,7 +10223,24 @@ not_appending_err:
 .align 8
 clear_screen:
 	.byte 27,'[','2','J',27,'[','H',0
+ 
+ .align 8
+ screen_at:
+	.asciz "\x1b[%d;%df"
 
+.align 8
+screen_textcolour:
+	.asciz "\x1b[%dm"
+
+.align 8
+monster:
+	.byte 0xF0, 0x9F, 0x91, 0xBE, 0
+
+largefont:
+.align 8
+	.byte 27
+	.ascii "]50;Monaco 36"
+	.byte 7, 0
 
 .align	8
 spaces:	.ascii "										"
@@ -10138,7 +10276,21 @@ current_c_ospeed:  	.quad 0
 
 .align 8
 getchar_buf:		.quad 0
-			
+.zero 64
+
+.align 8			
+bytes_waiting:		.quad 0
+
+
+read_fd:
+	.zero 128
+
+time_value:
+	.zero 128
+
+
+
+
 
 ; this is the tokens pool
 ; code for token compiled words is compiled into here
@@ -10534,6 +10686,8 @@ hashdict:
 		makeword "a" , dlocaz, 0, 0
 		makeword "a!" , dlocasz, 0, 0
 		makeword "a++" , dlocasppz, 0, 0
+		makeword "AT" , datxyz, 0, 0
+		
 
 
 	
@@ -10581,6 +10735,7 @@ cdict:
 		
 ddict:
 		makeemptywords 256 
+	
 		makeword "EXECUTE", dcallz, dcallc, 0
 		makeword "ELSE", 0 , delsec, 0 
 		makeword "ENDIF", 0 , dendifc, 0 
@@ -10624,6 +10779,7 @@ edict:
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
+		makeword "FLUSH", dflushz, 0, 0
 		makeword "f" , dlocfz, 0, 0
 		makeword "f!" , dlocfsz, 0, 0	
 	
@@ -10669,7 +10825,7 @@ idict:
 
 jdict:
 		makeemptywords 256
-	
+	 	makeword "KEY?", dkeyqz, 0,  0
 	 	makeword "KEY", dkeyz, 0,  0
 		makeword "K", dkloopz, dkloopc,  0
 	
@@ -10687,14 +10843,17 @@ kdict:
 
 		makeword "LAST", get_last_word, 0,  0
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
-	
+		makeword "LARGEFONT", dlargefont , 0, 0 
+
+
+
 ldict:
 		makeemptywords 256
 
 		;makeword "MAP", dmaparray, 0, 0	
 		makeword "MOD", dmodz, dmodc, 0	
 		makeword "MS", dsleepz , 0, 0 
-
+		makeword "MSTR", dmstr , 0, 0 
  
 
  
@@ -10702,9 +10861,9 @@ mdict:
 		makeemptywords 256
 
 	
-		makeword "NTH", dnthz, dnthc, 0	
-		makeword "NIP", dnipz, dnipc, 0	
-
+		makeword "NTH", dnthz, 0, 0	
+		makeword "NIP", dnipz, 0, 0	
+		makeword "NOECHO", noecho, 0, 0	
 	 
 
 ndict:	
@@ -10739,6 +10898,7 @@ qdict:
 		makeword "R@", dratz , 0, 0 
 		makeword "RP@", fetchrpz , 0, 0 
 		makeword "RESET", dresetz , 0, 0 
+		makeword "RETERM", reterm, 0, 0	
 	 
 
 rdict:
@@ -10769,7 +10929,7 @@ rdict:
 
 sdict:
 		makeemptywords 256
-
+		makeword "TEXT.COLR", datcolr, 0, 0
 		makeword "TOKENS", dHWarrayvalz, 0,  token_space, 0, 256*1024
 		makeword "TO", dtoz, dtoc, 0
 		makeword "TIMEIT", dtimeitz, 0, 0
