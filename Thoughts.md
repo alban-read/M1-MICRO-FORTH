@@ -269,3 +269,6 @@ Things that crash
 	64 +LOOP 
 	CR a . SPACE .' - Counted words. '
 	;
+
+
+: TEST 1000 1 DO KEY? 0> IF KEY EMIT ELSE CHAR . EMIT THEN 20 MS LOOP ;
