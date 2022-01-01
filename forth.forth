@@ -86,10 +86,24 @@ PRIVATE reset?
 	THEN 
 ;
 
+// -------------------------------
+// displays key codes until Q
+
+: .keys NOECHO 
+     BEGIN 
+	 	KEY? IF
+		  KEY DUP DUP EMIT CHAR = EMIT . 32 EMIT FLUSH 
+		  81 = IF RETERM EXIT THEN
+		THEN 
+		100 MS 
+	AGAIN
+ ;
+
+
 // announce ourselves
 PAGE 
 32 TEXT.COLR
-.VERSION 
+MSTR SPACE .VERSION 
 34 TEXT.COLR 
 CR WORDS CR
 .' forth.fs  loaded in '  UPTIME 

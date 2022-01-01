@@ -1547,6 +1547,16 @@ dresetz:
 	;  disable tracing, X6 = 0
 	MOV		X6, #0
 
+	; restore terminal
+	save_registers
+	MOV		X0, #0
+	MOV		X1, #0
+	ADRP	X2, saved_termios@PAGE	
+	ADD		X2, X2, saved_termios@PAGEOFF
+	BL		_tcsetattr
+	restore_registers
+
+
 10:
 	RET
 
