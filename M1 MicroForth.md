@@ -668,7 +668,7 @@ In theory a version of the inner interpreter can be written in FORTH, I expect t
 
 ### Performance
 
-This implementation is using a simple token interpreter that is written in assembly language.
+This implementation is using a simple token interpreter that is mostly written in assembly language.
 I have paid some attention to the performance of the inner loop, it is easy to test as you can try out different versions and time the results.
 
 The design is a token interpreter, I chose to use 16bit tokens to represent words, rather than 64 bit addresses, the addresses would probably be faster, but that would be a different implementation, as lots of words are tuned for the token memory layout.
@@ -676,9 +676,20 @@ The design is a token interpreter, I chose to use 16bit tokens to represent word
 It is a simple interpreter but FORTH is also a simple and lean language.
 
 The relationship appears much the same as ever, simple interpreters are 10 times slower,
-simple machine code is ten times faster, optimized machine code, 100 times faster.
+simple machine code is ten times faster, optimized machine code is 100 times faster.
 
 There are FORTH compilers that generate code that is closer in speed to machine code.
+
+
+### C integration
+
+The intention is to write this is Assembler.
+
+- The assembler code can call into C code and does so for a few functions.
+
+- This is necessary otherwise we would be restricted to system calls only which would be limiting even in the terminal.
+
+- You can add C functions to addons.c and call them from the assembler code.
 
 
 
@@ -1169,7 +1180,7 @@ Displays what the compiler did to compile the word into tokens.
 
 SELF^
 
-In a compiled word, points to words dictionary
+In a compiled word, points to the running words dictionary
 
 TOKENS
 

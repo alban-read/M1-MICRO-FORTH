@@ -64,7 +64,7 @@ Learn ARM64, have some fun, create useful things.
     - Simplified ACCEPT to read lines
     - ``` 0 STRING user_name  ACCEPT to user_name .' Hi ' user_name $. CR ```
 - The interpretor
-    - is completely implemented in ARM64 assembly language.
+    - is mostly implemented in ARM64 assembly language.
     - every word has a slot for run time and compile time actions.
     - compiles words to a token list using half-word (16 bit tokens)
     - literals are shared accross words and refer to literal pools.
