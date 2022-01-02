@@ -12,7 +12,9 @@ The implementation is specific to features of the ARM V8 64 bit processor, such 
 
 FORTH primitives are implemented as assembly language functions, the compiler converts high level FORTH words into list of tokens for the token interpreter(s) to execute.
 
-This is not a standard implementation, I am aiming to provide a *very small* set of practical FORTH like words that improve comfort, safety and convenience for the user of the language (me.) Throwing in 'everything and the kitchen sink in case it is useful' is very contrary to original FORTH principles.
+This is not a standard implementation, I am aiming to provide a *very small* set of practical FORTH like words that improve comfort, safety and convenience for the user of the language (me.) 
+
+Throwing in 'everything and the kitchen sink in case it is useful' is contrary to FORTH principles.
 
 I expect to extend the ASM file as I write my own Apps, I plan to test and script my Apps in FORTH.
 
@@ -26,7 +28,7 @@ It only runs when a high level word is executing, otherwise the interpreter and 
 
 Each high level word invokes an interpreter to run itself, multiple different versions of the interpreter exist, and they can be selected after the word has been compiled.
 
-I am using a certain ammount of brute force and ignorance in the current design of this program, which may not scale, but which works presently, in the spirit of getting it all started.  
+I am using a certain ammount of brute force and ignorance in the current design of this program, which may not scale, but which works presently, in the spirit of getting going.  
 
 
 ### Startup
@@ -682,6 +684,12 @@ There are FORTH compilers that generate code that is closer in speed to machine 
 
 ### Glossary of user words
 
+>NAME >DATA2 >DATA1 >COMP >ARG2 >RUN 
+
+Move to fields within a words dictionary entry.
+
+e.g. ` DUP >NAME $.  prints the name of DUP, which is DUP
+
 ADDS 
 
 7 ADDS 7+ 
@@ -897,6 +905,52 @@ A dangerouse but fast memory block filling word.
 A potential hazard.
 Copyrighted by ARM, who it seems feel free to Copyright a nice, useful but otherwise basic and entirely obvious algorithm, for some reason. Released as BSD licensed so at least we dont have to take them to court when we accidentally write the same entirely obvious code ourselves.
 
+
+Floating point
+
+f<> f= f>=0 f<0 f<= f>= f< f> f. f+ f- f* f/ fsqrt fneg fabs s>f f>s 
+
+FFIB 
+
+Machine code FIB.
+
+
+
+FORGET 
+
+Forgets the LAST word.
+
+
+FINAL^ 
+
+The final word in the dictionary
+
+
+FINDLIT 
+
+Find the literal 
+
+
+
+FILLVALUES 
+
+Fill a values
+
+
+FILLARRAY 
+
+Fill an array
+
+FILL 
+
+Fill a block of memory, hazardous.
+
+
+FLUSH 
+
+Flush output to the terminal
+
+
 HWARRAY
 
 This creates an array of Half Words, 16 bit values.
@@ -953,11 +1007,338 @@ INVERT
 
 Inverts the bits in the value on the top of the stack.
 
+IN
+
+The input file
+
+
+MOD
+
+Maths
+
+MS
+
+Delay for ms
+
+MSTR
+
+Print unicode monster.
+
+
+NTH 
+
+Convert address to token number.
+
+NIP 
+
+Stack operation
+
+
+NOECHO 
+
+Disable terminal echo
+
+OR 
+
+Logical operation
+
+
+OVER
+
+Stack operation
+
+PI 
+
+A floating point constant
+
+PRIVATE 
+
+PRIVATE word, hides that word
+
+
+
+PAGE 
+
+Clears the terminal screen
+
+
+PICK 
+
+A stack operation
+
+
+QUIET 
+
+Stop saying Ok all the time.
+
+
+RMARGIN 
+
+Terminal right margin
+
+
+REPEAT 
+
+Part of BEGIN f WHILE .. REPEAT loop
+
+
+
+RDEPTH 
+
+Depth of return stack
+
+
+ROT
+
+A stack operation
+
+
+R> 
+
+A return stack operation
+
+
+R@ 
+
+A return stack operation
+
+RP@ 
+
+A return stack operation
+
+RESET
+
+Reset and clear the parameter and return stacks and reset the terminal.
+
+
+RETERM
+
+Return terminal to standard settings.
+
+TEXT.COLR 
+
+Changes the text colour, using terminal escape codes, colours start at 30.
+
+
+STRING 
+
+Create a string, ' Hello ' STRING greeting
+
+STRINGS 
+
+
+Create a string array, 10 STRINGS messages
+
+
+SWAP 
+
+A stack operation
+
+SHIFTSL 
+
+Creates a shifting left word
+
+SHIFTSR 
+
+Creates a shifting right word
+
+SPACES 
+
+Displays spaces
+
+SPACE
+
+Displays a space
+
+SP@ 
+
+A stack operation
+
+
+SP 
+
+The stack pointer
+
+
+SEE 
+
+SEE word
+
+Displays what the compiler did to compile the word into tokens.
+
+
+SELF^
+
+In a compiled word, points to words dictionary
+
+TOKENS
+
+A values view over the half word token pool.
 
 
 
 
+TO 
+
+Sets a value, e.g. 10 TO thing.
 
 
+TIMEIT
+
+TIMEIT word, displays a words runtime.
+
+
+
+TRACE
+ 
+TRACE word
+
+Sets the words interpreter to the TRACEABLE one.
+
+ 
+TRUE 
+
+Not false, the same as -1 
+ 
+ 
+TRACING? 
+
+Is tracing on
+
+TICKS 
+
+Ticks from the system timer
+
+TIMESDO
+
+Dumb and fast repeater, for a single word. 
+
+10 TIMESDO word
+
+
+TPMS 
+
+Ticks per ms.
+
+
+TPS 
+
+Tickes per second
+
+
+TRON 
+
+Tracing on
+
+
+TROFF 
+
+Tracing off
+
+
+THEN 
+
+Ends the f .. IF ... ELSE ... THEN .. statment
+
+
+UPTIME 
+
+Time since the program started
+
+
+
+UNTIL 
+
+
+Ends the BEGIN ... f UNTIL loop
+
+
+VALUE 
+
+Create a VALUE, 10 VALUE ten
+
+
+create a VALUES array, 10 VALUES myValues 
+
+
+VARIABLE
+
+create a VARIABLE, 10 VARIABLE myThing
+
+
+WORDS 
+
+Lists the words
+
+WARRAY
+
+
+WVALUES 
+
+Create a VALUES array for word (32bit) length data
+
+WLOCALS 
+
+A word (32bit) values view over LOCALs storage.  
+
+WHILE 
+
+Part of BEGIN .. f WHILE .. REPEAT loop
+
+W! 
+
+32 bit word store
+
+W@
+
+32 bit word fetch
+
+
+$empty?
+
+Is the string empty
+
+ ${    $}
+   
+Begin / end building a string.
+
+$= 
+
+Are two strings the same
+
+$== 
+
+Are two strings content equal
+
+$compare 
+
+
+Is a string the same, less than or greater than another.
+
+$len 
+
+Find the length of a string
+
+$pos 
+
+Find the pos of char in string
+
+$slice 
+
+Take a slice from a string
+
+
+$'' 
+
+The empty string, the same as 0.
+
+
+$intern 
+
+Take BUFFER$ and intern it into string storage
+
+$$ 
+
+Access to string storage, not very useful, since it is sparse.
 
 

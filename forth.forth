@@ -90,10 +90,12 @@ PRIVATE reset?
 // displays key codes until Q
 
 : .keys NOECHO 
+	 CR .' Press keys to see the key codes.'
+	 CR .' press Q - to quit ' CR
      BEGIN 
 	 	KEY? IF
 		  KEY DUP DUP EMIT CHAR = EMIT . 32 EMIT FLUSH 
-		  81 = IF RETERM EXIT THEN
+		  DUP 81 = SWAP 113 = OR IF RETERM EXIT THEN
 		THEN 
 		100 MS 
 	AGAIN
@@ -108,4 +110,4 @@ MSTR SPACE .VERSION
 CR WORDS CR
 .' forth.fs  loaded in '  UPTIME 
  
-33 TEXT.COLR 
+30 TEXT.COLR 
