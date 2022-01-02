@@ -1,18 +1,3 @@
- 
-// accessors 
-: set-address [ FLAT set-address ]
-    0 TO LOCALS ;
-: address [ FLAT address ]
-    0 LOCALS ;
-
-: COMPILETIME
-    ` set-address 
-    address @ address >ARGUMENT2 !
-    address >RUNTIME @ address >COMPTIME !
-    0 address !
-    0 address >RUNTIME !
-    ;
- 
 
 
 // ---------------------------------------------------------------------

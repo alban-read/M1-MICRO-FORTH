@@ -10873,19 +10873,13 @@ kdict:
 		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
 		makeword "LEAVE", 0 , dleavec, 0 
 		makeword "LOOP", 0 , dloopc, 0 
-		;makeword "LDEPTH", loopdepth ,0 , 0 
 		makeword "LIMIT", dlimited , 0, 0 
-
 		makeword "LAST", get_last_word, 0,  0
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
-		makeword "LARGEFONT", dlargefont , 0, 0 
-
 
 
 ldict:
 		makeemptywords 256
-
-		;makeword "MAP", dmaparray, 0, 0	
 		makeword "MOD", dmodz, dmodc, 0	
 		makeword "MS", dsleepz , 0, 0 
 		makeword "MSTR", dmstr , 0, 0 
@@ -10956,7 +10950,6 @@ rdict:
 		makeword "SPACES", spacesz , spacesc, 0 
 		makeword "SPACE", emitchz , emitchc, 32
 	 	makeword "SP@", fetchspz , 0, 0 
-		makevarword "SP", dsp
 		makeword "SEE", dseez , 0, 0 
 		makeword "SELF^" , dlociz, 0, 0
 
