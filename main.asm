@@ -10957,7 +10957,7 @@ qdict:
 rdict:
 
 		makeemptywords 256
-		makeword "S'", dstrstksz , dstrstksc, 0 
+ 
 		makeword "SUBS", creatsubber, dcreat_invalid, 0	
 		makeword "STACK", dcreatstack , dcreat_invalid, 0 
 		makeword "STEPOUT", stepoutz , 0, 0 

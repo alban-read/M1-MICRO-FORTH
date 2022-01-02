@@ -18,7 +18,7 @@ TICKS VALUE start_ticks
 
 // Display time spent in the program
 
-: UPTIME 
+: .UPTIME 
 	TICKS start_ticks - 
 	s>f TPMS s>f f/ f.  .'  ms.'  ;
 
@@ -108,6 +108,6 @@ PAGE
 MSTR SPACE .VERSION 
 34 TEXT.COLR 
 CR WORDS CR
-.' forth.forth  loaded in '  UPTIME 
+.' forth.forth  loaded in '  .UPTIME 
  
 30 TEXT.COLR 
