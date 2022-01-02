@@ -1,13 +1,5 @@
-# riscish
-
-## experiment
-
-
-## Thoughts
-
-AARCH64 is suprisingly different to ARM32.
-
-
+# 👾 M1 MICRO FORTH 0.73 TOKEN THREADED 2021
+ 
 ### Inspiration
 
 Inspired by FORTH.
@@ -16,34 +8,24 @@ Inspired by FORTH.
 
 Learn ARM64, have some fun, create useful things.
 
-
-### approach
-
-create small machine code primitive words 
-
- .. allow them to be tested *interactively*
-
- .. allow new words to be composed, mainly by concatenation.
-
-
-
-### This is a non standard VARIANT of FORTH
+###  M1 MICRO FORTH is a small non standard VARIANT of FORTH
 
 
 #### Unsusal or odd features that deviate from Standard FORTH.
 
 - Strings are completely different:-
-    - string storage has its own pool, the string literal is ' a string '. 
+    - ASCII zero terminated in this version.
+    - string storage has its own pool, the string literal looks like  `' a string '`. 
     - string words often include $ e.g ```$.``` prints a string.
-    - strings are zero terminated not counted as it is 2021.
+    - strings are zero terminated.
     - There are words to make strings
     - ```' Hello World' STRING hello_world```
     - There are words to build strings (from substrings)
         - ```FORTH ${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender ```
-    - I have always detested the way FORTH handles strings, mainly because I always crash my programs when using them, so I am thinking hard about making them safe for use by humans.
+    - I detest the way standard FORTH handles strings, I always crash my programs when using them, so I am thinking hard about making them safe for use by humans.
 - The dictionary is simplified into a single array for the headers :-
-    - There are no vocabularies, few words are defined not thousands.
-    - The idea being to extend the ASM file for an app, and add words to the startup script to control/ test it, not to live in FORTH world.
+    - There are no vocabularies, few hundred words are defined not thousands.
+    - Headers are seperate from 'code' (tokens), literals, and data.
 - The token space for 16bit tokens (compiled words) is separate from data.
     - The token compiler creates tokens in token space and literals in literal pools.
     - There are long literals, for integers and floats.
@@ -62,6 +44,10 @@ create small machine code primitive words
         - ``` : test 100 0 TO LOCALS ; // plain locals access ```
         - ``` : cat-count ( -- n ) [ FLAT ] 6 LOCALS ; // use 6 for cat-count ```
         - ``` : set-cat-count ( n -- ) [ FLAT ] 6 TO LOCALS ; // set cat-count ```
+    - Predefined local accessor words a..h access the same storage
+- Introspection
+    - Running words can look up their own dictionary entry with SELF^  
+    - This allows words to look up their own name, data, and code.
 - LOOPS
     - There is a simpler faster definite loop `n TIMESDO word` also available in the interpreter and compiler.
 - DO LOOP
@@ -71,24 +57,36 @@ create small machine code primitive words
     - higher lower DOWNDO ... -LOOP
     - LEAVE is limited, because
         - The typical use case is garbage.  
-    - And it is difficult to compile.
+        - And (honestly) it is difficult to compile.
 - Indefinite loops
     - BEGIN f UNTIL
     - BEGIN .. f WHILE .. REPEAT
     - BEGIN .. LEAVE .. AGAIN 
 - I/O
-    - Unix terminal KEY, EMIT, unbuffered, flushed.
+    - Unix terminal KEY, EMIT, KEY?, NOECHO, RETERM (restore terminal)
     - Simplified ACCEPT to read lines
     - ``` 0 STRING user_name  ACCEPT to user_name .' Hi ' user_name $. CR ```
-- The compiler
-    - is implemented in assembly language.
+- The interpretor
+    - is completely implemented in ARM64 assembly language.
     - every word has a slot for run time and compile time actions.
     - compiles words to a token list using half-word (16 bit tokens)
     - literals are shared accross words and refer to literal pools.
     - often the compile time word compiles in a helper function named (nnnnn), see allwords.
-    - every high level word calls its own interpreter there are several versions.
+    - every high level word calls its own machine code interpreter there are several versions.
 - Introspection
     - There are words to SEE words, and to trace word execution.
-    - There are values that are views over the various pools.
+    - There are values that are views over the various storage pools.
     - It is possible to STEP through words.
+
+![Selfie](selfie.png)
+
+
+
+### Project rules
+
+This is open source, feel free to fork and improve.
+
+This project does not accept pull requests.
+
+
 
