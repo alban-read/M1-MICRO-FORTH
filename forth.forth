@@ -108,6 +108,6 @@ PAGE
 MSTR SPACE .VERSION 
 34 TEXT.COLR 
 CR WORDS CR
-.' forth.fs  loaded in '  UPTIME 
+.' forth.forth  loaded in '  UPTIME 
  
 30 TEXT.COLR 
