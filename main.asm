@@ -2211,9 +2211,8 @@ exit_compiler_unrecognized:
 	BL	sayrb
 	BL	saynotfound
 	BL	saycr
-	reset_data_stack
 	BL	clean_last_word
-	B	input ; back to immediate mode
+	BL	dresetz
 
 
 ; literal pool  is full.
@@ -2331,6 +2330,7 @@ not_compiling:
 	BL		sayword
 	BL		sayrb
 	BL		saynotfound
+	BL 		dresetz
 	B		advance_word
 
 
@@ -2769,6 +2769,10 @@ stckdoargsz:
 
 ; as above but includes skip forwards
 
+dinvalintz:
+	CBZ     X15, dinterp_invalid
+	RET
+
 ddoerz:
 	CBZ     X15, dinterp_invalid
 	STP		LR,  X12, [SP, #-16]!
@@ -3150,7 +3154,7 @@ duntilc: ; COMPILE in UNTIL
 
 		; : t3 BEGIN  1 + DUP 10 < WHILE DUP . CR REPEAT ;
 dwhilez: ; WHILE needs a foward branch to REPEAT
-	CBZ     X15, 170f
+	CBZ     X15, dinterp_invalid
 	do_trace
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
@@ -3229,7 +3233,7 @@ dwhilec: ; COMPILE (WHILE)
 ; BEGIN -- f WHILE -- REPEAT
 
 drepeatz: ; REPEAT
-	CBZ     X15, 170f
+	CBZ     X15, dinterp_invalid
 	do_trace
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
@@ -7154,6 +7158,12 @@ cstorz:  ; ( n address -- )
 	LDR		X0, [X16, #-8] 
 	LDR		X1, [X16, #-16]
 	CBZ		X0, itsnull2
+
+	ADRP	X12, data_base@PAGE		
+	ADD		X12, X12, data_base@PAGEOFF
+	CMP 	X0, X12
+	B.lt	itsnull
+
 	STRB	W1, [X0]
 	SUB		X16, X16, #16
 	RET
@@ -7412,11 +7422,13 @@ stackit: ; push x0 to stack.
 
 ; IP@
 dipatz:
+	CBZ     X15, dip_invalid
 	STR		X15, [X16], #8
 	RET
 
 ; IP!
 dipstrz:
+	CBZ     X15, dip_invalid
 	LDR		X0, [X16,#-8]
 	MOV 	X15, X0
 	SUB 	X16, X16, #8
@@ -7424,11 +7436,13 @@ dipstrz:
 
 ; IP2+
 dip2plusz:
+	CBZ     X15, dip_invalid
 	ADD		X15, X15, #2
 	RET
 
 ; IP+
 dipplusz:
+	CBZ     X15, dip_invalid
 	LDR		X0, [X16,#-8]
 	ADD		X15, X15, X0
 	SUB 	X16, X16, #8
@@ -7437,6 +7451,8 @@ dipplusz:
 ; HW@IP - get hw from HP; e.g. the TOKEN
 ; which will be itself in a high level word.
 dhatipz:
+
+	CBZ     X15, dip_invalid
 	LDRH    W0, [X15]
 	STR		X0, [X16], #8
 	RET
@@ -8038,7 +8054,7 @@ dtoz:
 	ADRP	X0, tcomer40@PAGE
 	ADD		X0, X0, tcomer40@PAGEOFF
 	B		sayit_err	 
-	
+ 
 
 	RET
 
@@ -9838,7 +9854,12 @@ dinterp_invalid:
 	ADD		X0, X0, inter_error@PAGEOFF
 	B 		sayit_err
  
+dip_invalid:
 
+	ADRP	X0, ip_error@PAGE		
+	ADD		X0, X0, ip_error@PAGEOFF
+	B 		sayit_err
+ 
 
 
 dallotablez: ; Can we allot to this word type
@@ -10239,7 +10260,7 @@ word_desc12: .ascii "\t\tPRIM COMP"
 
 
 .align	8
-word_desc13: .ascii "\nError: Null access."
+word_desc13: .ascii "\nError: invalid memory access attempt"
 	.zero 16
 
 
@@ -10267,8 +10288,13 @@ create_error: .ascii "\nError: use of CREATION words (VALUE, STRING etc) not all
 	.zero 16
 
 .align	8
-inter_error: .ascii "\nError: use of some words not allowed outside of compiled words."
+inter_error: .ascii "\nError: use of some words not allowed outside of definitions."
 	.zero 16
+
+.align	8
+ip_error: .ascii "\nError: IP (instruction pointer) invalid."
+	.zero 16
+
 
 
 not_appending_err:
@@ -10779,7 +10805,7 @@ bdict:
 cdict:
 		makeemptywords 256
 		makeword "DP", dvaraddz, 0,  here	
-		makeword "DO", 0 , doerc, 0 
+		makeword "DO", dinvalintz , doerc, 0 
 		makeword "DOWNDO", 0 , ddownerc, 0 
 		makeword "DUP", ddupz , 0, 0 
 		makeword "DROP", ddropz , 0, 0		
@@ -10895,8 +10921,8 @@ kdict:
 		makeqvword 108
 
 		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
-		makeword "LEAVE", 0 , dleavec, 0 
-		makeword "LOOP", 0 , dloopc, 0 
+		makeword "LEAVE",  dinvalintz, dleavec, 0 
+		makeword "LOOP", dinvalintz , dloopc, 0 
 		makeword "LIMIT", dlimited , 0, 0 
 		makeword "LAST", get_last_word, 0,  0
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
@@ -11082,8 +11108,8 @@ dollardict:
 
 		makeword "?DUP", dqdupz, dqdupc, 0
 		makeword ">R", dtorz , dtorc, 0 
-		makeword "+LOOP", 0 , dploopc, 0
-		makeword "-LOOP", 0 , dmloopc, 0
+		makeword "+LOOP", dinvalintz , dploopc, 0
+		makeword "-LOOP", dinvalintz , dmloopc, 0
 		makeword ".R", ddotrz, 0 , 0
 		makeword ".S", ddotsz, 0 , 0
 		makeword ".'", dstrdotz, dstrdotc , 0
