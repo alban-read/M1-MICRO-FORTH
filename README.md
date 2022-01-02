@@ -81,7 +81,7 @@ Learn ARM64, have some fun, create useful things.
 
 ### Details
 
-[M1 MicroForth.md](M1 MicroForth.md)
+[M1MicroForth.md](M1MicroForth.md)
 
 ### Project rules
 
