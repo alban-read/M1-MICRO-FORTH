@@ -260,7 +260,7 @@ data_base:
 .align 8
 ;; VERSION OF THE APP
 ver:	.double 0.734
-tver:	.ascii  "M1 MICRO FORTH %2.2f TOKEN THREADED 2021\n"
+tver:	.ascii  "M1 MICRO FORTH %2.2f TOKEN THREADED 2022\n"
 	.zero	4
 
 .text
@@ -2770,7 +2770,7 @@ stckdoargsz:
 ; as above but includes skip forwards
 
 ddoerz:
-
+	CBZ     X15, dinterp_invalid
 	STP		LR,  X12, [SP, #-16]!
 	MOV		X12, X15
 
@@ -2803,7 +2803,7 @@ ddoerz:
 
 
 ddowndoerz:
-
+	CBZ     X15, dinterp_invalid
 	STP		LR,  X12, [SP, #-16]!
 	MOV		X12, X15
 
@@ -2908,7 +2908,7 @@ do_loop_arguments:
 .endm
 
 dplooperz:
-
+	CBZ     X15, dinterp_invalid
 	loop_vars
 	LDR		X2, [X16, #-8]
 	SUB		X16, X16, #8	
@@ -2926,7 +2926,7 @@ dplooperz:
 ; -LOOP is non standard
 
 dmlooperz:
-
+	CBZ     X15, dinterp_invalid
 	LDP		X0, X1,  [X14, #-16]
 	LDP		X2, X12, [X14, #-32]	
 	CMP		X2, #22 ; DOWNDOER
@@ -2948,7 +2948,7 @@ dmlooperz:
 
 
 dlooperz: ; LOOP sense add or sub
-
+	CBZ     X15, dinterp_invalid
 	LDP		X0, X1,  [X14, #-16]
 	LDP		X2, X12, [X14, #-32]	
 	CMP		X2, #21 ; DOOER
@@ -3062,7 +3062,7 @@ dmloopc:
 ; AGAIN/REPEAT must fix up branch offsets.
 
 dbeginz: ; BEGIN runtime
-	CBZ 	X15, 190f
+	CBZ     X15, dinterp_invalid
 	MOV		X2,  #'B' ;  BEGIN 
 	STP		X2,  X15, [X14], #16
 
@@ -3081,7 +3081,7 @@ dbeginc: ; COMPILE BEGIN
 ; : t2 BEGIN 1+ DUP DUP . CR 10 >  UNTIL .' fini '  ;
 
 duntilz: ; UNTIL runtime
-	CBZ     X15, 170f
+	CBZ     X15, dinterp_invalid
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
 	CMP		X2, #'B' ;BEGIN
 	B.ne	190f ; UNTIL needs BEGIN
@@ -3282,7 +3282,7 @@ RET
 
 dagainz:	; AGAIN
 
-	CBZ		X15, 190f ; NOOP in interpreter
+	CBZ     X15, dinterp_invalid
 
 	do_trace
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
@@ -3349,7 +3349,7 @@ dagainc:	; COMPILE AGAIN
 ; : t3 BEGIN 1+ DUP 10 > IF EXIT THEN DUP . CR AGAIN .' fini ' ;
 
 dleavez:	; just LEAVE the enclosing loop
-	CBZ     X15, 170f
+	CBZ     X15, dinterp_invalid
 	STP		LR,  X5, [SP, #-16]!
 	do_trace
 
@@ -5368,6 +5368,7 @@ dcharc: ; char - convert Char to small lit while compiling.
 ; condition IF .. ELSE .. ENDIF 
 
 difz:
+	CBZ     X15, dinterp_invalid
 	RET
 
 
@@ -5389,6 +5390,7 @@ difc:
 
 
 dendifz:
+	CBZ     X15, dinterp_invalid
 	RET
 
 ; ENDIF	
@@ -5446,6 +5448,7 @@ dendifc:
 
 
 delsez:
+	CBZ     X15, dinterp_invalid
 	RET
 
 
@@ -6332,7 +6335,7 @@ dendz:	; EXIT interpreter - called by exit
 
 difexitz: ; IFEXIT
 
-	CBZ     X15, 190f
+	CBZ     X15, dinterp_invalid
 	LDR 	X0, [X16, #-8]
 	SUB 	X16, X16, #8
 	CBZ		X0, 170f
@@ -6347,7 +6350,7 @@ difexitz: ; IFEXIT
 
 difzexitz: ; IF0EXIT
 
-	CBZ     X15, 190f
+	CBZ     X15, dinterp_invalid	 
 	LDR 	X0, [X16, #-8]
 	SUB 	X16, X16, #8
 	CBNZ	X0, 170f
@@ -6363,7 +6366,7 @@ difzexitz: ; IF0EXIT
 
 
 dexitpz: ; EXITP (Exit and Exit parent)
-	CBZ     X15, 190f
+	CBZ     X15, dinterp_invalid
 	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80
@@ -6373,7 +6376,7 @@ dexitpz: ; EXITP (Exit and Exit parent)
 	RET
 
 dexitfpz: ; EXITFP (Exit and Exit parent, FLAT)
-	CBZ     X15, 190f
+	CBZ     X15, dinterp_invalid
 	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	LDP		X14, XZR, [SP], #16
@@ -6383,14 +6386,14 @@ dexitfpz: ; EXITFP (Exit and Exit parent, FLAT)
 
 
 dexitz: ; EXIT
-	CBZ     X15, 190f
+	CBZ     X15, dinterp_invalid
 	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80
 	RET
 
 dexitfz: ; EXITF
-	CBZ     X15, 190f
+	CBZ     X15, dinterp_invalid
 	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	RET
@@ -8407,8 +8410,8 @@ dkloopc: ; special K loop variable
 	RET
 
 dont_crash_in_interpreter:
-	RET
-
+	B dinterp_invalid
+ 
 ; stack display
 
 ddotrz:
@@ -9827,6 +9830,16 @@ dcreat_invalid:
 	B 		sayit_err
  
 
+ 
+// creation words are invalid in a compiled word
+dinterp_invalid:
+
+	ADRP	X0, inter_error@PAGE		
+	ADD		X0, X0, inter_error@PAGEOFF
+	B 		sayit_err
+ 
+
+
 
 dallotablez: ; Can we allot to this word type
 
@@ -10252,6 +10265,11 @@ word_desc17: .ascii "\t\t1 DIMENSION ARRAY OF BYTES"
 .align	8
 create_error: .ascii "\nError: use of CREATION words (VALUE, STRING etc) not allowed in compiled words."
 	.zero 16
+
+.align	8
+inter_error: .ascii "\nError: use of some words not allowed outside of compiled words."
+	.zero 16
+
 
 not_appending_err:
 .align	8
