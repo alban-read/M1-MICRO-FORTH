@@ -914,7 +914,7 @@ FILL
 
 A dangerouse but fast memory block filling word.
 A potential hazard.
-Copyrighted by ARM, who it seems feel free to Copyright a nice, useful but otherwise basic and entirely obvious algorithm, for some reason. Released as BSD licensed so at least we dont have to take them to court when we accidentally write the same entirely obvious code ourselves.
+Copyrighted by ARM, Released as BSD licensed so at least we dont go to court when we accidentally write the same code ourselves.
 
 
 Floating point
