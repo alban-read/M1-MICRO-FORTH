@@ -1,9 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; risc-ish experiment by Alban
+;; M1 MICRO FORTH by Alban
 ;; ARM64 code November - December 2021
-;; This is a small FORTH like interpreter for Apple Silicon
+;; This is a small non-standard FORTH like interpreter for Apple Silicon
 ;; implemented in assembly language
 ;; Copyright (c) Alban Read 2021 (excluding ARM copyright tagged functions)
+;; Open Source BSD License.
+;; 
 ;; reserved registers.
 ;; X18 reserved for OS
 ;; X29 frame ptr for OS/C
