@@ -62,7 +62,7 @@ Learn ARM64, have some fun, create useful things.
 - I/O
     - Unix terminal KEY, EMIT, KEY?, NOECHO, RETERM (restore terminal)
     - Simplified ACCEPT to read lines
-    - ``` 0 STRING user_name  ACCEPT to user_name .' Hi ' user_name $. CR ```
+    - ``` $'' STRING user_name  ACCEPT TO user_name .' Hi ' user_name $. CR ```
 - The interpretor
     - is mostly implemented in ARM64 assembly language.
     - every word has a slot for run time and compile time actions.
@@ -75,12 +75,13 @@ Learn ARM64, have some fun, create useful things.
     - There are values that are views over the various storage pools.
     - It is possible to STEP through words.
 
+### Selfie
 ![Selfie](selfie.png)
 
 
 ### Details
 
-See 
+[M1 MicroForth.md](M1 MicroForth.md)
 
 ### Project rules
 
