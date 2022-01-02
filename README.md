@@ -41,9 +41,6 @@ Learn ARM64, have some fun, create useful things.
     - The data is zero on entry to a word.
     - A FLAT word may share the LOCALS of its parent to provide accessor functions.
     - A FLAT word is useful for recursive words.
-        - ``` : test 100 0 TO LOCALS ; // plain locals access ```
-        - ``` : cat-count ( -- n ) [ FLAT ] 6 LOCALS ; // use 6 for cat-count ```
-        - ``` : set-cat-count ( n -- ) [ FLAT ] 6 TO LOCALS ; // set cat-count ```
     - Predefined local accessor words a..h access the same storage
 - Introspection
     - Running words can look up their own dictionary entry with SELF^  
@@ -81,6 +78,9 @@ Learn ARM64, have some fun, create useful things.
 ![Selfie](selfie.png)
 
 
+### Details
+
+See 
 
 ### Project rules
 
