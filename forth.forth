@@ -10,6 +10,11 @@ TICKS VALUE start_ticks
 48 ADDS >NAME
 
 
+-1 CONSTANT -1
+
+: SIGN 0 < IF -1 ELSE 1 THEN ;   
+: TUCK SWAP OVER ;
+
 : PRIVATE 0 ` >NAME C! ; 
 
 // avoid being annoyed by the Ok prompt
