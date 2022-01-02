@@ -2454,6 +2454,13 @@ dlocbsz:
 	STR		X0, [X26, #-16]
 	RET
 
+dlocbsppz:
+	LDR		X0, [X26, #-16]	
+	ADD		X0, X0, #1
+	STR		X0, [X26, #-16]
+	RET
+
+
 dloccz:	; LOCAL C
 	LDR		X0, [X26, #-24]	
 	STR		X0, [X16], #8
@@ -2464,6 +2471,14 @@ dloccsz:
 	STR		X0, [X26, #-24]
 	RET
 
+dloccsppz:
+	LDR		X0, [X26, #-24]	
+	ADD		X0, X0, #1
+	STR		X0, [X26, #-24]
+	RET
+
+
+
 dlocdz:	; LOCAL D
 	LDR		X0, [X26, #-32]	
 	STR		X0, [X16], #8
@@ -2473,6 +2488,13 @@ dlocdsz:
 	LDR		X0,	[X16, #-8]!
 	STR		X0, [X26, #-32]
 	RET
+
+dlocdsppz:
+	LDR		X0, [X26, #-32]	
+	ADD		X0, X0, #1
+	STR		X0, [X26, #-32]
+	RET
+
 
 dlocez:	; LOCAL E
 	LDR		X0, [X26, #-40]	
@@ -10710,6 +10732,7 @@ adict:
 		makeword "BREAK",  dbreakz, dbreakc, 0
 		makeword "b" , dlocbz, 0, 0
 		makeword "b!" , dlocbsz, 0, 0
+		makeword "b++" , dlocbsppz, 0, 0
 		
 bdict:
 		makeemptywords 256
@@ -10723,6 +10746,7 @@ bdict:
 		makeword "CR", 		saycr, 0, 0
 		makeword "c" , dloccz, 0, 0
 		makeword "c!" , dloccsz, 0, 0
+		makeword "c++" , dloccsppz, 0, 0
 		makeword "CODE^" , dlocjz, 0, 0
 	
 		
@@ -10739,6 +10763,7 @@ cdict:
 		;makeword "DECR", ddecrz, ddecrc,  0
 		makeword "d" , dlocdz, 0, 0
 		makeword "d!" , dlocdsz, 0, 0
+		makeword "d++" , dlocdsppz, 0, 0
 
 	
 
@@ -10952,10 +10977,8 @@ sdict:
 		makeword "TPS",  dconstz, dconstz, 24000000
 		makeword "TRON", dtronz, 0, 0
 		makeword "TROFF", dtroffz, 0, 0
-		;makeword "TYPEZ", ztypez, ztypec, 0	
 		makeword "THEN", 0 , dendifc, 0 
-		makeword "THERE", dvaraddz, 0,  allot_ptr	
- 
+	 
  
 
 tdict:
@@ -10970,7 +10993,6 @@ udict:
 
 		makeword "VALUE", dcreatevalz , dcreat_invalid, 0
 		makeword "VALUES", dcreatvalues , dcreat_invalid, 0 
-		makeword "VERSION", announce , 0, 0
 		makeword "VARIABLE", dcreatvz , 0, 0
 
 	 
@@ -10980,7 +11002,6 @@ vdict:
 		makeword "WARRAY", dWcreatarray , dcreat_invalid, 0 
 		makeword "WVALUES", dWcreatvalues , dcreat_invalid, 0 
 		makeword "WLOCALS", dlocalsWvalz, 0,  0, 0, 15
-		;makeword "WORDS", dotwords , 0, 0 
 		makeword "WHILE", 0 , dwhilec, 0 
 		makeword "W!", dwstorz , 0, 0 
 		makeword "W@", dwatz , 0, 0 
