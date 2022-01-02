@@ -1,6 +1,5 @@
 
-### Thoughts and ideas for a safer, saner, practical FORTH for Aarch64 desktops.
-
+### Thoughts and ideas 
 
 Using getline for terminal input is a bit weak.
 But do I want to be in a terminal anyway?

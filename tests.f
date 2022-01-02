@@ -7,7 +7,6 @@
 : TABLE  CR 11 1 DO  11 1 DO  I J *  .  SPACE LOOP CR LOOP ;
 
 
-
 : EGGSIZE
    DUP 18 < IF  .' reject '     ELSE
    DUP 21 < IF  .' small '      ELSE
@@ -22,14 +21,6 @@
 
 : QUADRATIC  ( a b c x -- n )   >R SWAP ROT R@ *  + R> *  + ;
 
-
-: RUNINT 
-  
-  0 FILLARRAY LOCALS 
-
-    
-
-;
 
 
 

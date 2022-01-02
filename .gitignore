@@ -2,17 +2,7 @@
 *.a
 *.dylib
 *.dSYM
-*.c
+test.*
 *.out
-main_1.asm
-a64
-test.s 
-main2.asm
-.DS_Store
-main copy.asm
-main.asm2
-NEXT-WORD
-RUN
-IF
-kbhit.s
+*.s
 .vscode/c_cpp_properties.json
