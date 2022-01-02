@@ -1,4 +1,4 @@
-### This is a non standard VARIANT of FORTH
+### M1 MICRO FORTH
 
 This FORTH is non standard.
 
