@@ -16,7 +16,7 @@ This is not a standard implementation, I am aiming to provide a *very small* set
 
 Throwing in 'everything and the kitchen sink in case it is useful' is contrary to FORTH principles.
 
-I expect to extend the ASM file as I write my own Apps, I plan to test and script my Apps in FORTH.
+I expect to extend the ASM file as I write my own Apps, I plan to test and script my Apps in FORTH and assembly language, with C to connect with the OS.
 
 Untyped - Storage has no type, words are aware of the size of storage cells but not what they contain.
 
@@ -33,11 +33,11 @@ I am using a certain ammount of brute force and ignorance in the current design 
 
 ### Startup
 
-The forth.fs file is loaded when the application starts.
+The forth.forth file is loaded when the application starts.
 
 This file should contain any high level words you want to add to the program.
 
-It is set up to clear the screen, and display the words, there are some words defined in the file, they are just examples you can remove if your own app will not use them.
+It is set up to clear the screen, and display the words.
 
 ### Values
 
@@ -597,8 +597,9 @@ KEY? returns true if a key is pending, it can be used in a LOOP like this.
 
 
 ```FORTH
-: .keys NOECHO 
-     BEGIN 
+: .keys 
+  NOECHO 
+  BEGIN 
 	 	KEY? IF
 		  KEY DUP DUP EMIT CHAR = EMIT . 32 EMIT FLUSH 
 		  81 = IF RETERM EXIT THEN
@@ -654,17 +655,15 @@ Hello :Alban
 
 #### Thoughts
 
-Having the interpreter and token compiler implemented in assembly language does provide some benefits, such as testing the token compiled code easilly, since the interpeter is not made out of the same token compiled code being tested.
+Having the interpreter and token compiler implemented in assembly language does provide some benefits, such as testing the token compiled code, since the interpeter is not made out of the same token compiled code being tested.
 
-The interpreter in assembler, also means it is not as exposed to high level FORTH as it would be if it was written in FORTH.
+The interpreter in assembler, also means it is not as open to high level FORTH as it would be if it was written in FORTH.
 
 High level FORTH does have a lot of access to the system still, various interrnal objects are also exposed as VALUES to FORTH.
 
-The implementation misses some of the selfwords-extending powers of standard FORTH.
-The various compile time words are frozen forever in the assembly language file.
+The implementation misses some of the self-extending awesome powers of standard FORTH.
+The various compile time words are frozen forever (until you edit them) in the assembly language file.
 
-
-In theory a version of the inner interpreter can be written in FORTH, I expect that would be far slower due to the high level loops, and the use of FORTH values instead of machine registers, very interesting to test.
 
 ### Performance
 
@@ -672,18 +671,19 @@ This implementation is using a simple token interpreter that is mostly written i
 I have paid some attention to the performance of the inner loop, it is easy to test as you can try out different versions and time the results.
 
 The design is a token interpreter, I chose to use 16bit tokens to represent words, rather than 64 bit addresses, the addresses would probably be faster, but that would be a different implementation, as lots of words are tuned for the token memory layout.
+64 bit addresses felt.. wastefull ..  
 
 It is a simple interpreter but FORTH is also a simple and lean language.
 
 The relationship appears much the same as ever, simple interpreters are 10 times slower,
-simple machine code is ten times faster, optimized machine code is 100 times faster.
+simple machine code is ten times faster, optimized machine code is 100 or many more times faster if you tap into the huge capabilities of the CPU and GPU..
 
 There are FORTH compilers that generate code that is closer in speed to machine code.
 
 
 ### C integration
 
-The intention is to write this is Assembler.
+The intention is to write this in Assembler.
 
 - The assembler code can call into C code and does so for a few functions.
 
@@ -693,7 +693,10 @@ The intention is to write this is Assembler.
 
 
 
-### Glossary of user words
+### Glossary of user words (under development)
+
+*List WORDS with WORDS, and look at the source code.*
+
 
 >NAME >DATA2 >DATA1 >COMP >ARG2 >RUN 
 
