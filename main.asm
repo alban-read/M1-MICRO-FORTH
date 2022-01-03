@@ -808,6 +808,9 @@ dflushz:
 	restore_registers
 	RET
 
+
+
+; Perhaps code 50 is Not Implemented?
 dlargefont:
 	ADRP	X0, largefont@PAGE	
 	ADD		X0, X0, largefont@PAGEOFF
@@ -823,6 +826,9 @@ dlargefont:
 	BL		_fflush
 	restore_registers
 	RET
+
+
+; No echo - needed when using KEY? and KEY
 
 noecho:
 	save_registers
@@ -847,6 +853,8 @@ noecho:
 	restore_registers
 	RET
 
+; restore terminal (after NOECHO)
+
 reterm:
  	save_registers
 	MOV		X0, #0
@@ -859,7 +867,7 @@ reterm:
 
 
 ; KEY for UNIX terminal
-; set the TERMIO and save it back.
+; set NOECHO first
 dkeyz:
 
 	save_registers
@@ -878,12 +886,11 @@ dkeyz:
 
 
 ; KEY? for UNIX terminal
-; I could not be *botherd* (polite term) with
-; translating FD_ISSET and assorted C MACROS. 
+; I could not be *bothered* (polite term) with
+; translating FD_ISSET and assorted C MACROS again.
 ; See KBHIT.C
 
 dkeyqz:
-
 	save_registers
 	BL 		_kb_hit
   	ADRP	X1, bytes_waiting@PAGE	
@@ -896,8 +903,9 @@ dkeyqz:
 	B 		nequalzz
 
 
+
+; like spaces for char n
 reprintz:
-	
 	LDP		X1, X0, [X16, #-16]
 	SUB		X16, X16, #16
 20:	
@@ -1246,6 +1254,7 @@ announce:
 
 
 	; exit the program
+	; BROKEN
 finish: 
 	MOV		X0, #0
 	LDR		LR, [SP], #16
@@ -1559,6 +1568,7 @@ main:
 
 init:	
  
+	BL 		randomize
 
 	; save terminal state
 	MOV		X0, #0
@@ -1636,7 +1646,7 @@ advance_word:
 	BL		empty_wordQ
 	B.eq	input ; get next line
 	
-	; look for BYE - which does quit.
+	; look for BYE - to exit app.
 	BL		get_word
 	ADRP	X0, dbye@PAGE		
 	ADD		X21, X0, dbye@PAGEOFF
@@ -1657,7 +1667,7 @@ advance_word:
 	ADD		SP, SP, #16 
 	restore_registers
 	MOV		X0, #0
-	BL		_exit
+	BL		_exit ; thats that.
 
 
 	; outer interpreter called QUIT in typical FORTH
@@ -1879,9 +1889,7 @@ set_word_runtime:
 	ADD		X8, X8, lasthere@PAGEOFF
 	STR		X15, [X8]
 
-
-	STR		X15, [X28]		; set start point
- 
+	STR		X15, [X28]		; set start point 
 	B		compile_words
 
 	
@@ -5601,16 +5609,10 @@ dcallz:	;  EXECUTE code field (from ' WORD on stack)
 
 
 dcallc:	; CALL code field (on stack)
+	RET
 
-; runintz is the inner interpreter of token 'compiled' words.
-; X15 IP is our instruction pointer.
-; there is a FASTER and a TRACEABLE version.
-; You can switch between.
 
-; A high level word is a list of tokens
-; tokens are expanded to word addresses
-; each word is then executed.
-
+; TRACE DISPLAY ON/OFF 
 
 dtronz:
 	MOV		X6, #-1
@@ -5631,7 +5633,7 @@ dtickerz:
 	B		stackit
 
 
-dtimeitz: ; time the next work
+dtimeitz: ; time the next words execution
 
 	save_registers
 
@@ -5713,6 +5715,10 @@ dtimeitz: ; time the next work
 
 190:	; error out 
 	MOV	X0, #-1
+
+
+
+
 
 200:
 	restore_registers
@@ -9856,6 +9862,35 @@ dallotablez: ; Can we allot to this word type
 	RET
 
 
+; 10 RND - 0..9 number
+; Thanks to Kjell Post for this LFSR.
+; https://github.com/kjepo/XOR-LFSR
+
+drandomz:  
+	LDR	   	X1, [X16, #-8] 
+	ADRP   	X8, random_seed@PAGE	
+	ADD	   	X8, X8, random_seed@PAGEOFF
+	LDR    	X0, [X8]
+	EOR    	X0, X0, X0, LSL #13  
+	EOR    	X0, X0, X0, LSR #7   
+	EOR    	X0, X0, X0, LSL #17  
+	STR		X0, [X8]
+ 	UDIV	X2, X0, X1
+	MSUB	X3, X2, X1, X0 
+	STR		X3, [X16, #-8]
+	RET
+
+; called from init to see the generator
+randomize: 
+	save_registers
+	ADRP   X0, random_seed@PAGE	
+	ADD	   X0, X0, random_seed@PAGEOFF
+	MOV    X1, #4
+	BL     _getentropy
+	restore_registers
+	RET
+ 
+
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 .data 
@@ -9875,6 +9910,8 @@ last_word:
 
 
 .data 
+
+
 
 .align 8
  
@@ -10441,6 +10478,15 @@ ivars:	.zero 256*16
 	.zero	512
 
 
+     .data
+
+random_seed:    
+	.quad 0;            	 
+
+
+dev_random:
+  .asciz "/dev/urandom"
+
 .align	16
 step_limit: 
 			.quad  5
@@ -10929,7 +10975,7 @@ qdict:
 		makeword "RP@", fetchrpz , 0, 0 
 		makeword "RESET", dresetz , 0, 0 
 		makeword "RETERM", reterm, 0, 0	
-	 
+	 	makeword "RND", drandomz, 0, 0	
 
 rdict:
 
