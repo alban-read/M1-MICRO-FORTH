@@ -2193,6 +2193,7 @@ exit_compiler_unrecognized:
 	BL	saynotfound
 	BL	saycr
 	BL	clean_last_word
+ 
 	BL	dresetz
 
 
@@ -2311,6 +2312,7 @@ not_compiling:
 	BL		sayword
 	BL		sayrb
 	BL		saynotfound
+ 
 	BL 		dresetz
 	B		advance_word
 
@@ -2359,10 +2361,6 @@ dratz:
 	LDR		X0, [X14, #-8]
 	STR		X0, [X16], #8
 	RET
-
-
-
-
 
 fetchspz: ; fetch stack pointer to stack
 	MOV     X0, X16
@@ -3032,9 +3030,6 @@ dmloopc:
 	STRH W0, [X15] ; replace code
 
 	RET
-
-
-
 
 ; The INDEFINITE LOOPS
 ; BEGIN stacks its address, AGAIN, UNTIL, REPEAT and LEAVE use that.

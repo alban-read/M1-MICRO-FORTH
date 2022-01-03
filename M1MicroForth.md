@@ -4,13 +4,13 @@ This FORTH is non standard.
 
 This FORTH is implemented mainly in AARCH64 assembly language (main.asm), and runs hosted under OSX on the Apple M1.
 
-A few C library functions are used, the program is linked against the C library, it is possible to call C functions (from assembler), which will be useful, in order to talk to the operating system.
+- A few C library functions are used, the program is linked against the C library, it is possible to call C functions (from assembler), which will be useful, in order to talk to the operating system.
 
-The compiler compiles words to tokens, which are then executed by a simpler interpreter.
+- The implementation is specific to features of the ARM V8 64 bit processor, such as wordsizes.
 
-The implementation is specific to features of the ARM V8 64 bit processor, such as wordsizes.
+- FORTH primitives are implemented as assembly language functions, the compiler converts high level FORTH words into list of tokens for the token interpreter(s) to execute.
 
-FORTH primitives are implemented as assembly language functions, the compiler converts high level FORTH words into list of tokens for the token interpreter(s) to execute.
+
 
 This is not a standard implementation, I am aiming to provide a *very small* set of practical FORTH like words that improve comfort, safety and convenience for the user of the language (me.) 
 
@@ -22,13 +22,18 @@ Untyped - Storage has no type, words are aware of the size of storage cells but 
 
 The syntax follows FORTH closely, including reverse polish notation, composition of new words *functions* by word concatenation, very similar control flow etc.
 
-The inner (token) interpreter is not running all of the time in this implementation.
+**Inner interpreter**
 
-It only runs when a high level word is executing, otherwise the interpreter and compiler are just running machine code, the interpeter and compiler are not written in FORTH.
+The compiler compiles words to tokens, which are then executed by a simpler interpreter.
 
-Each high level word invokes an interpreter to run itself, multiple different versions of the interpreter exist, and they can be selected after the word has been compiled.
+- is not running all of the time in this implementation.
 
-I am using a certain ammount of brute force and ignorance in the current design of this program, which may not scale, but which works presently, in the spirit of getting going.  
+- only runs when a high level word is executing, otherwise the interpreter and compiler are just running machine code, the interpeter and compiler are not written in FORTH.
+
+
+Each high level word invokes the interpreter to run itself, multiple different versions of the interpreter exist, and they can be selected after the word has been compiled.
+
+I am using a certain ammount of brute force and ignorance in the current design of this program, which may not scale, but which works for the moment, in the spirit of getting up and running.  
 
 
 ### Startup
@@ -37,7 +42,7 @@ The forth.forth file is loaded when the application starts.
 
 This file should contain any high level words you want to add to the program.
 
-It is set up to clear the screen, and display the words.
+It is presently set up to clear the screen, and display the words.
 
 ### Values
 
@@ -108,7 +113,7 @@ On entry to a word LOCALS are erased, all values will be read as zero.
 - LOCALS cease to exist and are reused when a word ends.
 
 
-Storge for WLOCALS
+Storage for WLOCALS
 
 - WLOCALS use the same memory as LOCALS providing word sized access (32bits) to 16 (0..15) Values.
 
@@ -133,7 +138,7 @@ After t1 runs type 14 WLOCALS . and it will be zero, the command line level has 
 There is no need to use LOCALS but if you write a word and think it would be handy to have somewhere else to briefly store a value that is not global or the stack, they serve that purpose.
 
 
-#### advanced LOCALS usage
+#### Advanced LOCALS usage
 
 You may have a recursive word that you do not want to eat into the LOCALS stack.
 
@@ -141,18 +146,18 @@ You may have a recursive word that you do not want to eat into the LOCALS stack.
 
 FLAT word.
 ```FORTH
-: FIB ( n -- n1 )  DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ; FLAT FIB
+: FIB ( n -- n1 ) [ FLAT FIB ] DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ;
 ```
-This makes FIB a very, very, tiny fraction faster, LOCALS are not slow.
+This makes FIB a very, very, tiny fraction faster, since the LOCALS are not slow.
 
 
 ##### LOCAL Accessor words.
 
-A FLAT word sees the locals of its parent word, that is the word that called it, or the command line.
+A FLAT word has no locals of its own so it sees the locals of its parent word, that is the word that called it, or the command line.
 
 - Using the standard local access can be cumbersome, the name LOCALS does not mean much.
 
-- FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give local variables some sensible names by creating accessor words.
+- FLAT words can be used to create words for accessing the parents locals, in the simplest case this just lets you give local variables some sensible names.
 
 
 ```FORTH
@@ -170,24 +175,35 @@ A FLAT word sees the locals of its parent word, that is the word that called it,
 
 set-speed and speed are working on the LOCALS shared with test.
 
-Obviously accessor words could do a lot more, like checking that the given speed is valid etc.
+Accessor words could do a lot more, like checking that the given speed is valid etc.
 
 Without FLAT, set-speed and speed would each read their own LOCALS a level above test and test would not work.
 
 
 #### Simple LOCALS access
 
-You can read LOCALS also using predefined accessors called a..h 
+You can read LOCALS also using some predefined accessors called a..h 
 And set them with n a..h! 
 e.g.
+
 ```FORTH
 10 a! a .
 ```
 Prints 10.
 
+There is a handy accessor for just counting
+
+```FORTH 
+a++
+```
+
+The (0 LOCALS) **a** is set to zero when the word starts, **a++** sets it to one.
+
+
+
 #### Self reference
 
-A word can refer to itself  
+A word can refer to it self.
 
 There are two special LOCAL variables that allow a word to see it is own address.
 
@@ -252,11 +268,12 @@ Is a VALUES view over the (64 bit) long literal space, where large integers, dou
 Strings are non standard.
 
 Strings are zero-terminated because that is the world we have lived in ever since UNIX was invented. To emphasize the *very major* differences, string literals here use single quotes.
- 
+
 
 A string is created with an initial text value like this.
 ```FORTH
-' This is my initial value ' STRING myString
+' This is my initial value ' 
+ STRING myString
 ```
 A string returns the address of its data.
 
@@ -267,7 +284,7 @@ Given the address $. will print the string.
 
 ```FORTH
 
-$'' STRING myEmptySting 
+$'' STRING myEmptyString 
 
 ```
 
@@ -324,11 +341,12 @@ Looks up the first 0th string in the storage and $. types it to the terminal.
 
 ### Little defining words
 
-As this is an interpeter it is almost always slower to use two words when one word will do.
+- As this is an interpeter it is almost always slower to use two words when one word will do.
 
-It is also faster if each word *does more*, the overhead of the interpreter is calling each word in the first place.
+- It is also faster if each word *does more*, the overhead of the interpreter is calling each word in the first place.
 
-The compiler also does not optimize, so it is often up to the programmer to choose to use a faster optimal word not up to the compiler to invent them on the fly.
+
+The compiler also *does not optimize*, so it is often up to the programmer to choose to use a faster optimal word not up to the compiler to invent them on the fly.
 
 A good example is that `1 + ` is slower than `1+` so if your word does `1 +` millions of times, this will have a performance impact.
 
@@ -377,7 +395,8 @@ At the end the combined text is stored and its address is returned, so it can be
 
 ```FORTH
 
-${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender 
+${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} 
+STRING appender 
 
 ```
 
@@ -396,17 +415,17 @@ Prints 'train'
 Slicing uses a slice buffer, and the string pool for storage.
 
 To avoid cluttering the string pool with never to be collected slices you can use the appender function.
- 
+
 To save the result from a slice send it somewhere, such as to a STRING e.g. 
 
 ```FORTH 
 $'' STRING vehicle
-
-' this is the age of the train' 23 5 $slice TO vehicle
+' this is the age of the train' 23 5 $slice 
+TO vehicle
 ```
 
 Slices can be appended to a string with $slice followed by a comma inside of an append list.
- 
+
 
 ```FORTH 
 
@@ -425,9 +444,7 @@ ${
     trains 23 5 $slice , ' " - yeah right.' , 
 $}
 
-
-
-
+$.
 ```
 
 Example of appending with $slice between ${ and $}.
@@ -513,7 +530,7 @@ e.g.
 
 #### LOOPS
 
-Most of the LOOPing words, only work inside a compiled word.
+Most of the LOOPing words, only work inside a compiled word definition between **:** and **;**
 
 ##### Non Standard Looping in the interpreter
 
@@ -532,7 +549,8 @@ Ok
 ```
 
 n TIMESDO  - executes the word that follows it, n times.
-It is simpler than other LOOPS and less powerful, it is also faster at doing the simple things it does.
+
+It is simpler than other LOOPS and less powerful, it is also faster at doing the simple thing it does.
 
 It also works in a compiled word e.g. 
 
@@ -549,9 +567,9 @@ It also works in a compiled word e.g.
 
 These loops work only inside of compiled words.
 
-DO LOOP loops between start and finish
+DO LOOP counts between Finish and Start 
 
-The loop can be nested and has an index value accessed by depth called I, J, K.
+A LOOP can be nested and has an index value *accessed by depth* called I, J, K.
 
 
 ```FORTH
@@ -563,40 +581,40 @@ The loop can be nested and has an index value accessed by depth called I, J, K.
 ```
 
 
+
 #### Loop Issues
 
-LEAVE is supported ONCE in a word inside loops.
-You can not have multiple LEAVES.
-Mainly because it is horrible to code.
-And Partly because multiple EXIT is garbage anyway.
-But mainly because it is horrible to code.
+- I, J, K work within a word, but NOT across words.
+- LEAVE is supported ONCE in a word inside loops.
+- You can not have multiple LEAVES.
+- Partly because multiple loop termination is a garbage idea anyway.
+  - But mainly because it is horrible to code.
 
 
-#### recursion
+#### Recursion
 
-Recusion is always an option as well.
-Just call yourself.
+Recusion is always an option for loops as well.
+Just call yourself in a word, the word knows its own name.
 
 
 
 ### Input and output.
 
-The IO is set for the UNIX terminal.
+The IO is presently set for the UNIX terminal.
 
 The interpreter accepts lines from the terminal, with buffering, the input is often STDIN, although the input can sometimes be a file, as it is at startup.
 
 The various printing words, `. $. f. .' hey'` etc print to STDOUT, and they buffer for terminal efficiency.
 
+- 
+  KEY - reads a user key press from STDIN
 
-KEY - reads a user key press from STDIN
+- EMIT - writes the char to STDOUT, without delay.
 
-EMIT - writes the char to STDOUT, without delay.
-
-
-KEY really needs NOECHO to be set
-After using KEY use RETERM to return the terminal to normal.
-
-KEY? returns true if a key is pending, it can be used in a LOOP like this.
+- KEY really needs NOECHO to be set
+  - After using NOECHO use RETERM to return the terminal to its normal state.
+- KEY? returns true if a key is pending, it can be used in a LOOP like this.
+- FLUSH - flushes output.
 
 
 ```FORTH
@@ -604,7 +622,8 @@ KEY? returns true if a key is pending, it can be used in a LOOP like this.
   NOECHO 
   BEGIN 
 	 	KEY? IF
-		  KEY DUP DUP EMIT CHAR = EMIT . 32 EMIT FLUSH 
+		  KEY DUP DUP EMIT CHAR = 
+		  EMIT . 32 EMIT FLUSH 
 		  81 = IF RETERM EXIT THEN
 		THEN 
 		100 MS 
@@ -614,11 +633,9 @@ KEY? returns true if a key is pending, it can be used in a LOOP like this.
 
 ```
 
-This will display key pressed and its multiple ASCII value(s).
+*This will display key pressed and its multiple ASCII value(s).*
 
-
-
-Terminals accept a variety of commands.
+Terminals accept a wide variety of commands.
 
 FORTH typically only implements `PAGE` to clear the screen and `AT-XY` to place the cursor.
 
@@ -643,7 +660,9 @@ Exciting interactions become possible
 
 ```FORTH
 $'' STRING yourName
-: ask-name? .' What is your name ? ' CR ACCEPT TO yourName CR .' Hello :' yourName $. ;
+: ask-name? .' What is your name ? ' 
+ CR ACCEPT TO yourName 
+ CR .' Hello :' yourName $. ;
 
 
 ask-name?
@@ -653,21 +672,21 @@ Alban
 Hello :Alban
 
 
- ```
+```
 
 
 #### Thoughts
 
-Having the interpreter and token compiler implemented in assembly language does provide some benefits, such as testing the token compiled code, since the interpeter is not made out of the same token compiled code being tested.
+- Having the interpreter and token compiler implemented in assembly language does provide some benefits, such as testing the token compiled code, since the interpeter is not made out of the same token compiled code being tested.
 
-The interpreter in assembler, also means it is not as open to high level FORTH as it would be if it was written in FORTH.
+- The interpreter in assembler, also means it is not as open to high level FORTH as it would be if it was written in FORTH.
 
-High level FORTH does have a lot of access to the system still, various interrnal objects are also exposed as VALUES to FORTH.
+- High level FORTH does have a lot of access to the system still, various interrnal objects are also exposed as VALUES to FORTH.
 
-The implementation misses some of the self-extending awesome powers of standard FORTH.
-The various compile time words are frozen forever (until you edit them) in the assembly language file.
+- The implementation misses some of the self-extending awesome powers of standard FORTH.
+  - The various compile time words are frozen forever (until you edit them) in the assembly language file.
+- Hiding the gubbins, gizards, and guts of the interpreter in the ASM file, offers the possibility of providing users with useful and safe words with which to write applications.
 
-Hiding the gubbins, gizards, and guts of the interpreter in the ASM file, offers the possibility of providing users with useful and safe words with which to write applications.
 
 
 ### Performance
@@ -681,20 +700,19 @@ I chose to use 16bit tokens to represent words, rather than 64 bit addresses, th
 It is a simple interpreter but FORTH is also a simple and lean language.
 
 The relationship appears much the same as ever, simple interpreters are 10 times slower,
-simple machine code is ten times faster, optimized machine code is 100 or many more times faster if you can tap into the huge and complex capabilities of the CPU and GPU..
+Simple machine code is ten or more times faster, optimized machine code is 100 or many more times faster if you can tap into the huge and complex capabilities of the CPU and GPU..
 
 There are FORTH compilers that generate code that is closer in speed to machine code.
 
 
 ### C integration
 
-The intention is to write this in Assembler.
+The intention is to write this as much as possible in Assembler.
 
 - The assembler code can call into C code and does so for a few functions.
-
 - This is necessary otherwise using only system calls would be limiting even in the terminal.
-
 - You can add C functions to addons.c and call them from your assembler code.
+- Some existing use of C will be replaced with assembler over time.
 
 
 
@@ -1209,17 +1227,17 @@ TIMEIT word, displays a words runtime.
 
 
 TRACE
- 
+
 TRACE word
 
 Sets the words interpreter to the TRACEABLE one.
 
- 
+
 TRUE 
 
 Not false, the same as -1 
- 
- 
+
+
 TRACING? 
 
 Is tracing on
@@ -1318,7 +1336,7 @@ $empty?
 Is the string empty
 
  ${    $}
-   
+
 Begin / end building a string.
 
 $= 
@@ -1359,5 +1377,4 @@ Take BUFFER$ and intern it into string storage
 $$ 
 
 Access to string storage, not very useful, since it is sparse.
-
 
