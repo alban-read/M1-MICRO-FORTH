@@ -6,3 +6,4 @@ test.*
 *.out
 *.s
 .vscode/c_cpp_properties.json
+main.asm

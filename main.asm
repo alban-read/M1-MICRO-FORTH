@@ -210,12 +210,9 @@
 	
 	MOV		X0, X15
 	BL		X0addrprln
-		
- 
 
 	LDRH	W0, [X15]
 	BL		X0halfpr
-
 
 	LDRH	W0, [X15]
 	LSL		W0, W0, #6		;  TOKEN*64 
@@ -241,7 +238,6 @@
  
  	MOV		X0, X15
 	BL		X0prip
-	 
 
 	BL		ddotsz
 	BL		ddotrz
@@ -278,7 +274,6 @@ beloud:
 	STR		X1, [X0]
 	RET
 
-
 from_startup:
 	save_registers
 	ADRP	X0, startup_file@PAGE		
@@ -290,9 +285,7 @@ from_startup:
 	ADD		X1, X1, input_file@PAGEOFF
 	STR		X0,	[X1]
 	restore_registers
-	
 	RET
-
 
 dfrom_startup:
 
@@ -300,7 +293,6 @@ dfrom_startup:
 	ADD		X0, X0, bequiet@PAGEOFF
 	MOV 	X1, #-1
 	STR		X1, [X0]
-
 	B	from_startup
 
 
@@ -662,8 +654,6 @@ resetline:
 
 advancespaces: ; byte ptr in x23, advance past spaces until zero
 
-	 
-
 10:	LDRB	W0, [X23] 
 	CMP		W0, #0
 	B.eq	90f	
@@ -818,8 +808,6 @@ dflushz:
 	restore_registers
 	RET
 
-
-
 dlargefont:
 	ADRP	X0, largefont@PAGE	
 	ADD		X0, X0, largefont@PAGEOFF
@@ -835,8 +823,6 @@ dlargefont:
 	BL		_fflush
 	restore_registers
 	RET
-
-
 
 noecho:
 	save_registers
@@ -860,7 +846,6 @@ noecho:
 	BL  	_tcsetattr
 	restore_registers
 	RET
-
 
 reterm:
  	save_registers
@@ -892,9 +877,6 @@ dkeyz:
 	B 		stackit
 
 
-
-
-
 ; KEY? for UNIX terminal
 ; I could not be *botherd* (polite term) with
 ; translating FD_ISSET and assorted C MACROS. 
@@ -912,7 +894,6 @@ dkeyqz:
 	ADD		X1, X1, bytes_waiting@PAGEOFF
 	LDR		X0, [X1]
 	B 		nequalzz
-
 
 
 reprintz:
@@ -1075,7 +1056,7 @@ X0hexprint:
 	MOV	X1, X0
 	B		12f
 
-hexprint: ; prints int on top of stack in hex	
+dhexprintz: ; prints int on top of stack in hex	
 	
 	LDR		X1, [X16, #-8]
 	SUB		X16, X16, #8	
@@ -6373,10 +6354,10 @@ dexitpz: ; EXITP (Exit and Exit parent)
 	CBZ     X15, dinterp_invalid
 	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80
+	SUB		X26, X26, #80 ; childs locals
 	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80
+	SUB		X26, X26, #80 ; parents locals
 	RET
 
 dexitfpz: ; EXITFP (Exit and Exit parent, FLAT)
@@ -6385,9 +6366,8 @@ dexitfpz: ; EXITFP (Exit and Exit parent, FLAT)
 	LDP		LR, X15, [SP], #16	
 	LDP		X14, XZR, [SP], #16
 	LDP		LR, X15, [SP], #16	
+	SUB		X26, X26, #80 ; parents locals only
 	RET
-
-
 
 dexitz: ; EXIT
 	CBZ     X15, dinterp_invalid
@@ -8513,7 +8493,6 @@ dstfromappendbuffer:
 	ADD		X13, X13, X0 
 710: 
 
-
 	; find a free slot or a match in the short strings
 
 140:
@@ -8602,9 +8581,6 @@ dstfromappendbuffer:
 	LDP		LR, XZR, [SP], #16	
 	
 	RET
-
-
-
 
 
 dstrappendbegin:
@@ -8981,7 +8957,7 @@ dstrcmp:
 	RET		
 
 
-	; relies on our no duplicate rule, a different string
+	; relies on our `no duplicate rule`, a different string
 	; also must be a different object.
 
 dstrequalz:
@@ -9187,8 +9163,6 @@ dstrdotz:
 		LDP		X0, X1, [X12], #16
 		STP		X0, X1, [X13], #16
 	.endr
-
-
 450:	
 
 	MOV 	X0, X5
@@ -9854,13 +9828,12 @@ dinterp_invalid:
 	ADD		X0, X0, inter_error@PAGEOFF
 	B 		sayit_err
  
+ // compile time words are not valid in interpreter
 dip_invalid:
-
 	ADRP	X0, ip_error@PAGE		
 	ADD		X0, X0, ip_error@PAGEOFF
 	B 		sayit_err
  
-
 
 dallotablez: ; Can we allot to this word type
 
@@ -9897,8 +9870,6 @@ dallotablez: ; Can we allot to this word type
 
 .align 8
 fc1:		.double 	1.0
-
-
 
 ; variables
 .align 8 
@@ -9969,7 +9940,7 @@ fdec:	.ascii "%.2f"
 
 
 .align	8
-thex:	.ascii "%8X"
+thex:	.ascii "%X"
 	.zero 16
 
 .align	8
@@ -10418,8 +10389,6 @@ allot_space:	;  allotable bytes
 allot_limit:	; allotments went too far
 				.zero 	8*1024		
 
-
-
 .data 
 
 ; this is the data stack
@@ -10730,14 +10699,8 @@ dend:
 		makeword "(DECR)", 				ddecrcz, 	0,  0	; 49
 
 
-
-
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
-
- 
- 
-
 
 		makeemptywords 256
 
@@ -10770,8 +10733,6 @@ hashdict:
 		makeword "a++" , dlocasppz, 0, 0
 		makeword "AT" , datxyz, 0, 0
 		
-
-
 	
 adict:
 
@@ -10800,8 +10761,6 @@ bdict:
 		makeword "CODE^" , dlocjz, 0, 0
 	
 		
- 
-
 cdict:
 		makeemptywords 256
 		makeword "DP", dvaraddz, 0,  here	
@@ -10856,7 +10815,7 @@ edict:
 		makeword "FFIB", dtstfib, 0,  0
 		makeword "FASTER", duntracable, 0, 0
 		makeword "FLAT", dflat, 0, 0
-		makeword "FLATTRACE", dflattrace, 0, 0
+		makeword "FLAT.TRACE", dflattrace, 0, 0
 		makeword "FALSE", dfalsez, 0,  0
 		makeword "FORGET", clean_last_word , 0, 0 
 		makeword "FINAL^", dvaraddz, 0,  startdict
@@ -10883,6 +10842,7 @@ gdict:
 		makeword "HW@IP", dhatipz, 0, 0
 		makeword "h" , dlochz, 0, 0
 		makeword "h!" , dlochsz, 0, 0	
+		makeword "HEX.", dhexprintz, 0, 0
  
 
 	 
@@ -10897,12 +10857,8 @@ hdict:
 		makeword "IN", dvaluez, 0,  input_file
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
-		makeword "IF_EXIT", difexitz, 	0,  0	
-		makeword "IF_Z_EXIT", difzexitz, 	0,  0	
 		makeword "INVERT", dinvertz, 0,  0
-		;makeword "INCR", dincrz, dincrc,  0
  
-
 idict:
 		makeemptywords 256
  
@@ -11007,7 +10963,7 @@ rdict:
 
 sdict:
 		makeemptywords 256
-		makeword "TEXT.COLR", datcolr, 0, 0
+		makeword "TFCOL", datcolr, 0, 0
 		makeword "TOKENS", dHWarrayvalz, 0,  token_space, 0, 256*1024
 		makeword "TO", dtoz, dtoc, 0
 		makeword "TIMEIT", dtimeitz, 0, 0
@@ -11211,7 +11167,7 @@ addressbuffer:
 	.zero 128*8
 
 
-			
+ 	
 
 
 

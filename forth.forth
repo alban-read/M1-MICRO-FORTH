@@ -109,10 +109,10 @@ PRIVATE reset?
 
 // announce ourselves
 PAGE 
-32 TEXT.COLR
+32 TFCOL
 MSTR SPACE .VERSION 
-34 TEXT.COLR 
+34 TFCOL
 CR WORDS CR
 .' forth.forth  loaded in '  .UPTIME 
  
-30 TEXT.COLR 
+33 TFCOL

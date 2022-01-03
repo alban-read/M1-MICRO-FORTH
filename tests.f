@@ -22,6 +22,18 @@
 : QUADRATIC  ( a b c x -- n )   >R SWAP ROT R@ *  + R> *  + ;
 
 
-
-
- 
+10 VALUE BASE
+: U.             
+   BASE /MOD      
+      ?DUP IF          
+      U.        
+   THEN
+   DUP 10 < IF
+      CHAR 0        
+   ELSE
+      10 -           
+      CHAR A
+   THEN
+   +
+   EMIT
+   ;

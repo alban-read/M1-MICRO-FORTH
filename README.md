@@ -1,4 +1,4 @@
-# 👾 M1 MICRO FORTH 0.73 TOKEN THREADED 2021
+# 👾 M1 MICRO FORTH 0.73 (TOKEN THREADED) 2022
  
 ### Inspiration
 
@@ -8,10 +8,15 @@ Inspired by FORTH.
 
 Learn ARM64, have some fun, create useful things.
 
-###  M1 MICRO FORTH is a small non standard VARIANT of FORTH
+Provide a small safe subset of user friendly FORTH (if possible.)
+
+###  M1 MICRO FORTH is a small, simple non standard VARIANT of FORTH
 
 
 #### Unsusal or odd features that deviate from Standard FORTH.
+
+
+Aims to provide a small safe set of user/application level words.
 
 - Strings are completely different:-
     - ASCII zero terminated in this version.
@@ -88,6 +93,13 @@ Learn ARM64, have some fun, create useful things.
 This is open source, feel free to fork and improve.
 
 This project does not accept pull requests.
+
+
+### Building
+
+For OSX first get XCODE and the command line tools.
+
+Then run make in a terminal.
 
 
 

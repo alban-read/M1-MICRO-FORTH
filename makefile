@@ -3,10 +3,10 @@ CFLAGS = -lc -e main
 LSTFLGS =
 DEBUGFLGS =
 
-all: a64
+all: mf
 
 %.o : %.s
 	as -march="armv8.2-a+fp16" $(DEBUGFLGS) $(LSTFLGS) $< -o $@
 
-a64: main.asm
-	clang $(CFLAGS) -g  -o a64 main.asm addons.c  
+mf: main.asm
+	clang $(CFLAGS) -g  -o mf main.asm addons.c  

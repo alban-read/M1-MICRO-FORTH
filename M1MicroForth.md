@@ -425,6 +425,9 @@ ${
     trains 23 5 $slice , ' " - yeah right.' , 
 $}
 
+
+
+
 ```
 
 Example of appending with $slice between ${ and $}.
@@ -664,19 +667,21 @@ High level FORTH does have a lot of access to the system still, various interrna
 The implementation misses some of the self-extending awesome powers of standard FORTH.
 The various compile time words are frozen forever (until you edit them) in the assembly language file.
 
+Hiding the gubbins, gizards, and guts of the interpreter in the ASM file, offers the possibility of providing users with useful and safe words with which to write applications.
+
 
 ### Performance
 
 This implementation is using a simple token interpreter that is mostly written in assembly language.
 I have paid some attention to the performance of the inner loop, it is easy to test as you can try out different versions and time the results.
 
-The design is a token interpreter, I chose to use 16bit tokens to represent words, rather than 64 bit addresses, the addresses would probably be faster, but that would be a different implementation, as lots of words are tuned for the token memory layout.
+I chose to use 16bit tokens to represent words, rather than 64 bit addresses, the addresses would probably be faster, but that would be a different implementation, as lots of words are tuned for the token memory layout.
 64 bit addresses felt.. wastefull ..  
 
 It is a simple interpreter but FORTH is also a simple and lean language.
 
 The relationship appears much the same as ever, simple interpreters are 10 times slower,
-simple machine code is ten times faster, optimized machine code is 100 or many more times faster if you tap into the huge capabilities of the CPU and GPU..
+simple machine code is ten times faster, optimized machine code is 100 or many more times faster if you can tap into the huge and complex capabilities of the CPU and GPU..
 
 There are FORTH compilers that generate code that is closer in speed to machine code.
 
@@ -687,9 +692,9 @@ The intention is to write this in Assembler.
 
 - The assembler code can call into C code and does so for a few functions.
 
-- This is necessary otherwise we would be restricted to system calls only which would be limiting even in the terminal.
+- This is necessary otherwise using only system calls would be limiting even in the terminal.
 
-- You can add C functions to addons.c and call them from the assembler code.
+- You can add C functions to addons.c and call them from your assembler code.
 
 
 
