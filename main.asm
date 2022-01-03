@@ -9795,7 +9795,6 @@ allotoz:
 	RET
  
 
-
 allot_memory_full: ; display err
 
 
@@ -9811,15 +9810,13 @@ allot_memory_full: ; display err
 	ADD		X0, X0, tcomer31@PAGEOFF
 	B		sayit
 	
-	   
- 
+	 
 // creation words are invalid in a compiled word
 dcreat_invalid:
 
 	ADRP	X0, create_error@PAGE		
 	ADD		X0, X0, create_error@PAGEOFF
 	B 		sayit_err
- 
 
  
 // creation words are invalid in a compiled word
@@ -9863,7 +9860,7 @@ dallotablez: ; Can we allot to this word type
 
 
 ; 10 RND - 0..9 number
-; Thanks to Kjell Post for this LFSR.
+; Thanks to Kjell Post (kjepo)
 ; https://github.com/kjepo/XOR-LFSR
 
 drandomz:  
@@ -9880,12 +9877,12 @@ drandomz:
 	STR		X3, [X16, #-8]
 	RET
 
-; called from init to see the generator
+; called from init to seed the generator
 randomize: 
 	save_registers
 	ADRP   X0, random_seed@PAGE	
 	ADD	   X0, X0, random_seed@PAGEOFF
-	MOV    X1, #4
+	MOV    X1, #8
 	BL     _getentropy
 	restore_registers
 	RET
