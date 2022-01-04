@@ -281,3 +281,30 @@ Things that crash
 	AGAIN
  ;
 
+: STARS
+  10000 1 DO 
+  	500 RND + TFCOL 
+  	20 RND 120 RND AT CHAR * EMIT
+  LOOP ;
+
+
+: $occurs ( substr str -- count )  
+	 BEGIN
+		OVER SWAP $find  
+		DUP 0= IF 
+			 DROP DROP DROP a EXIT
+		ELSE
+			a++
+			1+ ROT DROP 
+		 THEN
+	AGAIN 
+  ;
+
+: test 
+  ' test '
+  ' this is a test word to test the test for that test '
+  $occurs  ;
+
+: check test 4 = IF .' Ok ' ELSE .' Err ' THEN ;
+
+ 
