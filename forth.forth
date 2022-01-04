@@ -42,8 +42,7 @@ PRIVATE start_ticks
 2 ADDS 2+ 1 SUBS 2-
 
 
-
-// ----------------------------------------------
+// -------------------------------------------------------
 // display and count public words
 
 : reset [ FLAT reset ]
@@ -69,7 +68,7 @@ PRIVATE start_ticks
 
 : WORDS FINAL^ `` (  _words ;
 
-: ALLWORDS FINAL^ `` (END)  _words ;
+: ALLWORDS FINAL^ `` (EXIT)  _words ;
 
 PRIVATE _words
 PRIVATE reset    
@@ -77,7 +76,7 @@ PRIVATE -margin
 PRIVATE reset? 
 
 
-// -------------------------------
+// -------------------------------------------------------
 // ALLOT bytes to a variable
 
 : ALLOT ( n -- )
@@ -91,7 +90,7 @@ PRIVATE reset?
 	THEN 
 ;
 
-// -------------------------------
+// -------------------------------------------------------
 // displays key codes until Q
 
 : .keys NOECHO 
@@ -106,7 +105,22 @@ PRIVATE reset?
 	AGAIN
  ;
 
+// -------------------------------------------------------
+// how many times is substr in str
 
+: $occurs ( substr str -- count )  
+	 BEGIN
+		OVER SWAP $find  
+		DUP 0= IF 
+			 DROP DROP DROP a EXIT
+		ELSE
+			a++
+			1+ ROT DROP 
+		 THEN
+	AGAIN 
+  ;
+
+ 
 // announce ourselves
 PAGE 
 32 TFCOL

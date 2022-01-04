@@ -402,6 +402,7 @@ datxyz:
 	RET
 
 
+
 datcolr:
 	ADRP	X0, screen_textcolour@PAGE	
 	ADD		X0, X0, screen_textcolour@PAGEOFF
@@ -888,7 +889,7 @@ dkeyz:
 ; KEY? for UNIX terminal
 ; I could not be *bothered* (polite term) with
 ; translating FD_ISSET and assorted C MACROS again.
-; See KBHIT.C
+; See addons.c
 
 dkeyqz:
 	save_registers
@@ -901,7 +902,6 @@ dkeyqz:
 	ADD		X1, X1, bytes_waiting@PAGEOFF
 	LDR		X0, [X1]
 	B 		nequalzz
-
 
 
 ; like spaces for char n
@@ -1516,7 +1516,6 @@ searchall:
 ; RESET try and RESET as much as possible to a sane state.
 dresetz:
 	CBNZ    X15, 10f	; only from interpreter level
-	LDP		LR, X15, [SP], #16	; unwind as we are never returning
 
 	reset_data_stack
 	reset_return_stack
@@ -1538,10 +1537,6 @@ dresetz:
 	;  disable tracing, X6 = 0
 	MOV		X6, #0
 	BL 		beloud
-	B 		input
-	 
-	;  disable tracing, X6 = 0
-	MOV		X6, #0
 
 	; restore terminal
 	save_registers
@@ -1551,9 +1546,20 @@ dresetz:
 	ADD		X2, X2, saved_termios@PAGEOFF
 	BL		_tcsetattr
 	restore_registers
-
+  
+	ADRP	X0, screen_textcolour@PAGE	
+	ADD		X0, X0, screen_textcolour@PAGEOFF
+	save_registers
+	MOV     X2, #0
+	MOV     X1, #30
+	STP		X1, XZR, [SP, #-16]!
+	BL		_printf		
+	ADD		SP, SP, #16 
+	restore_registers  
+	B 		input
 
 10:
+ 
 	RET
 
 
@@ -1616,7 +1622,6 @@ init:
 	LSL		X2, X2, #10
 	BL 		fill_mem
 
-	
 
 
 	;  disable tracing, X6 = 0
@@ -1625,7 +1630,7 @@ init:
 	; start of outer interpreter/compiler
 	
 	BL 	dfrom_startup
- 
+
 input:	
 
 	BL  chkoverflow
@@ -2059,8 +2064,6 @@ try_compiling_literal:
 	;MOV		X0, #'!'
 	;BL		X0emit
 
-	
-
 	LDRB	W0, [X22]
 	CMP		W0, #'-'
 	B.ne	22f 
@@ -2105,7 +2108,6 @@ try_compiling_literal:
 	FMOV  	X0, D0	; float 
 	B 		25f 	; process as long word
  
-
 its_an_it:
 	save_registers
 	ADRP	X0, zword@PAGE		
@@ -2113,7 +2115,6 @@ its_an_it:
 	BL 		_atoi
 	restore_registers 
  
-
 
 check_number_size:
 	
@@ -2180,7 +2181,6 @@ check_number_size:
 	MOV		X0, #2 ; #LITL
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
-
 	STRH	W3, [X15]	; value
 	ADD		X15, X15, #2
 
@@ -2201,7 +2201,6 @@ exit_compiler_unrecognized:
 	BL	saynotfound
 	BL	saycr
 	BL	clean_last_word
- 
 	BL	dresetz
 
 
@@ -2226,7 +2225,6 @@ exit_compiler_compile_time_err:
 
 exit_compiler_unbalanced_loops:
 	BL		clean_last_word
-
 	BL		saycr
 	BL		ddotsz
 	BL		saycr
@@ -2320,7 +2318,6 @@ not_compiling:
 	BL		sayword
 	BL		sayrb
 	BL		saynotfound
- 
 	BL 		dresetz
 	B		advance_word
 
@@ -2660,11 +2657,8 @@ dtimesdoz:
 	MOV		X0, #-1
 	RET
 
-
-
 ; compile timesdo
 dtimesdoc:
-
 
 100:	
 	STP		LR,  XZR, [SP, #-16]!
@@ -2697,7 +2691,6 @@ dtimesdoc:
 	MOV     X1, X28   ; word base
 	CBZ		X2,  190f
   
-
 	MOV 	X0, X1
 	BL		longlitit
 	ADD		X15, X15, #2
@@ -2717,12 +2710,6 @@ dtimesdoc:
 	LDP		LR, X16, [SP], #16
 	MOV		X0, #-1
 	RET
-
-
-	RET
-
-
-
 
 ; DO LOOP words
 ; The definite loops
@@ -3163,14 +3150,10 @@ dwhilez: ; WHILE needs a foward branch to REPEAT
 170:
 	RET 
 
-
 180:
  
  	ADD		X15, X15, #2
 	RET
-
-
-
 
 190:	; UNTIL/AGAIN needs BEGIN
 
@@ -3230,8 +3213,6 @@ drepeatz: ; REPEAT
 
 
 drepeatc:	; COMPILE REPEAT
-
-
 	STP		LR,  X12, [SP, #-16]!
 
 	LDP		X1,  X12,  [X14, #-16]  
@@ -3283,11 +3264,7 @@ dagainz:	; AGAIN
 
 	
 190:	; continue - on as LEAVE popped BEGIN
-
-
 	RET			
-	
-
 	
 
 dagainc:	; COMPILE AGAIN
@@ -3434,8 +3411,6 @@ dleavec:	; COMPILE LEAVE create branch slot, look out for IF
 
 ;;
 
-
-
 dstorez:	; ( addr value -- )
 	B		storz
 	RET
@@ -3528,7 +3503,6 @@ ddepthc:
 	RET
 
 
-
 ddepthrz: 
 
 	ADRP	X0, rpu@PAGE		
@@ -3614,11 +3588,8 @@ floop:
 	RET	
 	
 
-
 ;; Introspection and inspection
-; good to see what our compiler is doing.
-; displays the layout of a word.
-; NOT the source, you have that
+;; displays the layout of a word, to see what the compiler did.
 
 
 dseez:
@@ -3855,8 +3826,6 @@ dseez:
 	LDR		X0, [X28, #8]
 	CMP		X0, X2
 	B.eq	12020f
-
-	
 
 
 ; must be a primitive word 
@@ -4264,7 +4233,6 @@ dcreatcz:
 
 dcreatcc:
 	RET
-
 
 
 ;; VARIABLE
@@ -4746,7 +4714,6 @@ dlocalsWvalz_fill:  ; (32 bit)
 
 ; WORD 32 bit array
 
-
 dWarrayvalz: ; X0=data, X1=word
 
  	LDR		X2, [X16, #-8]	; X2 = index
@@ -4930,7 +4897,6 @@ compile_localsvalz_fill: ;
 	MOV		X0, #0
 	RET
 
-
 compile_darrayaddz_fill:
 	STP		LR,  X16, [SP, #-16]!
 	BL		longlitit	; X0 = data
@@ -4943,8 +4909,6 @@ compile_darrayaddz_fill:
 	LDP		LR, X16, [SP], #16
 	MOV		X0, #0
 	RET
-
-
 
 compile_dWarrayaddz_fill:
 	STP		LR,  X16, [SP, #-16]!
@@ -5040,8 +5004,6 @@ compile_dCarrayaddz_fill:
 
 ;; ARRAY returns addresses
 ;; VALUES returns value
-
-
 dcreatvalues:
  	find_free_word
 	ADRP	X8, darrayvalz@PAGE	; high level word.	
@@ -5056,14 +5018,12 @@ dcreatstringvalues:
 	MOV		X3, #3
 	B 		arrayvaluecreator
 
-
 dcreatarray:
 	find_free_word
 	ADRP	X8, darrayaddz@PAGE	; high level word.	
 	ADD		X8, X8, darrayaddz@PAGEOFF
 	MOV		X3, #3
 	B 		arrayvaluecreator
-
 
 dWcreatvalues:
  	find_free_word
@@ -5079,7 +5039,6 @@ dWcreatarray:
 	MOV		X3, #2
 	B 		arrayvaluecreator
 
-
 dHWcreatvalues:
  	find_free_word
 	ADRP	X8, dHWarrayvalz@PAGE	; high level word.	
@@ -5093,7 +5052,6 @@ dHWcreatarray:
 	ADD		X8, X8, dHWarrayaddz@PAGEOFF
 	MOV		X3, #1
 	B 		arrayvaluecreator
-
 
 dCcreatvalues:
 	 find_free_word
@@ -5110,11 +5068,9 @@ dCcreatarray:
 	B 		arrayvaluecreator
 
 
-
 arrayvaluecreator:
 
 100:	; find free word and start building it
-
 
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
@@ -5127,12 +5083,10 @@ arrayvaluecreator:
 	b.ne	260f
 
 	; undefined so build the word here
-
 	; this is now the last_word word being built.
 	ADRP	X1, last_word@PAGE		
 	ADD		X1, X1, last_word@PAGEOFF
 	STR		X28, [X1]
-
 
 	copy_word_name
 
@@ -5212,7 +5166,6 @@ dcreatstack:
 	b.ne	260f
 
 	; undefined so build the word here
-
 	; this is now the last_word word being built.
 	ADRP	X1, last_word@PAGE		
 	ADD		X1, X1, last_word@PAGEOFF
@@ -5222,11 +5175,9 @@ dcreatstack:
 	copy_word_name
 
 	; store runtime code
-
 	ADRP	X8, dstackz@PAGE	; high level word.	
 	ADD		X8, X8, dstackz@PAGEOFF
 	STR		X8, [X28, #8]
-
 
 	; set stack size from tos.
 	LDR		X0, [X16, #-8]	
@@ -5237,15 +5188,12 @@ dcreatstack:
 	allotation
 	CMP		X0, X12
 	B.gt	allot_memory_full
-
 	B		300f
 
 
 260:	; try next word in dictionary
 	SUB		X28, X28, #64
 	B		100b
-
-
 
 280:	; error dictionary FULL
 
@@ -5254,10 +5202,6 @@ dcreatstack:
 	restore_registers_not_stack
 
 	RET
-
-
-
-
 
 
 
@@ -5291,7 +5235,6 @@ dtickz: ; ' - get address of NEXT words data field
 
 	MOV	X0, 	X28  
 	restore_registers
-
 	B		stackit
 
 170:	; next word in dictionary
@@ -5302,8 +5245,6 @@ dtickz: ; ' - get address of NEXT words data field
 	MOV		X0, #0
 	restore_registers
 	B	stackit
-
-
 	RET
 
 
@@ -5318,7 +5259,6 @@ dcharz: ; char - stack char code while interpreting
 	B.eq	10b
 	B		stackit
 
- 
  
 dcharc: ; char - convert Char to small lit while compiling.
 	
@@ -5342,14 +5282,9 @@ dcharc: ; char - convert Char to small lit while compiling.
 20:	
 	STRH	W0, [X15]	; value
 	ADD		X23, X23, #1
-
 	MOV 	X0, #0
-
 	RET
  
-
-
-
 
 
 ; control flow
@@ -5377,7 +5312,7 @@ difc:
 	RET			
 
 
-dendifz:
+dendifz: ; AKA THEN AKA ENDIF
 	CBZ     X15, dinterp_invalid
 	RET
 
@@ -5641,8 +5576,15 @@ dtimeitz: ; time the next words execution
 	BL		collectword
 
 	BL		empty_wordQ
-	B.eq	190f
+	B.ne	10f
 
+	restore_registers
+	ADRP	X0, tcomer43@PAGE	
+	ADD		X0, X0, tcomer43@PAGEOFF
+	BL		sayit_err
+	RET
+
+10:
 	BL		start_point
 
 120:
@@ -5658,7 +5600,6 @@ dtimeitz: ; time the next words execution
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
-
 
 	MOV		X1, 	X28  
  
@@ -5694,6 +5635,7 @@ dtimeitz: ; time the next words execution
 	ADD		X0, X0, tcomer21@PAGEOFF
 	BL		sayit
 
+
 	MOV		X0, X12
 	MOV		X2, #100
 	MOV		X1, #24			; 2400
@@ -5714,17 +5656,23 @@ dtimeitz: ; time the next words execution
 	B		120b
 
 190:	; error out 
-	MOV	X0, #-1
-
-
-
-
+ 	restore_registers
+	ADRP	X0, tcomer43@PAGE	
+	ADD		X0, X0, tcomer43@PAGEOFF
+	B		sayit_err
+ 
 
 200:
 	restore_registers
 	RET
 
- 
+ dtimeitc:
+	ADRP	X0, tcomer44@PAGE	
+	ADD		X0, X0, tcomer44@PAGEOFF
+	B		sayit_err
+	RET
+
+
 
 ; assign fast or tracable runtime to word.
 
@@ -8484,6 +8432,7 @@ dstfromappendbuffer:
 	ADD		X13, X13, short_strings@PAGEOFF
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
+	ORR		W0, W0, 0x20
 	CMP		W0, #'z'
 	B.gt 	710f
 	CMP		W0, #'a'
@@ -8982,6 +8931,98 @@ dSTRINGz: ; return our address..
 	RET
 
 
+; true if x12 contains X13
+dstrcontains:
+
+	LDP		X13, X12, [X16, #-16]
+	SUB 	X16, X16, #8
+	MOV     X3, X13
+
+05:	
+	LDRB	W0,[X13]
+	CBZ		X0, 200f
+
+10:	
+	LDRB    W1,[X12]
+	CBZ		X1, 200f
+	CMP		W0, W1, uxtb
+	B.eq	25f  
+	ADD		X12, X12, #1
+	B 		10b 
+25:
+	MOV 	X2, X12
+30:
+	LDRB	W0, [X12] 
+	LDRB	W1, [X13] 
+	CBZ		X1, 100f 
+	CBZ     X0, 200f
+	CMP		W0, W1, uxtb
+	B.ne	300f
+	ADD		X13, X13, #1
+	ADD		X12, X12, #1
+	B 		30b 
+
+100:
+	MVN		X0, XZR
+	STR		X0, [X16],#8
+	RET
+
+200:
+	MOV		X0, XZR
+	STR		X0, [X16],#8
+	RET
+
+ 
+; search X12, for X13 return address found.
+dstrfind:
+
+	LDP		X13, X12, [X16, #-16]
+	SUB 	X16, X16, #8
+	MOV     X3, X13
+
+05:	
+	LDRB	W0,[X13]
+	CBZ		X0, 200f
+
+10:	
+	LDRB    W1,[X12]
+	CBZ		X1, 200f
+	CMP		X0, X1
+	B.eq	25f  
+	ADD		X12, X12, #1
+	B 		10b 
+
+	; we have a match
+	; for a while
+ 
+25:
+	MOV 	X2, X12
+30:
+	LDRB	W0, [X12] 
+	LDRB	W1, [X13] 
+	CBZ		X1, 100f 
+	CBZ     X0, 200f
+	CMP 	X0, X1
+	B.ne	300f
+	ADD		X13, X13, #1
+	ADD		X12, X12, #1
+	B 		30b 
+
+100:
+	MOV		X0, X2
+	STR		X0, [X16],#8
+	RET
+
+200:
+	MOV		X0, XZR
+	STR		X0, [X16],#8
+	RET
+
+300: ; look at rest of string for sub string
+	MOV X13, X3
+	B 	05b
+
+
 ; create string 
 
 creatstring:
@@ -9097,6 +9138,7 @@ dstrdotz:
 
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
+	ORR		W0, W0, 0x20
 	CMP		W0, #'z'
 	B.gt 	710f
 	CMP		W0, #'a'
@@ -9253,6 +9295,7 @@ intern_string_from_buffer:
 
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
+	ORR		W0, W0, 0x20
 	CMP		W0, #'z'
 	B.gt 	710f
 	CMP		W0, #'a'
@@ -9402,6 +9445,7 @@ dstrdotc:
 
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
+	ORR		W0, W0, 0x20
 	CMP		W0, #'z'
 	B.gt 	710f
 	CMP		W0, #'a'
@@ -9555,6 +9599,7 @@ dstrstksc: ; compile literal that returns its address.
 
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
+	ORR		W0, W0, 0x20
 	CMP		W0, #'z'
 	B.gt 	710f
 	CMP		W0, #'a'
@@ -9887,6 +9932,14 @@ randomize:
 	restore_registers
 	RET
  
+ dcopy:
+	LDP 	X0, X1, [X16, #-16]
+	LDR		X2, [X0]
+	STR		X2, [X1]
+	ADD		X0, X0, #8
+	ADD		X1, X1, #8
+	STP 	X0, X1, [X16, #-16]
+	RET
 
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -10175,6 +10228,16 @@ tcomer41: .ascii "\nError n ALLOT> word, expected a variable or value word."
    .align	8
 tcomer42: .ascii "\nError n ALLOT, expected the last word to be a variable or value word."
 	.zero 16
+
+
+   .align	8
+tcomer43: .ascii "\nError TIMEIT expects a single words name."
+	.zero 16
+
+   .align	8
+tcomer44: .ascii "\nError TIMEIT only works in the interpreter, not in compiled words."
+	.zero 16
+
 
 .align	8
 tforget: .ascii "\nForgeting last_word word: "
@@ -10680,7 +10743,7 @@ dend:
 	
 
 		; words that can take *inline* literals as arguments
-		makeword "(END)", dexitz, 0,  0					; 0 - never runs
+		makeword "(EXIT)", dexitz, 0,  0					; 0 - never runs
 		makeword "(LITS)",  dlitz, dlitc,  0			; 1
 		makeword "(LITL)",  dlitlz, dlitlc,  0			; 2
 		makeword "(IF)", 	dzbranchz, 0,  0			; 3
@@ -10735,7 +10798,7 @@ dend:
 		makeword "(TIMESDO)", 			dtimescz, 	0,  0	; 47
 		makeword "(INCR)", 				dincrcz, 	0,  0	; 48
 		makeword "(DECR)", 				ddecrcz, 	0,  0	; 49
-
+		makeword "(ONRESET)", 			0,  	0,   0		; 50
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
@@ -10797,6 +10860,7 @@ bdict:
 		makeword "c!" , dloccsz, 0, 0
 		makeword "c++" , dloccsppz, 0, 0
 		makeword "CODE^" , dlocjz, 0, 0
+		makeword "COPY" ,  dcopy, 0, 0
 	
 		
 cdict:
@@ -10820,7 +10884,7 @@ ddict:
 	
 		makeword "EXECUTE", dcallz, dcallc, 0
 		makeword "ELSE", 0 , delsec, 0 
-		makeword "ENDIF", 0 , dendifc, 0 
+		makeword "ENDIF", dendifz , dendifc, 0 
 		makeword "EMIT", emitz , 0, 0 
 		makeword "EXIT", dexitz, 	0,  0	
 		makeword "EXITP", dexitpz, 	0,  0	
@@ -11004,7 +11068,7 @@ sdict:
 		makeword "TFCOL", datcolr, 0, 0
 		makeword "TOKENS", dHWarrayvalz, 0,  token_space, 0, 256*1024
 		makeword "TO", dtoz, dtoc, 0
-		makeword "TIMEIT", dtimeitz, 0, 0
+		makeword "TIMEIT", dtimeitz, dtimeitc, 0
 		makeword "TRACE", dtracable, 0, 0
 		makeword "TRUE", dtruez, 0,  0
 		makeword "TRACING?", dtraqz, 0, 0
@@ -11014,7 +11078,7 @@ sdict:
 		makeword "TPS",  dconstz, dconstz, 24000000
 		makeword "TRON", dtronz, 0, 0
 		makeword "TROFF", dtroffz, 0, 0
-		makeword "THEN", 0 , dendifc, 0 
+		makeword "THEN", dendifz , dendifc, 0 
 	 
  
 
@@ -11075,6 +11139,8 @@ zdict:
 		makeword "$compare", dstrcmp, 0,  0
 		makeword "$len", dstrlen, 0,  0
 		makeword "$pos", dstrpos, 0,  0
+		makeword "$find", dstrfind, 0,  0
+		makeword "$contains", dstrcontains, 0,  0
 		makeword "$slice", dstrslice, 0,  0
 		makeword "$''", 	stackit, 	stackit, 	0
 		makeword "$intern", 	intern, 	intern, 	0
@@ -11082,7 +11148,7 @@ zdict:
 	 
 dollardict:
 	 	
-		 makeemptywords 256
+		makeemptywords 256
 		
 		makeword "*/", dstarslshz, 0,  10
 		makeword "*/MOD", dstarslshzmod, 0,  10
