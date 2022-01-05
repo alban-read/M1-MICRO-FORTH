@@ -308,3 +308,28 @@ Things that crash
 : check test 4 = IF .' Ok ' ELSE .' Err ' THEN ;
 
  
+
+	MOV		X0, #1024
+	LSL		X0, X0, #7
+	save_registers
+	BL		_malloc
+	restore_registers
+	
+	ADRP	X1, allot_ptr@PAGE	
+	ADD		X1, X1, allot_ptr@PAGEOFF
+	STR		X0, [X1]
+
+	MOV		X1, #1024
+	LSL		X1, X1, #7
+	ADD		X0, X0, X1
+	SUB 	X0, X0, #1024
+
+	ADRP	X1, allot_limit@PAGE	
+	ADD		X1, X1, allot_limit@PAGEOFF
+	STR		X0, [X1]
+
+
+// move allotment to HEAP 
+HEAP^ TO ALLOT^
+HEAP^ TO ALLOT.LAST^ 
+240 1024 *  ALLOT^ + TO ALLOT.LIMIT^

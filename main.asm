@@ -288,11 +288,6 @@ from_startup:
 	RET
 
 dfrom_startup:
-
- 	ADRP	X0, bequiet@PAGE
-	ADD		X0, X0, bequiet@PAGEOFF
-	MOV 	X1, #-1
-	STR		X1, [X0]
 	B	from_startup
 
 
@@ -428,13 +423,23 @@ intern:
 	B intern_string_from_buffer
 
 
+
+; Lots of little messages
+
 ; Ok prompt
+; only say OK when reading stdin.
+
 sayok:	
 
-	ADRP	X0, bequiet@PAGE
-	ADD		X0, X0, bequiet@PAGEOFF
-	LDR		X0, [X0]
-	CBNZ	X0, quietly
+	ADRP	X1, input_file@PAGE
+	ADD		X1, X1, input_file@PAGEOFF
+	LDR		X0,	[X1]
+
+	ADRP	X8, ___stdinp@GOTPAGE
+	LDR		X8, [X8, ___stdinp@GOTPAGEOFF]
+	LDR		X2, [X8]
+	CMP 	X0, X2
+	B.ne	quietly
 
 	ADRP	X0, tok@PAGE	
 	ADD		X0, X0, tok@PAGEOFF
@@ -533,6 +538,7 @@ sayliteral:
 
 
 ; WORDS - displays words in the dictionary.
+; not used as implemented in FORTH
 
 alldotwords:
 
@@ -608,10 +614,11 @@ dotwords:
 10:	; skip non word
 	B		20b  
 
- 
 15:
 	RET
 
+
+; displays a message
 sayit:	
 	ADRP	X8, ___stdoutp@GOTPAGE
 	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
@@ -621,7 +628,7 @@ sayit:
 	restore_registers
 	RET
 
-
+; displays message and sets the error flag
 sayit_err:	
 	ADRP	X8, ___stdoutp@GOTPAGE
 	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
@@ -629,8 +636,11 @@ sayit_err:
 	save_registers
 	BL		_fputs	
 	restore_registers
-	MOV		X0, #-1
+	MOV		X0, #-1 ; flag err for compiler
 	RET
+
+
+; WORD scanning routines
 
 resetword: ; clear word return x22
 	ADRP	X22, zword@PAGE		
@@ -639,8 +649,9 @@ resetword: ; clear word return x22
 	STP		XZR, XZR, [X22, #48]
 	RET
 
-resetline:
 
+; zaps the line storage for the terminal input
+resetline:
 	; get zpad address in X23
 	ADRP	X0, zpad@PAGE		
 	ADD		X23, X0, zpad@PAGEOFF
@@ -652,6 +663,9 @@ resetline:
 	STRB	W1, [X0], #1
 	.endr
 	RET
+
+
+; Skip over spaces in the input
 
 advancespaces: ; byte ptr in x23, advance past spaces until zero
 
@@ -665,6 +679,8 @@ advancespaces: ; byte ptr in x23, advance past spaces until zero
 
 90:	RET
 
+
+; some simple maths operations
 absz:		
 	RET
 
@@ -718,6 +734,8 @@ dstarslshz: ; famous */ but only 64 bit not using 128 intermediate
 	RET
 		
 
+; some simple logical operations
+
 andz:	; and tos with 2os leaving result tos
 	LDR		X1, [X16, #-8]
 	LDR		X2, [X16, #-16]
@@ -743,6 +761,8 @@ orz:	; or tos with 2os leaving result tos
 	RET
 
 
+; maths operations
+
 sdivz:	; div tos by 2os leaving result tos
 	LDR		X1, [X16, #-8]
 	LDR		X2, [X16, #-16]
@@ -759,6 +779,9 @@ udivz:	; div tos by 2os leaving result tos - ??? not clear this is correct.
 	SUB		X16, X16, #8
 	RET
 
+
+
+; char output 
 
 emitz:	; output tos as char
 	LDR		X1, [X16, #-8]
@@ -800,6 +823,9 @@ dmstr:
 	restore_registers
 	RET
 
+
+
+; flush the stdout stream
 dflushz:
 	save_registers
 	ADRP	X8, ___stdoutp@GOTPAGE
@@ -829,6 +855,8 @@ dlargefont:
 	RET
 
 
+; TERMINAL commands
+
 ; No echo - needed when using KEY? and KEY
 
 noecho:
@@ -855,7 +883,7 @@ noecho:
 	RET
 
 ; restore terminal (after NOECHO)
-
+; restore to the state the program started
 reterm:
  	save_registers
 	MOV		X0, #0
@@ -954,6 +982,9 @@ spacesz:
 spacesc:	
 	RET
 
+
+
+; special display words 
 
 X0prname:
 
@@ -1084,6 +1115,9 @@ X0print:
 	MOV		X1, X0
 	B		12f
 
+
+; Standard printing functions
+
 print: ; prints int on top of stack		
 	
 	LDR		X1, [X16, #-8]
@@ -1113,6 +1147,9 @@ fprint: ; prints float on top of stack
 	ADD		SP, SP, #16 
 	restore_registers  
 	RET
+
+
+; number conversions
 
 word2number:	; converts ascii at word to number
 			; IN X16
@@ -1146,6 +1183,9 @@ word2fnumber:	; converts ascii at word to float number
 	B			chkoverflow
 	RET
 
+
+; delay functions
+
 dsleepz: ; sleep for ms		
 	save_registers
 	LDR		X0, [X16, #-8]
@@ -1155,6 +1195,10 @@ dsleepz: ; sleep for ms
 	restore_registers  
 	SUB		X16, X16, #8	
 	RET
+
+
+
+; stack over/underflow checks
 
 chkunderflow: ; check for stack underflow
 	ADRP	X0, spu@PAGE		
@@ -1186,6 +1230,38 @@ chkoverflow:; check for stack overflow
 95:
 	RET
 
+
+
+
+	; announciate version
+announce:	
+	
+	ADRP	X0, ver@PAGE		
+	ADD		X0, X0, ver@PAGEOFF
+	LDR		X1, [X0]
+	ADRP	X0, tver@PAGE		
+	ADD		X0, X0, tver@PAGEOFF
+	save_registers
+	STP		X1, X0, [SP, #-16]!
+	BL		_printf		
+	ADD		SP, SP, #16  
+	restore_registers
+	RET
+
+
+	; exit the program
+	; BROKEN as we never stacked these in init.
+finish: 
+	MOV		X0, #0
+	LDR		LR, [SP], #16
+	LDP		X19, X20, [SP], #16
+	RET
+
+ 
+
+
+; this is the equivalent of WORD that reads the next
+; word from the input
 
 collectword:  ; byte ptr in x23, x22 
 		; copy and advance byte ptr until space.
@@ -1236,32 +1312,8 @@ collectword:  ; byte ptr in x23, x22
 	RET
 
 
+; process the word
 
-	; announciate version
-announce:	
-	
-	ADRP	X0, ver@PAGE		
-	ADD		X0, X0, ver@PAGEOFF
-	LDR		X1, [X0]
-	ADRP	X0, tver@PAGE		
-	ADD		X0, X0, tver@PAGEOFF
-	save_registers
-	STP		X1, X0, [SP, #-16]!
-	BL		_printf		
-	ADD		SP, SP, #16  
-	restore_registers
-	RET
-
-
-	; exit the program
-	; BROKEN
-finish: 
-	MOV		X0, #0
-	LDR		LR, [SP], #16
-	LDP		X19, X20, [SP], #16
-	RET
-
- 
 get_word: ; get word from zword into x22
 	ADRP	X22, zword@PAGE		
 	ADD		X22, X22, zword@PAGEOFF
@@ -1275,6 +1327,9 @@ empty_wordQ: ; is word empty?
 	CMP		W0, #0 
 	RET
 
+
+; the dictionary has fixed start points for each letter.
+; so the order of predefined words is always fixed.
 
 start_point: ; finds where to start searching the dictionary
  
@@ -1563,7 +1618,21 @@ dresetz:
 	RET
 
 
-;; start running here
+heapsize:
+	LDR		X0, [X16, #-8]
+	SUB 	X16, X16, #8
+	save_registers
+	BL		_malloc
+	restore_registers
+	ADRP	X1, heap_ptr@PAGE	
+	ADD		X1, X1, heap_ptr@PAGEOFF
+	STR		X0, [X1]
+
+	RET
+
+;; Program Start
+
+; we start running here
 
 main:	
 
@@ -1574,7 +1643,9 @@ main:
 
 init:	
  
+	; seed RNG
 	BL 		randomize
+
 
 	; save terminal state
 	MOV		X0, #0
@@ -1615,13 +1686,6 @@ init:
 	LSL		X2, X2,#3
 	BL 		fill_mem
 
-	ADRP	X0, allot_space@PAGE		
-	ADD		X0, X0, allot_space@PAGEOFF
-	MOV 	X1, #0
-	MOV     X2, 256
-	LSL		X2, X2, #10
-	BL 		fill_mem
-
 
 
 	;  disable tracing, X6 = 0
@@ -1629,6 +1693,8 @@ init:
 
 	; start of outer interpreter/compiler
 	
+	; load text from forth.forth
+
 	BL 	dfrom_startup
 
 input:	
@@ -1675,9 +1741,10 @@ advance_word:
 	BL		_exit ; thats that.
 
 
-	; outer interpreter called QUIT in typical FORTH
-	; look for WORDs - when found, execute the words function	
-	; we are in immediate mode, we see a word and we execute its code.
+	; outer interpreter (called QUIT in typical FORTH)
+	; look for each word - when found, execute the words function	
+	; if the word is not found check if it is a number, and if so stack it.
+	; If we recognize a word we execute its code.
 
 outer:	
 	
@@ -1703,7 +1770,6 @@ short_words:
 semicheck:
 	CMP		W0, #';'	
 	B.ne	endsemicheck
-
 	ADRP	X0, tcomer39@PAGE
 	ADD		X0, X0, tcomer39@PAGEOFF
 	BL		sayit_err	 
@@ -1716,7 +1782,7 @@ endsemicheck:
 	; check if we need to enter the compiler loop.
 	CBZ		X15, fw1  	; compiler is not working on a word.
 	LDRB	W0, [X22]
-	CMP		W0, #']'	; do we enter the compiler ?
+	CMP		W0, #']'	; do we re-enter the compiler ?
 	B.eq	reenter_compiler
 
 fw1:
@@ -1745,7 +1811,7 @@ fw1:
 	STP		X28, XZR, [SP, #-16]!
 	
 	MOV		X1, 	X28
-	
+
 	BLR		X2	;; call function with X0=data, X1=address
 
 	LDP		X28, XZR, [SP] 
@@ -1868,7 +1934,6 @@ scan_words:
 	ADD		X1, X1, last_word@PAGEOFF
 	STR		X28, [X1]
 
-
 	copy_word_name
 
 	CBZ		X6, faster_mode
@@ -1886,12 +1951,12 @@ faster_mode:
 
 set_word_runtime:
 
-	ADRP	X8, here@PAGE	
-	ADD		X8, X8, here@PAGEOFF
+	ADRP	X8, here_ptr@PAGE	
+	ADD		X8, X8, here_ptr@PAGEOFF
 	LDR		X15, [X8]
 
-	ADRP	X8, lasthere@PAGE	
-	ADD		X8, X8, lasthere@PAGEOFF
+	ADRP	X8, lasthere_ptr@PAGE	
+	ADD		X8, X8, lasthere_ptr@PAGEOFF
 	STR		X15, [X8]
 
 	STR		X15, [X28]		; set start point 
@@ -1919,10 +1984,10 @@ compile_next_word:
 
 	ADRP	X1, last_word@PAGE		
 	ADD		X1, X1, last_word@PAGEOFF
-	LDR		X1, [X1]
-	SUB		X0, X15, X1
-	CMP		X0, #124
-	B.gt	exit_compiler_word_full
+	;LDR		X1, [X1]
+	;SUB		X0, X15, X1
+	;CMP		X0, #124
+	;B.gt	exit_compiler_word_full
 
 reenter_compiler:
 	; get next word from line
@@ -1979,16 +2044,24 @@ find_word_token:
 	; if the word has a compile time action, we will call it.
 
 	; check word type and skip if not primitive.
-	; is this necessary?
+	; high level words use X15 as IP to run and we use it to compile.
+	; preventing the use of high level words for compilation
+	; a design flaw for sure.
+
 	ADRP	X1, runintz@PAGE	; high level word.	
 	ADD		X1, X1, runintz@PAGEOFF
 	LDR		X0, [X28, #8]
 	CMP		X0, X1
 	B.eq	skip_compile_time
 
-
 	ADRP	X1, fastrunintz@PAGE	; high level word.	
 	ADD		X1, X1, fastrunintz@PAGEOFF
+	LDR		X0, [X28, #8]
+	CMP		X0, X1
+	B.eq	skip_compile_time
+
+	ADRP	X1, flatrunintz@PAGE	; high level word.	
+	ADD		X1, X1, flatrunintz@PAGEOFF
 	LDR		X0, [X28, #8]
 	CMP		X0, X1
 	B.eq	skip_compile_time
@@ -2021,9 +2094,10 @@ find_word_token:
 	LDP		X3, X4, [SP]
 	LDP		X5, X7, [SP]
 
-	; words that assist the compiler must return 0, or -1 in X0 for status
+	; words that assist the compiler 
+	; must return 0, or -1 in X0 for status
 
-	CMP		X0, #-1 ; fail compile time call.
+	CMP		X0, #-1 ; failed compile time call.
 	B.eq	exit_compiler_compile_time_err
 
 
@@ -2293,12 +2367,12 @@ exit_compiler: ; NORMAL success exit
 	ADD		X1, X1, last_word@PAGEOFF
 	LDR		X1, [X1]
 	
-	ADRP	X8, here@PAGE	
-	ADD		X8, X8, here@PAGEOFF
+	ADRP	X8, here_ptr@PAGE	
+	ADD		X8, X8, here_ptr@PAGEOFF
 	STR		X15, [X8]
 
-	ADRP	X8, lasthere@PAGE	
-	ADD		X8, X8, lasthere@PAGEOFF
+	ADRP	X8, lasthere_ptr@PAGE	
+	ADD		X8, X8, lasthere_ptr@PAGEOFF
 	LDR		X0, [X8]
 
 	SUB		X0, X15, X0
@@ -2311,7 +2385,7 @@ exit_compiler: ; NORMAL success exit
 not_compiling:
 
 ; at this point we have not found this word
-; display word not found as an error.
+; display word not found as an error and reset
 
 	BL		saycr
 	BL		saylb
@@ -2340,7 +2414,7 @@ exit_program:
 ; Return stack
 ; The word execution uses the machine stack pointer
 ; So the return stack is NOT actually used for return addresses
-; it is used to stack LOOP addresses
+; it is used to stack a few LOOP addresses
 
 dtorz:
 	LDR		X0, [X16, #-8]	
@@ -2378,8 +2452,11 @@ fetchrpz: ; fetch stack pointer to stack
 	RET
 
 
-; locals LOCALS
-; local stack indexed by X26
+
+
+
+; LOCALS accessors
+; This is a LOCALS stack indexed by X26
 ; 0..  7 A
 ; 8.. 15 B
 ; 16..23 C
@@ -2526,7 +2603,7 @@ dlochsz:
 	STR		X0, [X26, #-64]
 	RET
 
-; SELF. CODE.
+; SELF and CODE pointers
 dlociz:	;   
 	LDR		X0, [X26, #-72]	
 	STR		X0, [X16], #8
@@ -2711,12 +2788,14 @@ dtimesdoc:
 	MOV		X0, #-1
 	RET
 
-; DO LOOP words
+
+
+; DO LOOP  
 ; The definite loops
 ; Not compliant with standard FORTH.
 ;
 
-; DO .. LOOP, +LOOP uses the return stack.
+; DO .. LOOP, +LOOP uses the return stack when compiling.
 ; LEAVE does an immediate early exit
 
 ; #21DOER 
@@ -2853,13 +2932,11 @@ found_loop:
 	SUB		X0, X15, X12	
 	B		200f
 
-
 do_without_loop:
 	; detected 'at runtime' by magic number	test
 	ADRP	X0, tcomer16@PAGE	
 	ADD		X0, X0, tcomer16@PAGEOFF
 	BL		sayit	
-
 
 do_loop_arguments:
 	; not enough arguments
@@ -2871,7 +2948,6 @@ do_loop_arguments:
 200:
 	LDP		LR, X12, [SP], #16
 	RET
-
 
 .macro loop_vars
 	LDP		X0, X1,  [X14, #-16]
@@ -2946,20 +3022,15 @@ dloopercmp:
 
 	CMP		X0, X1
 	B.lt	loops_end
-
 	loop_continues
-
 	MOV		X15, X12
-
 	RET
 
 ddownloopercmp:
 
 	CMP		X0, X1
 	B.gt	loops_end
-
 	loop_continues
-
 	MOV		X15, X12
 	RET
 
@@ -2977,7 +3048,6 @@ do_loop_err:
 	ADRP	X0, tcomer18@PAGE	
 	ADD		X0, X0, tcomer18@PAGEOFF
 	B		sayit
-		
 	RET	
 
 ; compile in DO LOOP, +LOOP, DOWNDO -LOOP
@@ -3123,7 +3193,7 @@ duntilc: ; COMPILE in UNTIL
 
 
 
-		; : t3 BEGIN  1 + DUP 10 < WHILE DUP . CR REPEAT ;
+; : t3 BEGIN  1 + DUP 10 < WHILE DUP . CR REPEAT ;
 dwhilez: ; WHILE needs a foward branch to REPEAT
 	CBZ     X15, dinterp_invalid
 	do_trace
@@ -3553,12 +3623,12 @@ clean_last_word:
 	STP		X1, X1, [X0], #16
 
 
-	ADRP	X8, lasthere@PAGE	
-	ADD		X8, X8, lasthere@PAGEOFF
+	ADRP	X8, lasthere_ptr@PAGE	
+	ADD		X8, X8, lasthere_ptr@PAGEOFF
 	LDR		X0, [X8]
 
-	ADRP	X8, here@PAGE	
-	ADD		X8, X8, here@PAGEOFF
+	ADRP	X8, here_ptr@PAGE	
+	ADD		X8, X8, here_ptr@PAGEOFF
 	STR		X0, [X8]
 	
 	MOV 	X15, #0 ; we failed. compilation stopped.
@@ -4979,7 +5049,7 @@ compile_dCarrayaddz_fill:
 
 	ADRP	X12, allot_limit@PAGE	
 	ADD		X12, X12, allot_limit@PAGEOFF
-	
+	LDR 	X12, [X12]
  .endm
 
 
@@ -6027,6 +6097,11 @@ fastrunintcz: ; interpret the list of tokens at word +
 fastrunintz:; interpret the list of tokens at X0
 	; until (END)
 
+
+	; SAVE IP 
+	STP		LR,  X15, [SP, #-16]!
+	STP		X14, X26, [SP, #-16]! 
+
 	; zero locals
 
 	STP		X0,  X1,  [X26],#16 ; data and word address
@@ -6035,14 +6110,9 @@ fastrunintz:; interpret the list of tokens at X0
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 
-	; SAVE IP 
-	STP		LR,  X15, [SP, #-16]!
-	STP		X14, XZR, [SP, #-16]! 
-
+	; IP
 	SUB		X15, X0, #2
  
-
-	
 
 	; unrolling the loop here x16 makes this a lot faster, 
 10:	; next token
@@ -6065,9 +6135,8 @@ fastrunintz:; interpret the list of tokens at X0
 
 
 90:
-	LDP		X14, XZR, [SP], #16
+	LDP		X14, X26, [SP], #16
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80
 	RET
 
 
@@ -6077,7 +6146,7 @@ flattracerunintz:; interpret the list of tokens at X0
 
 	; SAVE IP 
 	STP		LR,  X15, [SP, #-16]!
-	STP		X14, XZR, [SP, #-16]! 
+	STP		X14, X26, [SP, #-16]! 
 	SUB		X15, X0, #2
 	MOV		X20, X15
 
@@ -6103,7 +6172,7 @@ flattracerunintz:; interpret the list of tokens at X0
 	b		10b
 
 90:
-	LDP		X14, XZR, [SP], #16
+	LDP		X14, X26, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	RET
 
@@ -6223,6 +6292,11 @@ runintcz: ; interpret the list of tokens at word +
 
 
 runintz:; interpret the list of tokens at X0
+
+	; SAVE IP, RP, LOCALS
+	STP		LR,  X15, [SP, #-16]!
+	STP		X14, X26, [SP, #-16]! 
+
  
 	STP		X0,  X1,  [X26],#16 ; data and word address
 	STP		XZR, XZR, [X26],#16
@@ -6230,9 +6304,7 @@ runintz:; interpret the list of tokens at X0
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 
-	; SAVE IP 
-	STP		LR,  X15, [SP, #-16]!
-	STP		X14, XZR, [SP, #-16]! 
+
 	SUB		X15, X0, #2
  
 
@@ -6261,7 +6333,7 @@ runintz:; interpret the list of tokens at X0
 dendz:	; EXIT interpreter - called by exit
 
 90:
-	LDP		X14, XZR, [SP], #16
+	LDP		X14, X26, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	SUB		X26, X26, #80
 	RET
@@ -6273,10 +6345,11 @@ difexitz: ; IFEXIT
 	LDR 	X0, [X16, #-8]
 	SUB 	X16, X16, #8
 	CBZ		X0, 170f
+
 	; unwind stack
-	LDP		X14, XZR, [SP], #16
+	LDP		X14, X26, [SP], #16
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80 ; if flat we should not do that.
+ 
 	
 170:	
 	RET
@@ -6289,52 +6362,21 @@ difzexitz: ; IF0EXIT
 	SUB 	X16, X16, #8
 	CBNZ	X0, 170f
 	; unwind stack
-	LDP		X14, XZR, [SP], #16
+	LDP		X14, X26, [SP], #16
 	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80 ; if flat we should not do that.
-	
 170:	
 	RET
 
 
-
-
-dexitpz: ; EXITP (Exit and Exit parent)
-	CBZ     X15, dinterp_invalid
-	LDP		X14, XZR, [SP], #16
-	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80 ; childs locals
-	LDP		X14, XZR, [SP], #16
-	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80 ; parents locals
-	RET
-
-dexitfpz: ; EXITFP (Exit and Exit parent, FLAT)
-	CBZ     X15, dinterp_invalid
-	LDP		X14, XZR, [SP], #16
-	LDP		LR, X15, [SP], #16	
-	LDP		X14, XZR, [SP], #16
-	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80 ; parents locals only
-	RET
-
 dexitz: ; EXIT
 	CBZ     X15, dinterp_invalid
-	LDP		X14, XZR, [SP], #16
-	LDP		LR, X15, [SP], #16	
-	SUB		X26, X26, #80
-	RET
-
-dexitfz: ; EXITF
-	CBZ     X15, dinterp_invalid
-	LDP		X14, XZR, [SP], #16
+	LDP		X14, X26, [SP], #16
 	LDP		LR, X15, [SP], #16	
 	RET
 
 dexitc: ; EXIT compiles end
 	MOV		X0, #0 ; (EXIT)
 	STRH	W0, [X15]
-	SUB		X26, X26, #160
 190:
 	RET
 
@@ -6385,7 +6427,6 @@ dlrbz: ; ( This is a comment that ends with .. )
 	RET
 
 
-
 drrbz: ; )
 	RET
 
@@ -6427,10 +6468,6 @@ dcomac: ; ,
 	MOV		X0, #43 ; (,)
 	STR		X0, [X15]	
 	RET
-
-
-
-
 
 dsubz: ; -  subtract
 	B 		subz
@@ -6557,7 +6594,6 @@ fsqrt:
 	STR		D0, [X16, #-8]
 	RET
 
-
 fgtz:
 	LDR		D0, [X16, #-8]
 	LDR		D1, [X16, #-16]
@@ -6567,7 +6603,6 @@ fgtz:
 	CINV    X0, X0, gt 
 	STR		X0, [X16], #8
 	RET
-
 
 fgtez:
 	LDR		D0, [X16, #-8]
@@ -6588,7 +6623,6 @@ fltz:
 	CINV    X0, X0, lt 
 	STR		X0, [X16], #8
 	RET
-
 
 fltezz:
 	LDR		D0, [X16, #-8]
@@ -6672,7 +6706,7 @@ ddropc: ;
 	RET	
 
 
-ztypez:
+ztypez: ; AKA $.
 
 	LDR		X0, [X16, #-8] 
 	SUB 	X16, X16, #8
@@ -6693,13 +6727,18 @@ nothing_to_say:
 ztypec:
 	RET
 
+d2dupz: ;  
+	LDR		X0, [X16, #-8] 
+	STR		X0, [X16], #8
+	LDR		X0, [X16, #-8] 
+	STR		X0, [X16], #8
+	RET
+
 ddupz: ;  
 	LDR		X0, [X16, #-8] 
 	STR		X0, [X16], #8
 	RET
 	
-
-
 ddup2z: ;  
 	LDP		X0, X1, [X16, #-16] 
 	STP		X0, X1,  [X16], #16
@@ -8430,6 +8469,7 @@ dstfromappendbuffer:
 	
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
+	LDR		X13, [X13]
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
 	ORR		W0, W0, 0x20
@@ -8449,6 +8489,7 @@ dstfromappendbuffer:
 
 	ADRP	X1, short_strings_end@PAGE		
 	ADD		X1, X1, short_strings_end@PAGEOFF
+	LDR		X1, [X1]
 	CMP		X13, X1  ; check for string space
 	B.gt 	490f
 
@@ -9135,7 +9176,7 @@ dstrdotz:
 	
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
-
+	LDR 	X13, [X13]
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
 	ORR		W0, W0, 0x20
@@ -9156,6 +9197,7 @@ dstrdotz:
 
 	ADRP	X1, short_strings_end@PAGE		
 	ADD		X1, X1, short_strings_end@PAGEOFF
+	LDR		X1, [X1]
 	CMP		X13, X1  ; check for string space
 	B.gt 	490f
 
@@ -9292,7 +9334,7 @@ intern_string_from_buffer:
 	
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
-
+	LDR		X13, [X13]
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
 	ORR		W0, W0, 0x20
@@ -9313,6 +9355,7 @@ intern_string_from_buffer:
 
 	ADRP	X1, short_strings_end@PAGE		
 	ADD		X1, X1, short_strings_end@PAGEOFF
+	LDR		X1, [X1]
 	CMP		X13, X1  ; check for string space
 	B.gt 	490f
 
@@ -9442,7 +9485,7 @@ dstrdotc:
 	
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
-
+	LDR		X13, [X13]
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
 	ORR		W0, W0, 0x20
@@ -9463,6 +9506,7 @@ dstrdotc:
 
 	ADRP	X1, short_strings_end@PAGE		
 	ADD		X1, X1, short_strings_end@PAGEOFF
+	LDR		X1,[X1]
 	CMP		X13, X1  ; check for string space
 	B.gt 	490f
 
@@ -9517,6 +9561,7 @@ dstrdotc:
 
 	ADRP	X1, short_strings@PAGE		
 	ADD		X1, X1, short_strings@PAGEOFF
+	LDR		X1, [X1]
 	MOV     X2, #256
 	SUB  	X5, X5, X1
 	UDIV 	X3, X5, X2
@@ -9595,7 +9640,7 @@ dstrstksc: ; compile literal that returns its address.
 	
 	ADRP	X13, short_strings@PAGE		
 	ADD		X13, X13, short_strings@PAGEOFF
-
+	LDR		X13, [X13]
 
 	; add offset based on first letter
 	LDRB	W0, [X12]	; first letter
@@ -9617,6 +9662,7 @@ dstrstksc: ; compile literal that returns its address.
 
 	ADRP	X1, short_strings_end@PAGE		
 	ADD		X1, X1, short_strings_end@PAGEOFF
+	LDR		X1, [X1]
 	CMP		X13, X1  ; check for string space
 	B.gt 	490f
 
@@ -9705,7 +9751,7 @@ dslitSzdot:
 
 	ADRP	X8, short_strings@PAGE		
 	ADD		X12, X8, short_strings@PAGEOFF
-
+	LDR		X12, [X12]
 	ADD		X15, X15, #2		
 	LDRH	W0, [X15]
  
@@ -9723,7 +9769,8 @@ dslitSzdot:
 ; fetch address of a short literal string, inline literal
 dslitSz:
 	ADRP	X8, short_strings@PAGE		
-	ADD		X12, X8, short_strings@PAGEOFF
+	ADD		X8, X8, short_strings@PAGEOFF
+	LDR		X12, [X8]	 
 	ADD		X15, X15, #2		
 	LDRH	W0, [X15]
 	SUB		W0, W0, #32 ; avoid confusion
@@ -10443,17 +10490,12 @@ time_value:
 ;  
 .align 8
 
-lasthere:	
-	.quad	token_space
-here:
-	.quad	token_space
+lasthere_ptr:	
+	.quad	0
+here_ptr:
+	.quad	0
 
-	.zero 16
-
-token_space:
-	.zero	256*1024*2
-
-token_space_top:
+ 
 
 	.zero 16
 
@@ -10461,8 +10503,7 @@ token_space_top:
 ; this is the locals stack
 
 .align  8
-lsp:	 
-				.zero	16*4096
+lsp:	 .quad 	0
 
 
 
@@ -10472,14 +10513,11 @@ lsp:
 .align 	8
 
 
-allot_last:		.quad	allot_space
-				.zero 	32
-allot_ptr:		.quad	allot_space
-				.zero 	32
-allot_space:	;  allotable bytes
-				.zero	256*1024
-allot_limit:	; allotments went too far
-				.zero 	8*1024		
+allot_last:		.quad	0
+allot_ptr:		.quad	0	
+allot_space:	.quad 	0			
+allot_limit:	.quad 	0 
+				 
 
 .data 
 
@@ -10602,27 +10640,9 @@ string_buffer:
  ; at runtime access is just direct.
 
 
-
-.align 16
-short_strings:
-.rept  8192
-	.zero	256
-.endr
-short_strings_overflow:
-.rept  2048
-	.zero	256
-.endr
-
-short_strings_end:
-.quad	-1
-.quad	-1
-
-long_strings:
-.rept  32
-	.zero	512
-.endr
-.quad	-1
-.quad	-1
+ 
+short_strings: 	.quad 	0
+short_strings_end: .quad 0
 
 .align 16
 slice_string:
@@ -10821,7 +10841,7 @@ hashdict:
 		makeword "ALLOT^", dvaluez , 0, allot_ptr
 		makeword "ALLOT.LAST^", dvaluez , 0, allot_last
 		makeword "ALLOT.LIMIT^", dvaluez , 0, allot_limit
-		makeword "ALLOTMENT", dCarrayvalz, 0,  allot_space, 0, 256*1024
+ 
 		makeword "ALLOT?", dallotablez , 0, 0
 		makeword "ARRAY", dcreatarray ,dcreat_invalid , 0 
 		makeword "ADDR" , daddrz, daddrc, 0
@@ -10838,7 +10858,7 @@ hashdict:
 adict:
 
 		makeemptywords 256
-		makeword "BEQUIET", dvaraddz, 0,  bequiet
+
 		makeword "BEGIN" , dbeginz, dbeginc, 0
 		makeword "BUFFER$", dvaraddz, 0,  string_buffer
 		makeword "BREAK",  dbreakz, dbreakc, 0
@@ -10865,18 +10885,16 @@ bdict:
 		
 cdict:
 		makeemptywords 256
-		makeword "DP", dvaraddz, 0,  here	
 		makeword "DO", dinvalintz , doerc, 0 
 		makeword "DOWNDO", 0 , ddownerc, 0 
 		makeword "DUP", ddupz , 0, 0 
-		makeword "DROP", ddropz , 0, 0		
+		makeword "DDUP", d2dupz , 0, 0 
+ 	
 		makeword "DEPTH", ddepthz , 0, 0 
 		;makeword "DECR", ddecrz, ddecrc,  0
 		makeword "d" , dlocdz, 0, 0
 		makeword "d!" , dlocdsz, 0, 0
 		makeword "d++" , dlocdsppz, 0, 0
-
-	
 
 		
 ddict:
@@ -10887,9 +10905,6 @@ ddict:
 		makeword "ENDIF", dendifz , dendifc, 0 
 		makeword "EMIT", emitz , 0, 0 
 		makeword "EXIT", dexitz, 	0,  0	
-		makeword "EXITP", dexitpz, 	0,  0	
-		makeword "EXITF", dexitfz, 	0,  0	
-		makeword "EXITFP", dexitfpz, 	0,  0	
 		makeword "e" , dlocez, 0, 0
 		makeword "e!" , dlocesz, 0, 0	
 	 
@@ -10945,8 +10960,10 @@ gdict:
 		makeword "h" , dlochz, 0, 0
 		makeword "h!" , dlochsz, 0, 0	
 		makeword "HEX.", dhexprintz, 0, 0
- 
-
+		makeword "HEAPSIZE", heapsize , 0, 0
+		makeword "HEAP^", dvaluez , 0, heap_ptr
+ 		makeword "HLAST^", dvaluez , 0, lasthere_ptr
+ 		makeword "HERE^", dvaluez , 0, here_ptr
 	 
 hdict:
 	
@@ -10977,7 +10994,8 @@ kdict:
 		
 	
 		makeqvword 108
-
+		makeword "LSP^", dvaluez , 0, heap_ptr
+	
 		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
 		makeword "LEAVE",  dinvalintz, dleavec, 0 
 		makeword "LOOP", dinvalintz , dloopc, 0 
@@ -10990,7 +11008,8 @@ ldict:
 		makeemptywords 256
 		makeword "MOD", dmodz, dmodc, 0	
 		makeword "MS", dsleepz , 0, 0 
-		makeword "MSTR", dmstr , 0, 0 
+		makeword "MSTR", dmstr , 0, 0
+
  
 
  
@@ -11066,7 +11085,7 @@ rdict:
 sdict:
 		makeemptywords 256
 		makeword "TFCOL", datcolr, 0, 0
-		makeword "TOKENS", dHWarrayvalz, 0,  token_space, 0, 256*1024
+ 
 		makeword "TO", dtoz, dtoc, 0
 		makeword "TIMEIT", dtimeitz, dtimeitc, 0
 		makeword "TRACE", dtracable, 0, 0
@@ -11107,8 +11126,6 @@ vdict:
 		makeword "W!", dwstorz , 0, 0 
 		makeword "W@", dwatz , 0, 0 
 
-		 
-		
 		
 wdict:
 
@@ -11119,13 +11136,11 @@ xdict:
 		makeemptywords 256
 		
   
-		
-
+	
 ydict:
 		makeemptywords 256
 
-	 
-
+	
 zdict:
 
 		makeemptywords 256
@@ -11144,6 +11159,8 @@ zdict:
 		makeword "$slice", dstrslice, 0,  0
 		makeword "$''", 	stackit, 	stackit, 	0
 		makeword "$intern", 	intern, 	intern, 	0
+		makeword "$^", dvaluez , 0, short_strings
+		makeword "$LIMIT^", dvaluez , 0, short_strings_end
 		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 10240
 	 
 dollardict:
@@ -11180,7 +11197,6 @@ dollardict:
 		makeword "2DROP", ddrop2z , 0, 0 
 
 
-	
 zbytewords:
 		makeemptywords 33
 		makebword 33, 	dstorez, 	dstorec, 	0
@@ -11271,7 +11287,10 @@ addressbuffer:
 	.zero 128*8
 
 
- 	
+.align 8
+heap_ptr:	.quad 0
+
+
 
 
 
