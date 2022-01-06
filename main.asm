@@ -2889,6 +2889,27 @@ stckdoargsz:
 	RET
 
 
+stckqdoargsz: ; (?DO)
+
+	STP		LR,  X12, [SP, #-16]!
+	MOV		X12, X15
+	; Get my arguments
+	LDP 	X0, X1,  [X16, #-16]  
+	SUB		X16, X16, #16
+	SUB 	X0, X0, #1
+
+	; Stack arguments 21, literal address, start, limit
+	
+	MOV		X2,  #21 ; DO
+	STP		X2,  X12, [X14], #16
+	STP		X0,  X1,  [X14], #16
+
+	LDP		LR, X12, [SP], #16
+
+	RET
+
+
+
 ; as above but includes skip forwards
 
 dinvalintz:
@@ -3121,6 +3142,12 @@ do_loop_err:
 	RET	
 
 ; compile in DO LOOP, +LOOP, DOWNDO -LOOP
+
+dqoerc:
+	MOV	X0, #26 ; 
+	STRH W0, [X15] ; replace code
+	RET
+	
 
 doerc:
 	MOV	X0, #21 ; 
@@ -10835,7 +10862,7 @@ dend:
 		makeword "(DO)", 		stckdoargsz, 0 , 0		; 23
 		makeword "(END)", 		dendz, 0 , 0			; 24
 		makeword "(DOCOL)",		0, 	0,  0				; 25
-		makeword "(26)", 		0, 	0,  0				; 26
+		makeword "(?DOER)", 	stckqdoargsz, 	0,  0	; 26
 		makeword "(27)", 		0, 	0,  0				; 27
 		makeword "(28)", 		0, 	0,  0				; 28
 		makeword "(29)", 		0, 	0,  0				; 29
@@ -11243,6 +11270,7 @@ dollardict:
 		makeword "``", 0, dtickc , 0
 		makeword "2DUP", ddup2z , 0, 0 
 		makeword "2DROP", ddrop2z , 0, 0 
+		makeword "?DO", dinvalintz , dqoerc, 0 
 
 
 zbytewords:

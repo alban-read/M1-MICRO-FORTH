@@ -72,6 +72,11 @@ PRIVATE start_ticks
 1 ADDS 1+ 1 SUBS 1-
 2 ADDS 2+ 1 SUBS 2-
 
+// add the common shift words
+1 SHIFTSL 2* 1 SHIFTSR 2/
+2 SHIFTSL 4* 2 SHIFTSR 4/
+
+
 
 // -------------------------------------------------------
 // display and count public words
@@ -163,7 +168,15 @@ PRIVATE ALLOT?
 	AGAIN  
   ;
  
- 
+// make exponent word and assign to ^
+// ^ is predefined without any action.
+
+: exp ( x y -- x^y )
+   OVER SWAP 1  ?DO OVER * LOOP NIP ; 
+
+` exp ` ^ COPY COPY 2DROP FORGET
+
+
 // announce ourselves
 
 PAGE 

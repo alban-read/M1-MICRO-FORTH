@@ -128,12 +128,12 @@ e.g.
 
 ```FORTH
 : t1 
-		127 FILLVALUES WLOCALS 
-		// filled the 16 values with 127
-		15 WLOCALS 
-		14 WLOCALS 
-		+ . 
-		;
+	127 FILLVALUES WLOCALS 
+	// filled the 16 values with 127
+	15 WLOCALS 
+	14 WLOCALS 
+	+ . 
+	;
 ```
 
 Should return 254, every high level word, normally gets its own fresh set of LOCALS when it starts.
@@ -276,7 +276,6 @@ Is a VALUES view over the HW (half/word 16 bit) token space, this is where the c
 #### LITERALS
 
 Is a VALUES view over the (64 bit) long literal space, where large integers, double floats and addresses are stored by the compiler.
-
 
 
 ### Strings 
@@ -1201,9 +1200,9 @@ The compiler does nothing at all to look at expressions and implement them in an
 
 It would be nice to add an **OPTIMIZE** word, that takes a TOKEN compiled word and just translates it to the simplest possible machine code, that would also be a good way of learning some of the nitty gritty detail of the ARM instruction set.
 
-Although a dumb machine code word would probably be ten times faster at branches, you need to get into inlining code and analyzing the flow of data to and from the stack for FORTH to become very fast.
+Although a dumb machine code word would probably be ten times faster at branches, you need to get into inlining code and analyzing the flow of data to and from the stack for FORTH to become very fast. 
 
-MPE have spent a lot of time figuring that out for their commercial FORTH products.
+MPE have commercial Forth products that produce fast code.
 
 
 
@@ -1548,11 +1547,13 @@ Flush output to the terminal
 
 **HEAP**
 
-Allocates some MALLOC memory and leaves the address in HEAP^
+Allocates some MALLOCed memory and leaves the address in HEAP^
 
 Useful to set up various essential areas during startup.
 
-Generally useful if you need ;
+Generally useful if you need a large lump of memory.
+
+Memory is not initialized, FILL can help with that.
 
 **HWARRAY**
 
