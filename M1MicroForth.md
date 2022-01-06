@@ -1405,6 +1405,10 @@ Can be used to create a fast copying word.
 
 Hazardous, only copy memory you own.
 
+**CCOPY** ( src dest -- src1 dest1 )
+
+Short for COPY COPY copies 16 bytes.
+
 **CREATE** 
 
 Used to create a word header in the dictionary.

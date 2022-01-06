@@ -10073,6 +10073,19 @@ randomize:
 	STP 	X0, X1, [X16, #-16]
 	RET
 
+ d2copy:
+	LDP 	X0, X1, [X16, #-16]
+	LDR		X2, [X0]
+	STR		X2, [X1]
+	ADD		X0, X0, #8
+	ADD		X1, X1, #8
+	LDR		X2, [X0]
+	STR		X2, [X1]
+	ADD		X0, X0, #8
+	ADD		X1, X1, #8
+	STP 	X0, X1, [X16, #-16]
+	RET
+
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 .data 
@@ -10956,7 +10969,7 @@ bdict:
 		makeword "c++" , dloccsppz, 0, 0
 		makeword "CODE^" , dlocjz, 0, 0
 		makeword "COPY" ,  dcopy, 0, 0
-	
+		makeword "CCOPY" ,  d2copy, 0, 0
 		
 cdict:
 		makeemptywords 256

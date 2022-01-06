@@ -172,9 +172,9 @@ PRIVATE ALLOT?
 // ^ is predefined without any action.
 
 : exp ( x y -- x^y )
-   OVER SWAP 1  ?DO OVER * LOOP NIP ; 
+   OVER SWAP 1 ?DO OVER * LOOP NIP ; 
 
-` exp ` ^ COPY COPY 2DROP FORGET
+` exp ` ^ CCOPY DDROP FORGET
 
 
 // announce ourselves
