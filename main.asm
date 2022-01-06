@@ -10940,7 +10940,6 @@ cdict:
  		makeword "DROP", ddropz , 0, 0 
 		makeword "DDROP", ddrop2z , 0, 0 
 		makeword "DEPTH", ddepthz , 0, 0 
-		;makeword "DECR", ddecrz, ddecrc,  0
 		makeword "d" , dlocdz, 0, 0
 		makeword "d!" , dlocdsz, 0, 0
 		makeword "d++" , dlocdsppz, 0, 0
