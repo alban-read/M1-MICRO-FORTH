@@ -1317,6 +1317,34 @@ A logical functon applied to the top two values on the stack.
 
 ~~Stop saying OK all the time.~~
 
+**ALLWORDS**
+
+Lists all the public words, including words no one in their right mind should use.
+
+**a++**
+
+A local word that increments 0 LOCALS by 1. 
+
+A super easy way to create a counter, since a is set to zero when a word starts, and this adds one to it.
+
+*A disgraceful and shameful way to avoid the insane stack juggling we should cherish.*
+
+The value is returned by **a** or 0 LOCALS.
+
+**a** .. **h** exist as accessor words for 0 .. 7 LOCALS.
+
+**AT**
+
+Moves the cursor to a position on the terminal, great for video games, (from the 1970s.)
+
+```FORTH
+10 10 AT MSTR
+```
+
+Shame the unicode consortium are so *relentlessly boring in their mission* or we could have more fun in our terminals.
+
+
+
 **BEGIN** 
 
 The start of an indefinite loop in a compiled word.
@@ -1365,8 +1393,18 @@ Potential hazard.
 3.14159265359   CONSTANT PI
 
 An alias for VALUE that expresses a promise to never use TO.
+
 See VALUE.
+
 Nothing is immutable so why pretend.
+
+**COPY** ( src dest -- src1 dest1 )
+
+COPY 8 bytes from src to dest and increment src and dest.
+
+Can be used to create a fast copying word.
+
+Hazardous, only copy memory you own.
 
 **CREATE** 
 
@@ -1447,7 +1485,7 @@ See LOCALS section.
 
 **FALSE** 
 
-Not TRUE
+Not TRUE, 0 in particular.
 
 **FORGET**
 
@@ -1474,17 +1512,15 @@ f<> f= f>=0 f<0 f<= f>= f< f> f. f+ f- f* f/ fsqrt fneg fabs s>f f>s
 
 Mainly the ARM floating point instructions.
 
-
-
 **FFIB** 
 
 Machine code FIB.
 
-
-
 **FORGET** 
 
-Forgets the LAST word.
+Forgets the LAST word created.
+
+Handy if you make a mistake and want to start a word over.
 
 **FINAL^** 
 
@@ -1565,9 +1601,26 @@ The file we are reading from, probably STDIN most of the time.
 
 The index for the current LOOP in a compiled word.
 
+This is an index into a relative position on the return stack.
+
+I means the index of the current LOOP I am in.
+
+If a LOOP is nested you can also use J to get the value of the parents LOOP.
+
+And if you are nested again, you can use K to the value of the grandparents LOOP.
+
+Its all relative.
+
 **IF**
 
 Part of f IF .. ELSE .. THEN in a compiled word.
+
+```FORTH
+: DoYou? 
+  .' Do you like Forth '                 
+  ' yes' ACCEPT $contains
+  IF .' Good ' ELSE .' So sorry ' THEN ;
+```
 
 **INVERT**
 
@@ -1577,7 +1630,51 @@ Inverts the bits in the value on the top of the stack.
 
 The input file
 
+**LAST**
 
+The last word created, this is the only word we can FORGET without saying Bye.
+
+It is the word that ALLOT will try to add more data bytes to.
+
+```FORTH
+LAST >NAME $.
+```
+
+prints the last words name.
+
+**LOCALS**
+
+The locals array of VALUES that exists at every level, for every word.
+
+When a word starts 0..7 LOCALS are all set to zero.
+
+A  LOCALS value may be stored with TO, e.g. ' A string ' TO 7 LOCALS or 3.1459 TO 6 LOCALS.
+
+Read the value with just 7 LOCALS.
+
+A FLAT word sees the LOCALS of its parent word.
+
+The interpreter at level zero, also has its own LOCALS.
+
+See LOCALS above.
+
+**LOOP**
+
+Part of the magnificent definite DO .. LOOP
+
+e.g. 10 1 DO I . .' Hello' CR LOOP ;
+
+Within a LOOP you can get the LOOP index using **I**.
+
+You can **EXIT** from a word and also by implication from any LOOPs.
+
+You can **LEAVE** a LOOP and continue where LOOP ends, but only once.
+
+**LIMIT**
+
+Limits the steps a word can take, used to step through a word, while you attempt to understand how logic let you down again.
+
+See the (not yet written) debugging section above.
 
 **LSP^** 
 
@@ -1593,7 +1690,7 @@ Delay for ms
 
 **MSTR**
 
-Print unicode monster.
+Print the unicode monster.
 
 **NTH** 
 
@@ -1621,9 +1718,11 @@ A floating point constant
 
 **PRIVATE** 
 
-PRIVATE word, hides that word
+PRIVATE word, hides that word.
 
+Avoids cluttering the dictionary with words only used in one other word.
 
+Also hides words used only at startup, or that are so dangerous they should be banned.
 
 **PAGE** 
 
@@ -1631,11 +1730,13 @@ Clears the terminal screen
 
 **PICK** 
 
-A stack operation
+A stack operation that picks the nth word from the stack.
 
-**QUIET** 
+*The fact that pick is actually super fast, is the everlasting shame of the stack machine.*
 
-Stop saying Ok all the time.
+~~**QUIET**~~ 
+
+~~Stop saying Ok all the time.~~
 
 **RMARGIN** 
 
@@ -1675,11 +1776,7 @@ Reset and clear the parameter and return stacks and reset the terminal.
 
 Return terminal to standard settings.
 
-**TFCOL**
 
-Changes the text colour, using terminal escape codes, colours start at 30.
-
-This also sets the background colour and if a character flushes.
 
 **STRING** 
 
@@ -1720,19 +1817,19 @@ The stack pointer
 
 **SEE** 
 
-SEE word
+SEE *word*
 
 Displays what the compiler did to compile the word into tokens.
 
+Shows details about a word.
+
 **SELF^**
 
-In a compiled word, points to the running words dictionary
+In a compiled word, points to the running words dictionary.
 
 **TOKENS**
 
 A values view over the half word token pool.
-
-
 
 **TO** 
 
@@ -1740,9 +1837,9 @@ Sets a value, e.g. 10 TO thing.
 
 **TIMEIT**
 
-TIMEIT word, displays a words runtime.
+TIMEIT *word*, displays a words runtime.
 
-
+That is it displays how long a word takes to run.
 
 **TRACE**
 
@@ -1750,13 +1847,27 @@ TRACE word
 
 Sets the words interpreter to the TRACEABLE one.
 
+Used with TRON and TROF.
+
+.e.g TRACE *WORD* TRON *WORD*
+
+Should display a trace of the word running.
+
 **TRUE** 
 
 Not false, the same as -1 
 
-**TRACING?** 
+**TFCOL**
 
-Is tracing on
+Changes the text colour, using terminal escape codes, colours start at 30.
+
+This also sets the background colour and if a character flashes its zany.
+
+**TRACING?**
+
+Are we tracing, perhaps the reams of code flying past should give us a clue.
+
+This word may not be around much longer.. 
 
 **TICKS** 
 
@@ -1774,7 +1885,7 @@ Ticks per ms.
 
 **TPS** 
 
-Tickes per second
+Ticks per second
 
 **TRON** 
 
@@ -1792,12 +1903,10 @@ Ends the f .. IF ... ELSE ... THEN .. statment
 
 Time since the program started
 
-
-
 **UNTIL** 
 
 
-Ends the BEGIN ... f UNTIL loop
+Ends the BEGIN ... f UNTIL indefinite loop
 
 **VALUE** 
 
@@ -1812,7 +1921,7 @@ create a VARIABLE, 10 VARIABLE myThing
 
 **WORDS** 
 
-Lists the words
+Lists the words but not all of them. 
 
 **WARRAY**
 
@@ -1852,14 +1961,29 @@ Are two strings the same
 
 Are two strings content equal
 
-**$compare** 
+**$find** ( sub str -- n )
 
+find substring in larger string returns address where found.
+
+' test ' ' this is a test of find' $find 
+
+prints: test of find
+
+**$compare** 
 
 Is a string the same, less than or greater than another.
 
+**$contains**  ( sub str -- f )
+
+if str contains sub true, else false.
+
 **$len** 
 
-Find the length of a string
+Find the length of a string.
+
+**$occurs**  ( sub str -- n )
+
+How many times does sub occur in string.
 
 **$pos** 
 
