@@ -333,3 +333,13 @@ Things that crash
 HEAP^ TO ALLOT^
 HEAP^ TO ALLOT.LAST^ 
 240 1024 *  ALLOT^ + TO ALLOT.LIMIT^
+
+: exp ( x y -- x^y )
+  DUP
+  IF DUP 2 MOD
+    IF 2 / SWAP TUCK DUP * SWAP exp *
+    ELSE 2 / SWAP DUP * SWAP exp
+    THEN
+  ELSE 
+  	2DROP 1
+  THEN ;
