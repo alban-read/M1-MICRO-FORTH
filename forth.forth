@@ -158,7 +158,7 @@ PRIVATE ALLOT?
 
 : $occurs ( substr str -- count )  
 	 BEGIN
-		OVER SWAP $find  
+		OVERSWAP $find  
 		DUP 0= IF 
 		DDROP DROP a EXIT 
 		ELSE 
@@ -172,7 +172,7 @@ PRIVATE ALLOT?
 // ^ is predefined without any action.
 
 : exp ( x y -- x^y )
-   OVER SWAP 1 ?DO OVER * LOOP NIP ; 
+   OVERSWAP 1 ?DO OVER * LOOP NIP ; 
 
 ` exp ` ^ CCOPY DDROP FORGET
 

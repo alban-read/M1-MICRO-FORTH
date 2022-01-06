@@ -6883,6 +6883,20 @@ doverz: ;
 	STR		X0, [X16], #8
 	RET
 
+doverswap:
+	LDR		X0, [X16, #-16] 
+	STR		X0, [X16], #8
+	LDP		X0, X1, [X16, #-16]
+	STP		X1, X0, [X16, #-16]
+	RET
+
+dtuckz: ; SWAP OVER
+	LDP		X0, X1, [X16, #-16]
+	STP		X1, X0, [X16, #-16]
+	LDR		X0, [X16, #-16] 
+	STR		X0, [X16], #8
+	RET
+
 doverc:	
 	RET
 
@@ -11114,7 +11128,9 @@ ndict:
 		makeemptywords 256
 
 		makeword "OR", dorz, 0, 0
-		makeword "OVER", doverz, doverc, 0
+		makeword "OVER", doverz, 0, 0
+		makeword "OVERSWAP", doverswap, 0, 0
+		
  
 	
 odict:
@@ -11186,7 +11202,7 @@ sdict:
 		makeword "TRON", dtronz, 0, 0
 		makeword "TROFF", dtroffz, 0, 0
 		makeword "THEN", dendifz , dendifc, 0 
-	 
+	 	makeword "TUCK", dtuckz , 0, 0 
  
 
 tdict:
