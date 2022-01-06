@@ -1,9 +1,9 @@
 // This file is loaded as FORTH starts.
- 
-TICKS ( get the start time early )
-
 // -------------------------------------------------------
-// Set up the Dynamic Memory allocations
+// Set up the Dynamic Memory areas
+
+// initially the stack is tiny, set the new parameter stack size (in cells)
+512 #DSTACK 
 
 // set allotment size data
 1024 1024 * HEAPSIZE
@@ -19,14 +19,19 @@ HERE^ 64 1024 2 * * 0 FILL
 80 256 * HEAPSIZE HEAP^ ALIGN8 TO LSP^
 LSP^ 80 256 * 0 FILL
 
+
 // set up a massive sparse short-strings pool 
+// this is a temporary kludge, hopefully
 8519680 HEAPSIZE HEAP^ ALIGN8 TO $^ 
 8519680 256 - $^ + TO $LIMIT^
 $^ 8519680 0 FILL
 
+// -------------------------------------------------------
+// now variables and words can be declared.
+
 
 // save start time
-VALUE start_ticks
+TICKS  VALUE start_ticks
 
 // Offsets from a words header
 8 ADDS >RUN
@@ -43,6 +48,12 @@ VALUE start_ticks
 
 : PRIVATE 0 ` >NAME C! ; 
 
+// hide startup internal words
+PRIVATE #DSTACK
+PRIVATE #RSTACK
+PRIVATE $^  PRIVATE $LIMIT^
+PRIVATE LSP^
+PRIVATE HERE^ PRIVATE HLAST^ 
 
 // Display time spent in the program
 
@@ -110,6 +121,12 @@ PRIVATE reset?
 	THEN 
 ;
 
+// private (predefined) allot words.
+PRIVATE ALLOT^ 
+PRIVATE ALLOT.LAST^ 
+PRIVATE ALLOT.LIMIT^ 
+PRIVATE ALLOT?
+
 // -------------------------------------------------------
 // displays key codes until Q
 
@@ -125,8 +142,6 @@ PRIVATE reset?
 	AGAIN
  ;
 
-
-
 // -------------------------------------------------------
 // STRINGS 
 
@@ -140,14 +155,14 @@ PRIVATE reset?
 	 BEGIN
 		OVER SWAP $find  
 		DUP 0= IF 
-			 DROP DROP DROP a EXIT
-		ELSE
+		DDROP DROP a EXIT 
+		ELSE 
 			a++
 			1+ ROT DROP 
-		 THEN
-	AGAIN 
+		 THEN 
+	AGAIN  
   ;
-
+ 
  
 // announce ourselves
 

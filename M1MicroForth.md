@@ -1222,6 +1222,20 @@ Move to fields within a words dictionary entry.
 
 e.g. ` DUP >NAME $.  prints the name of DUP, which is DUP
 
+
+
+**#DSTACK**
+
+Only used in the startup file, to set the size of the data (parameter) stack.
+
+e.g. 
+
+256 #DSTACK
+
+Switches from the temporary mini stack to a new larger stack.
+
+
+
 **ADDS** 
 
 7 ADDS 7+ 
@@ -1253,9 +1267,9 @@ Adds n bytes of storage to a variable created earlier
 
 Adds n bytes of storage to the LAST word created
 
-**ALLOTMENT** 
+**~~ALLOTMENT**~~ 
 
-A view over the ALLOTMENT space, used to add data space to words.
+~~A view over the ALLOTMENT space, used to add data space to words.~~
 
 **ARRAY**
 
@@ -1299,9 +1313,9 @@ A maths function, applied to the top value on the stack.
 
 A logical functon applied to the top two values on the stack.
 
-**BEQUIET**
+**~~BEQUIET**~~
 
-Stop saying OK all the time.
+~~Stop saying OK all the time.~~
 
 **BEGIN** 
 
@@ -1376,9 +1390,17 @@ Part of a descending definite loop.
 
 Duplicates the top value on the stack.
 
+**DDUP**
+
+DUP and then DUP again, like DUP DUP and not like 2DUP.
+
 **DROP**
 
 Drops the top value on the stack.
+
+**DDROP**
+
+DROP and then DROP again, the same as 2DROP, but I like it.
 
 **DEPTH** 
 
@@ -1488,6 +1510,14 @@ Fill a block of memory, hazardous.
 
 Flush output to the terminal
 
+**HEAP**
+
+Allocates some MALLOC memory and leaves the address in HEAP^
+
+Useful to set up various essential areas during startup.
+
+Generally useful if you need ;
+
 **HWARRAY**
 
 This creates an array of Half Words, 16 bit values.
@@ -1546,6 +1576,12 @@ Inverts the bits in the value on the top of the stack.
 **IN**
 
 The input file
+
+
+
+**LSP^** 
+
+Only really useful during startup to point the locals stack pointer at some HEAP.
 
 **MOD**
 

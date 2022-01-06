@@ -40,10 +40,14 @@
 .macro reset_data_stack
 	ADRP	X1, sp1@PAGE		
 	ADD		X1, X1, sp1@PAGEOFF
+	LDR		X1, [X1]
+
 	ADRP	X0, dsp@PAGE		
 	ADD		X0, X0, dsp@PAGEOFF
 	STR		X1, [X0]
+
 	MOV		X16, X1 
+	
 .endm
 
 .macro reset_return_stack
@@ -1201,8 +1205,10 @@ dsleepz: ; sleep for ms
 ; stack over/underflow checks
 
 chkunderflow: ; check for stack underflow
+ 
 	ADRP	X0, spu@PAGE		
 	ADD		X0, X0, spu@PAGEOFF
+	LDR		X0, [X0]
 	CMP		X16, X0
 	b.gt	12f	
 
@@ -1215,9 +1221,10 @@ chkunderflow: ; check for stack underflow
 	RET
 
 chkoverflow:; check for stack overflow
-
+ 
 	ADRP	X0, spo@PAGE		
 	ADD		X0, X0, spo@PAGEOFF
+	LDR		X0, [X0]
 	CMP		X16, X0
 	b.lt	95f
 
@@ -1352,12 +1359,10 @@ start_point: ; finds where to start searching the dictionary
 	ADD		X28, X28, hashdict@PAGEOFF	
 	B		251f
 
-
 155:
 	ADRP	X28, dollardict@PAGE		
 	ADD		X28, X28, dollardict@PAGEOFF	
 	B		251f
-
 
 
 200:
@@ -1384,7 +1389,6 @@ start_point: ; finds where to start searching the dictionary
 	ADRP	X28, bdict@PAGE		
 	ADD		X28, X28, bdict@PAGEOFF	
 	B		251f
-
 
 221:	
 	CMP		W0, #'c'
@@ -1420,7 +1424,6 @@ start_point: ; finds where to start searching the dictionary
 	ADRP	X28, gdict@PAGE		
 	ADD		X28, X28, gdict@PAGEOFF	
 	B		251f
-
 
 206:
 	CMP		W0, #'h'
@@ -1577,6 +1580,8 @@ dresetz:
 	
 	ADRP	X0, sp1@PAGE		
 	ADD		X0, X0, sp1@PAGEOFF
+	LDR		X0, [X0]
+
 	MOV 	X1, #0
 	MOV     X2, 512
 	LSL		X2, X2, #3
@@ -1618,6 +1623,7 @@ dresetz:
 	RET
 
 
+
 heapsize:
 	LDR		X0, [X16, #-8]
 	SUB 	X16, X16, #8
@@ -1629,6 +1635,89 @@ heapsize:
 	STR		X0, [X1]
 
 	RET
+
+; these words initialize the stack sizes.
+
+; the script can set the real stack size here
+create_dstack:
+
+	LDR		X0, [X16, #-8]
+	SUB 	X16, X16, #8
+	ADD		X0, X0, #32
+	LSL		X0, X0, #3
+	MOV 	X13, X0
+	save_registers
+	BL		_malloc
+	restore_registers
+	ADRP	X1, heap_ptr@PAGE	
+	ADD		X1, X1, heap_ptr@PAGEOFF
+	STR		X0, [X1]
+	MOV 	X12, X0
+	B 		make_stack
+
+
+mini_stack: ; default tiny stack
+
+	MOV 	X0, #48
+	LSL		X0, X0, #3		 
+	MOV 	X13, X0  
+	ADRP	X1, ssize@PAGE			 
+	ADD		X1, X1, ssize@PAGEOFF
+	STR		X13, [X1]
+
+	; chunk of zeros
+	ADRP	X0, sbase@PAGE		
+	ADD		X0, X0, sbase@PAGEOFF
+	MOV 	X12, X0
+
+	B 		make_stack
+
+make_stack: ; X12 base, X13 size
+
+	STP		LR,  XZR, [SP, #-16]!
+
+	; zero memory
+	MOV 	X1, #0
+	MOV 	X2, X13
+	MOV     X0, X12
+	BL  	fill_mem
+
+	ADRP	X1, spu@PAGE			 
+	ADD		X1, X1, spu@PAGEOFF
+	MOV 	X0, X12
+	ADD		X0, X0, #8*4
+	STR		X0, [X1]
+
+	MOV 	X0, X12
+	ADD		X0, X0, #8*5
+
+	ADRP	X1, sp1@PAGE			 
+	ADD		X1, X1, sp1@PAGEOFF
+
+	ADRP	X2, dsp@PAGE		
+	ADD		X2, X2, dsp@PAGEOFF
+	STR		X0, [X1]
+	STR		X0, [X2]
+	MOV		X16, X0
+
+	ADD		X0, X12, X13
+	SUB 	X0, X0, #8*40
+	ADRP	X1, spo@PAGE		 
+	ADD		X1, X1, spo@PAGEOFF
+	STR		X0, [X1]			 
+
+
+	LDP		LR, XZR, [SP], #16
+
+	RET
+
+
+create_rstack:
+
+
+	RET
+
+
 
 ;; Program Start
 
@@ -1642,7 +1731,9 @@ main:
 	
 
 init:	
- 
+
+	BL mini_stack
+
 	; seed RNG
 	BL 		randomize
 
@@ -1656,13 +1747,7 @@ init:
 
 	ADRP	X27, dend@PAGE	;; <-- dictionary end
 	ADD		X27, X27, dend@PAGEOFF
-
-	ADRP	X0, dsp@PAGE		
-	ADD		X0, X0, dsp@PAGEOFF
-
-	 
-	LDR		X16, [X0]  ;; <-- data stack pointer to X16
-	ADD		X16, X16, #16
+ 
 
 	ADRP	X0, rsp@PAGE		
 	ADD		X0, X0, rsp@PAGEOFF
@@ -1670,22 +1755,6 @@ init:
 
 	ADRP	X26, lsp@PAGE		
 	ADD		X26, X26, lsp@PAGEOFF
-  
-
-	ADRP	X0, sp1@PAGE		
-	ADD		X0, X0, sp1@PAGEOFF
-	MOV 	X1, #0
-	MOV     X2, 512
-	LSL		X2, X2, #3
-	BL      fill_mem
-	
-	ADRP	X0, rp1@PAGE		
-	ADD		X0, X0, rp1@PAGEOFF
-	MOV 	X1, #0
-	MOV     X2, 512
-	LSL		X2, X2,#3
-	BL 		fill_mem
-
 
 
 	;  disable tracing, X6 = 0
@@ -2835,6 +2904,7 @@ ddoerz:
 	ADRP	X8, dsp@PAGE		
 	ADD		X8, X8, dsp@PAGEOFF
 	LDR		X0, [X8]
+
 	SUB		X0, X16, X0
 	LSR		X0, X0, #3
 	CMP		X0, #2
@@ -3552,6 +3622,7 @@ ddepthz:
 
 	ADRP	X0, spu@PAGE		
 	ADD		X0, X0, spu@PAGEOFF
+	LDR		X0, [X0]
 	CMP		X16, X0
 	b.gt	50f	
 
@@ -8890,7 +8961,6 @@ dstrslice:
 	B 		stackit
 	RET
 
-
 dstrcmp:
 
 	LDP		X12, X13, [X16, #-16]
@@ -8947,7 +9017,6 @@ dstrcmp:
  	STR		X0, [X16], #8
 	RET		
 
-
 	; relies on our `no duplicate rule`, a different string
 	; also must be a different object.
 
@@ -8964,7 +9033,6 @@ dstrequalz:
 	STR		X0, [X16, #-16]
 	SUB		X16, X16, #8
 	RET
-
 
 
 dSTRINGz: ; return our address..
@@ -9089,7 +9157,6 @@ creatstring:
 	CMP		X1, #-1		; undefined entry in list?
 	b.ne	260f
 
-
     ; undefined so build the word here
 
 	; this is now the last_word word being built.
@@ -9105,7 +9172,6 @@ creatstring:
 	ADD		X1, X1, dSTRINGz@PAGEOFF
 	STR		X1, [X28, #8]
 
-
 	; set value from the string on the stack
 	LDR		X1, [X16, #-8]	
 	SUB		X16, X16, #8
@@ -9113,7 +9179,6 @@ creatstring:
 	MOV 	X0, #255
 	STR		X0, [X28, #32]
 	B		300f
-
 
 260:	; try next word in dictionary
 	SUB		X28, X28, #64
@@ -9126,9 +9191,6 @@ creatstring:
 
 	restore_registers_not_stack
 	RET
-
-
-
 
 ; run time .'  for interpreter only
 
@@ -9164,7 +9226,6 @@ dstrdotz:
 	CBZ  	W0, 500f
 
 	B 		100b
-
 
 120:
 
@@ -9436,8 +9497,6 @@ intern_string_from_buffer:
 	RET
 
 
-
-
 ; compiles string into the string literal pool.
 ; compiles string literal token and value into word.
 dstrdotc:
@@ -9478,7 +9537,6 @@ dstrdotc:
 
 	MOV 	W0, #0
 	STRB	W0, [X12]
-
 
 	ADRP	X12, string_buffer@PAGE		
 	ADD		X12, X12, string_buffer@PAGEOFF
@@ -10523,36 +10581,22 @@ allot_limit:	.quad 	0
 
 ; this is the data stack
 .align  8
-sps:	.zero 8*8	
-	.quad -111111; underflow patterws
-	.quad -222222
-	.quad -333333
-	.quad -444444
-	.quad -555555
-	.quad -666666
-	.quad -777777
-	.quad -888888
-	.quad -999999
-	.quad 0
-	.quad 0
-spu:	.quad 0
-sp1:	; base
-	.zero 512*8
-spo:	.quad 0
-	.quad 0
-	.quad 0
-	.quad 1111111 ; overflow patterns
-	.quad 2222222
-	.quad 3333333
-	.quad 4444444
-	.quad 5555555
-	.quad 6666666
-	.quad 7777777
-	.quad 8888888
-	.quad 9999999
+spu:	.zero 32
+	 
+spo:	.zero 32
+		 
+sp1:	.zero 32
+		 
+dsp:	.zero 32
 
-sp0:	.zero 8*8
-dsp:	.quad sp1
+ssize:	.zero 32
+
+sbase:
+		.rept	48
+		.quad  0
+		.endr
+
+
 
 ; this is the return stack
 ; used for loop constructs and local variables.
@@ -10825,6 +10869,10 @@ dend:
 
 		makeemptywords 256
 
+		makeword "#DSTACK", create_dstack, dcreat_invalid, 0	
+		makeword "#RSTACK", create_rstack, dcreat_invalid, 0	
+
+
 hashdict:	
 
 		; end of inline compiled words, relax
@@ -10889,7 +10937,8 @@ cdict:
 		makeword "DOWNDO", 0 , ddownerc, 0 
 		makeword "DUP", ddupz , 0, 0 
 		makeword "DDUP", d2dupz , 0, 0 
- 	
+ 		makeword "DROP", ddropz , 0, 0 
+		makeword "DDROP", ddrop2z , 0, 0 
 		makeword "DEPTH", ddepthz , 0, 0 
 		;makeword "DECR", ddecrz, ddecrc,  0
 		makeword "d" , dlocdz, 0, 0
