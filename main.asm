@@ -1268,13 +1268,14 @@ finish:
 
 
 ; this is the equivalent of WORD that reads the next
-; word from the input
+; word from the input, it will also swap the word with
+; an alias word if it sees one.
 
 collectword:  ; byte ptr in x23, x22 
 		; copy and advance byte ptr until space.
 
 	STP		LR, X16, [SP, #-16]!
-
+	STP		X13, XZR, [SP, #-16]!
 	; reset word to zeros;
 	BL		resetword
 
@@ -1312,10 +1313,43 @@ collectword:  ; byte ptr in x23, x22
 	
 20:	B		10b
 		
-90:	MOV		W0, #0x00
+90:	
+	MOV		W0, #0x00
 	STRB	W0, [X22], #1
 	STRB	W0, [X22], #1
-95:	LDP		LR, X16, [SP], #16
+	
+100: ; check for alias substitution
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	LDR		X0, [X22] ; this the word we have from input
+	 
+	; this is the small words alias table
+	ADRP	X13, alias_table@PAGE
+	ADD		X13, X13, alias_table@PAGEOFF
+
+110:
+	
+	LDR		X1, [X13]
+	CBZ		X1, 150f 	; no alias defined
+	CMP  	X0, X1
+	B.eq	130f ; found alias 
+	ADD		X13, X13, #32
+	B 		110b		; try next
+	B 		150f
+
+	; found alias with word
+130: 
+	; swap word for alias.
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	ADD 	X13, X13, #16 
+ 
+	LDP		X0, X1, [X13]
+	STP		X0, X1, [X22]
+
+150: 
+95:	LDP		X13, XZR, [SP], #16
+	LDP		LR, X16, [SP], #16
 	RET
 
 
@@ -6810,8 +6844,8 @@ ztypez: ; AKA $.
 	SUB 	X16, X16, #8
 	CBZ		X0, nothing_to_say
 
-	ADRP	X8, below_string_space@PAGE		
-	ADD		X8, X8, below_string_space@PAGEOFF
+	ADRP	X8, data_base@PAGE		
+	ADD		X8, X8, data_base@PAGEOFF
 	CMP 	X0, X8
 	B.lt 	nothing_to_say
 
@@ -10100,10 +10134,96 @@ randomize:
 	STP 	X0, X1, [X16, #-16]
 	RET
 
+
+; add an alias (text substitution) to the alias table
+
+creatalias:
+
+	save_registers
+	
+	ADRP	X12, alias_table@PAGE
+	ADD		X12, X12, alias_table@PAGEOFF
+	ADRP	X13, alias_limit@PAGE
+	ADD		X13, X13, alias_limit@PAGEOFF
+
+
+	; find free alias slot
+10:	LDRB	W0, [X12]	
+	CBZ		X0, 30f 
+	ADD		X12, X12, #32
+	CMP		X12, X13
+	B.gt	210f
+	B 		10b
+
+30:
+	; get first word
+	BL		advancespaces
+	BL		collectword
+ 	BL		get_word
+	BL		empty_wordQ
+	B.eq	190f
+
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	 
+	; copy word name to alias
+	LDP		X0, X1, [X22]
+	STP 	X0, X1, [X12], #16
+
+	; Second word
+	BL		advancespaces
+	BL		collectword
+    BL		get_word
+	BL		empty_wordQ
+	B.eq	200f
+
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+ 
+	; copy word name to alias
+	LDP		X0, X1, [X22]
+	STP 	X0, X1, [X12]
+
+	restore_registers
+
+	RET
+
+190:
+	restore_registers
+	ADRP	X0, tcomer45@PAGE
+	ADD		X0, X0, tcomer45@PAGEOFF
+	B		sayit_err
+ 
+
+200:
+	restore_registers
+	ADRP	X0, tcomer46@PAGE
+	ADD		X0, X0, tcomer46@PAGEOFF
+	B		sayit_err
+
+
+
+210:
+	restore_registers
+	ADRP	X0, tcomer47@PAGE
+	ADD		X0, X0, tcomer47@PAGEOFF
+	B		sayit_err	
+
+
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 .data 
 
+alias_table:    
+	.rept 32
+	.quad 0
+	.quad 0
+	.endr
+alias_limit:   
+	.quad 0
+  	.quad 0
+    .quad 0
+	.quad 0
 
 ; floats	
 
@@ -10396,6 +10516,20 @@ tcomer43: .ascii "\nError TIMEIT expects a single words name."
    .align	8
 tcomer44: .ascii "\nError TIMEIT only works in the interpreter, not in compiled words."
 	.zero 16
+
+
+   .align	8
+tcomer45: .ascii "\nError ALIAS is followed by the name"
+	.zero 16
+
+   .align	8
+tcomer46: .ascii "\nError ALIAS name is followed by the old name."
+	.zero 16
+
+   .align	8
+tcomer47: .ascii "\nError ALIAS table full."
+	.zero 16
+
 
 
 .align	8
@@ -10934,6 +11068,8 @@ hashdict:
 		makeemptywords 256
 
 		makeword "ADDS", creatadder, dcreat_invalid, 0	
+		makeword "ALIAS", creatalias, dcreat_invalid, 0	
+		makeword "ALIAS^", dvaraddz, 0, alias_table
 		makeword "APPEND$", dvaraddz, 0,  append_buffer
 		makeword "APPEND^", dvaluez, 0,  append_ptr
  

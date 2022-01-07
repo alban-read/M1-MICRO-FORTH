@@ -44,7 +44,7 @@ TICKS  VALUE start_ticks
 -1 CONSTANT -1
 
 : SIGN 0 < IF -1 ELSE 1 THEN ;   
-: TUCK SWAP OVER ;
+ 
 
 : PRIVATE 0 ` >NAME C! ; 
 
@@ -146,6 +146,7 @@ PRIVATE ALLOT?
 		100 MS 
 	AGAIN
  ;
+
 
 // -------------------------------------------------------
 // STRINGS 

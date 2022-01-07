@@ -1717,6 +1717,10 @@ Logical operation
 
 Stack operation
 
+**OVERSWAP**
+
+Short for OVER SWAP.
+
 **PI** 
 
 A floating point constant
@@ -1903,6 +1907,10 @@ Tracing off
 **THEN** 
 
 Ends the f .. IF ... ELSE ... THEN .. statment
+
+**TUCK**
+
+short for SWAP OVER
 
 **UPTIME** 
 
