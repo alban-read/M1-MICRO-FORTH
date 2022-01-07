@@ -1241,6 +1241,24 @@ Switches from the temporary mini stack to a new larger stack.
 
 Create a word 7+ that adds 7 to the value on the stack.
 
+**ALIAS**
+
+Name a word with an ALIAS name
+
+e.g. ALIAS ten 10
+
+ten is now 10.
+
+Using ALIAS a single word (or number) is aliased with a new name.
+You can UNALIAS ten and ten will be undefined again.
+
+ALIAS is just a *magic trick* that provides a new additional name for an existing word.
+
+It does not create anything real in the dictionary and can not be used with a string literal for example.
+
+
+
+
 **APPEND$** 
 
 Storage used when appending by the string builder.
@@ -1915,6 +1933,13 @@ short for SWAP OVER
 **UPTIME** 
 
 Time since the program started
+
+
+**UNALIAS**
+
+UNALIAS word 
+
+Will remove the alias name.
 
 **UNTIL** 
 

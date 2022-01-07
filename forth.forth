@@ -90,22 +90,27 @@ PRIVATE start_ticks
 : reset? ( n -- ) [ FLAT reset? ]
 	1 LOCALS 0< ;
  
+ALIAS	countaword 	a++
+ALIAS	wordcount 	a
+
 : _words
 	reset 
      DO 
 		I >NAME C@ DUP 0> SWAP 255 <> AND IF
-		 	I >NAME $. SPACE a++
+		 	I >NAME $. SPACE countaword
 			I >NAME $len -margin
 			reset? IF CR reset THEN   
 		 THEN 
 	64 +LOOP 
-	CR a . SPACE .' - Counted words. '
+	CR wordcount . SPACE .' - Counted words. '
 	;
 
 : WORDS FINAL^ `` (  _words ;
 
 : ALLWORDS FINAL^ `` (EXIT)  _words ;
 
+UNALIAS countaword
+UNALIAS wordcount
 PRIVATE _words
 PRIVATE reset    
 PRIVATE -margin 

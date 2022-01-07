@@ -1264,6 +1264,66 @@ finish:
 	LDP		X19, X20, [SP], #16
 	RET
 
+
+
+
+
+collectwordnoalias:  ; byte ptr in x23, x22 
+		; copy and advance byte ptr until space.
+
+	STP		LR, X16, [SP, #-16]!
+	STP		X13, XZR, [SP, #-16]!
+	; reset word to zeros;
+	BL		resetword
+
+	MOV		W1, #0
+
+10:	LDRB	W0, [X23], #1
+	CMP		W0, #32
+	b.eq	90f
+	CMP		W0, #9
+	B.eq	90f
+	CMP		W0, #10
+	B.eq	90f
+	CMP		W0, #12
+	B.eq	90f
+	CMP		W0, #13
+	B.eq	90f
+	CMP		W0, #0
+	B.eq	90f
+
+30:			
+	STRB	W0, [X22], #1
+	ADD		W1, W1, #1
+	CMP		W1, #15
+	B.ne	10b
+
+	ADRP	X0, zword@PAGE		
+	ADD		X22, X0, zword@PAGEOFF
+	STP		XZR, XZR, [X22]
+	STP		XZR, XZR, [X22, #8]
+	ADRP	X0, zword@PAGE		
+	ADD		X22, X0, zword@PAGEOFF
+	
+	BL		sayerrlength
+	B		95f
+	
+20:	B		10b
+		
+90:	
+	MOV		W0, #0x00
+	STRB	W0, [X22], #1
+	STRB	W0, [X22], #1
+	 
+  
+95:	LDP		X13, XZR, [SP], #16
+	LDP		LR, X16, [SP], #16
+	RET
+
+
+
+
+
  
 
 
@@ -10135,6 +10195,55 @@ randomize:
 	RET
 
 
+; UNALIAS word - remove an alias
+
+unalias:
+
+	save_registers
+	
+	ADRP	X12, alias_table@PAGE
+	ADD		X12, X12, alias_table@PAGEOFF
+	ADRP	X13, alias_limit@PAGE
+	ADD		X13, X13, alias_limit@PAGEOFF
+
+	BL		advancespaces
+	BL		collectwordnoalias
+ 	BL		get_word
+	BL		empty_wordQ
+	B.eq	190f
+
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	LDR		X0, [X22] ; word to remove in X0
+ 
+110:
+	
+	LDR		X1, [X12]
+	CBZ		X1, 150f 	; no alias defined
+	CMP  	X0, X1
+	B.eq	130f ; found alias 
+	ADD		X12, X12, #32
+	B 		110b		; try next
+ 
+	B		150f
+
+
+	; found alias with word at X12,
+	; we just need to remove it..
+130: 
+	MOV 	X0, X12	; dest
+	ADD		X1, X12, #32 ; source
+	MOV 	X2, #2048
+	BL		_memcpy
+
+150:
+	; normal exit
+	restore_registers
+
+	RET
+
+
+
 ; add an alias (text substitution) to the alias table
 
 creatalias:
@@ -10158,7 +10267,7 @@ creatalias:
 30:
 	; get first word
 	BL		advancespaces
-	BL		collectword
+	BL		collectwordnoalias
  	BL		get_word
 	BL		empty_wordQ
 	B.eq	190f
@@ -10172,7 +10281,7 @@ creatalias:
 
 	; Second word
 	BL		advancespaces
-	BL		collectword
+	BL		collectwordnoalias
     BL		get_word
 	BL		empty_wordQ
 	B.eq	200f
@@ -10215,14 +10324,16 @@ creatalias:
 .data 
 
 alias_table:    
-	.rept 32
+	.rept 64
+	.quad 0
+	.quad 0
 	.quad 0
 	.quad 0
 	.endr
 alias_limit:   
 	.quad 0
-  	.quad 0
-    .quad 0
+	.quad 0
+ 	.quad 0
 	.quad 0
 
 ; floats	
@@ -11285,7 +11396,7 @@ pdict:
 
 qdict:
 		makeemptywords 256
-
+ 	
 	 	makeword "RMARGIN", dvaluez, 0,  rmargin	
 		makeword "REPEAT", drepeatz , drepeatc, 0 
 	 	makeword "RDEPTH", ddepthrz , 0, 0 
@@ -11345,6 +11456,7 @@ tdict:
 
 		makeemptywords 256
 		makeword "UNTIL", duntilz, duntilc, 0	
+		makeword "UNALIAS", unalias, dcreat_invalid, 0	
  
 	
 udict:
