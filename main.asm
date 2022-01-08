@@ -1326,7 +1326,7 @@ collectword:  ; byte ptr in x23, x22
 		; copy and advance byte ptr until space.
 
 	STP		LR, X16, [SP, #-16]!
-	STP		X13, XZR, [SP, #-16]!
+	STP		X13, X12, [SP, #-16]!
 	; reset word to zeros;
 	BL		resetword
 
@@ -1369,37 +1369,38 @@ collectword:  ; byte ptr in x23, x22
 	STRB	W0, [X22], #1
 	STRB	W0, [X22], #1
 	
-100: ; check for alias substitution
+100: 
+	save_registers
+	ADRP	X1, alias_table@PAGE
+	ADD		X1, X1, alias_table@PAGEOFF
+	mov		w2, #256
+	mov		w3, #32
+	adrp	x4, aliassort@PAGE
+	add		x4, x4, aliassort@PAGEOFF
+	ADRP	X0, zword@PAGE		
+	ADD		X0, X0, zword@PAGEOFF
+
+	BL		_bsearch
+	restore_registers
+
+	CBZ		X0, 150f 
+	MOV 	X12, X0 
 	ADRP	X22, zword@PAGE		
 	ADD		X22, X22, zword@PAGEOFF
-	LDR		X0, [X22] ; this the word we have from input
-	 
-	; this is the small words alias table
-	ADRP	X13, alias_table@PAGE
-	ADD		X13, X13, alias_table@PAGEOFF
+
+	LDP		X0, X1, [X12,#16]
+	STP		X0, X1, [X22]
+
 
 110:
 	
-	LDR		X1, [X13]
-	CBZ		X1, 150f 	; no alias defined
-	CMP  	X0, X1
-	B.eq	130f ; found alias 
-	ADD		X13, X13, #32
-	B 		110b		; try next
-	B 		150f
-
-	; found alias with word
+120:
+	
 130: 
-	; swap word for alias.
-	ADRP	X22, zword@PAGE		
-	ADD		X22, X22, zword@PAGEOFF
-	ADD 	X13, X13, #16 
- 
-	LDP		X0, X1, [X13]
-	STP		X0, X1, [X22]
+	
 
 150: 
-95:	LDP		X13, XZR, [SP], #16
+95:	LDP		X13, X12, [SP], #16
 	LDP		LR, X16, [SP], #16
 	RET
 
@@ -1667,9 +1668,10 @@ dresetz:
 	ADD		X0, X0, sp1@PAGEOFF
 	LDR		X0, [X0]
 
+	ADRP	X1, ssize@PAGE			 
+	ADD		X1, X1, ssize@PAGEOFF
+	LDR		X2, [X1]
 	MOV 	X1, #0
-	MOV     X2, 512
-	LSL		X2, X2, #3
 	BL      fill_mem
 	
 	ADRP	X0, rp1@PAGE		
@@ -1696,7 +1698,7 @@ dresetz:
 	ADD		X0, X0, screen_textcolour@PAGEOFF
 	save_registers
 	MOV     X2, #0
-	MOV     X1, #30
+	MOV     X1, #0 ; reset colour
 	STP		X1, XZR, [SP, #-16]!
 	BL		_printf		
 	ADD		SP, SP, #16 
@@ -8940,10 +8942,10 @@ dstrlen:
 	MOV     X2, X1
 	CBZ 	X1, 90f
 
-	ADRP	X12, below_string_space@PAGE		
-	ADD		X12, X12, below_string_space@PAGEOFF
-	CMP 	X1, X12
-	B.lt 	98f
+	;ADRP	X12, below_string_space@PAGE		
+	;ADD		X12, X12, below_string_space@PAGEOFF
+	;CMP 	X1, X12
+	;B.lt 	98f
 
 
 	; search for zero over N bytes 
@@ -9089,6 +9091,18 @@ dstrslice:
 
 dstrcmp:
 
+	; just use c library
+	LDP		X0, X1, [X16, #-16]
+	ADD  	X16, X16, #16
+	MOV 	W2,	 #255
+	save_registers
+	bl		_strncmp
+	restore_registers
+	STR		X0, [X16], #8
+	RET
+ 
+
+	; not using C library
 	LDP		X12, X13, [X16, #-16]
 	SUB		X16, X16, #16
 	
@@ -10263,6 +10277,54 @@ dparamsc:
 
 
 
+findalias:
+
+	save_registers
+	
+	ADRP	X12, alias_table@PAGE
+	ADD		X12, X12, alias_table@PAGEOFF
+
+	BL		advancespaces
+	BL		collectwordnoalias
+ 	BL		get_word
+	BL		empty_wordQ
+	B.eq	190f
+
+
+	BL 		find_alias
+
+	restore_registers
+	STR 	X0, [X16], #8 ; thing we found
+	RET
+
+
+
+find_alias:
+
+;   void *
+;     bsearch(
+;		const void *key,  X0 
+;		const void *base, X1
+;		size_t nel,  W2
+;		size_t width,  W3
+;         int (^compar) (const void *, const void *) X4
+; );
+
+
+	save_registers
+	ADRP	X1, alias_table@PAGE
+	ADD		X1, X1, alias_table@PAGEOFF
+	mov		w2, #256
+	mov		w3, #32
+	adrp	x4, aliassort@PAGE
+	add		x4, x4, aliassort@PAGEOFF
+	ADRP	X0, zword@PAGE		
+	ADD		X0, X0, zword@PAGEOFF
+	BL		_bsearch
+	restore_registers
+	RET
+
+
 clralias:
 	; X1 = fill; X2=count; X0=address
 	STP		LR,  X12, [SP, #-16]!
@@ -10296,37 +10358,67 @@ unalias:
 	BL		empty_wordQ
 	B.eq	190f
 
-	ADRP	X22, zword@PAGE		
-	ADD		X22, X22, zword@PAGEOFF
-	LDR		X0, [X22] ; word to remove in X0
- 
-110:
-	
-	LDR		X1, [X12]
-	CBZ		X1, 150f 	; no alias defined
-	CMP  	X0, X1
-	B.eq	130f ; found alias 
-	ADD		X12, X12, #32
-	B 		110b		; try next
- 
-	B		150f
+	save_registers
+	ADRP	X1, alias_table@PAGE
+	ADD		X1, X1, alias_table@PAGEOFF
+	mov		w2, #256
+	mov		w3, #32
+	adrp	x4, aliassort@PAGE
+	add		x4, x4, aliassort@PAGEOFF
+	ADRP	X0, zword@PAGE		
+	ADD		X0, X0, zword@PAGEOFF
 
+	BL		_bsearch
+	restore_registers
+  	CBZ		X0, 150f 
+	MOV 	X12, X0 
 
-	; found alias with word at X12,
-	; we just need to remove it..
 130: 
 	MOV 	X0, X12	; dest
 	ADD		X1, X12, #32 ; source
-	MOV 	X2, #2048
+
+	ADRP	X12, alias_table@PAGE
+	ADD		X12, X12, alias_table@PAGEOFF
+	SUB 	X3, X0, X12
+	MOV     X2, #8192
+	SUB  	X2, X2, X3
 	BL		_memcpy
 
 150:
 	; normal exit
+	BL 		sortalias
 	restore_registers
 
 	RET
 
 
+ 
+
+; sort the alias list
+aliassort:
+.cfi_startproc
+	stp	x29, x30, [sp, #-16]!           
+	mov	x29, sp
+	.cfi_def_cfa w29, 16
+	.cfi_offset w30, -8
+	.cfi_offset w29, -16
+	mov	w2, #16
+	bl	_strncmp
+	ldp	x29, x30, [sp], #16           
+	ret
+	.cfi_endproc
+
+sortalias:
+	save_registers
+ 	adrp	x0, alias_table@PAGE
+	add		x0, x0, alias_table@PAGEOFF
+	adrp	x3, aliassort@PAGE
+	add		x3, x3, aliassort@PAGEOFF
+	mov		w1, #256
+	mov		w2, #32
+	bl		_qsort
+	restore_registers
+	RET
 
 ; add an alias (text substitution) to the alias table
 
@@ -10376,7 +10468,7 @@ creatalias:
 	; copy word name to alias
 	LDP		X0, X1, [X22]
 	STP 	X0, X1, [X12]
-
+	BL 		sortalias
 	restore_registers
 
 	RET
@@ -10408,7 +10500,7 @@ creatalias:
 .data 
 
 alias_table:    
-	.rept 64
+	.rept 256
 	.quad 0
 	.quad 0
 	.quad 0
@@ -10419,6 +10511,11 @@ alias_limit:
 	.quad 0
  	.quad 0
 	.quad 0
+
+	.quad -1
+	.quad -1
+ 	.quad -1
+	.quad -1
 
 ; floats	
 
@@ -11272,6 +11369,7 @@ hashdict:
 
 		makeword "ADDS", creatadder, dcreat_invalid, 0	
 		makeword "ALIAS", creatalias, dcreat_invalid, 0	
+		makeword "ASORT", sortalias, dcreat_invalid, 0	
 		makeword "ALIAS^", dvaraddz, 0, alias_table
 		makeword "APPEND$", dvaraddz, 0,  append_buffer
 		makeword "APPEND^", dvaluez, 0,  append_ptr
@@ -11327,6 +11425,7 @@ bdict:
 		
 cdict:
 		makeemptywords 256
+ 
 		makeword "DO", dinvalintz , doerc, 0 
 		makeword "DOWNDO", 0 , ddownerc, 0 
 		makeword "DUP", ddupz , 0, 0 
@@ -11379,12 +11478,14 @@ edict:
 		makeword "FORGET", clean_last_word , 0, 0 
 		makeword "FINAL^", dvaraddz, 0,  startdict
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
+		makeword "FINDALIAS", findalias, 0,  0
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
 		makeword "FLUSH", dflushz, 0, 0
 		makeword "f" , dlocfz, 0, 0
 		makeword "f!" , dlocfsz, 0, 0	
+		makeword "FCOL", datcolr, 0, 0
 	
 
 fdict:	
@@ -11527,7 +11628,7 @@ rdict:
 
 sdict:
 		makeemptywords 256
-		makeword "TFCOL", datcolr, 0, 0
+
  
 		makeword "TO", dtoz, dtoc, 0
 		makeword "TIMEIT", dtimeitz, dtimeitc, 0
@@ -11610,7 +11711,6 @@ zdict:
 dollardict:
 	 	
 		makeemptywords 256
-		
 		makeword "*/", dstarslshz, 0,  10
 		makeword "*/MOD", dstarslshzmod, 0,  10
 		 
