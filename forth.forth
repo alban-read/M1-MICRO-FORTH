@@ -2,7 +2,8 @@
 // -------------------------------------------------------
 // Set up the Dynamic Memory areas
 
-// initially the stack is tiny, set the new parameter stack size (in cells)
+// initially the stack is tiny. 
+// parameter stack size (in 64 bit cells)
 512 #DSTACK 
 
 // set allotment size data
@@ -30,7 +31,7 @@ $^ 8519680 0 FILL
 // -------------------------------------------------------
 // now variables and words can be declared.
 
-
+ 
 // save start time from here.
 TICKS  VALUE start_ticks
 
@@ -79,13 +80,19 @@ PRIVATE start_ticks
 
 // -------------------------------------------------------
 // list ALIAS words 
-
+ 
+: spacepad [ FLAT spacepad ]
+	  24 a $len - 1 DO SPACE LOOP ;  
+;
+ 
 : list_alias
 	1 PARAMS
 	CR .' ALIAS words '
 	BEGIN
-		a @ 0= IF EXIT THEN
-		CR a $. SPACE .' ALIAS OF ' a 16+ $.
+		a @ -1 = IF EXIT THEN
+		a @ 0> IF
+		CR spacepad a $. .'  :  ' a 16+ DUP $.  
+		THEN
 		a 32+ a!
 	AGAIN
 	CR
@@ -93,8 +100,9 @@ PRIVATE start_ticks
 
 : .ALIAS ALIAS^ list_alias ;
 
+PRIVATE spacepad
 PRIVATE list_alias
-PRIVATE ALIAS^
+ 
 
 // -------------------------------------------------------
 // display and count public words
@@ -218,25 +226,25 @@ CLRALIAS
 
 // basic terminal colours 
 
-ALIAS color_reset 	0
-ALIAS bold 			1
-ALIAS underline 	2
-ALIAS reversed 		3
-ALIAS black 		30
-ALIAS red 			31
-ALIAS green 		32
-ALIAS yellow 		33
-ALIAS blue 			34
-ALIAS magenta 		35
-ALIAS cyan 			36
-ALIAS white 		37
+ALIAS creset 	0
+ALIAS bold 		1
+ALIAS under 	2
+ALIAS reverse   3
+ALIAS black 	30
+ALIAS red 		31
+ALIAS green 	32
+ALIAS yellow 	33
+ALIAS blue 		34
+ALIAS magenta 	35
+ALIAS cyan 		36
+ALIAS white 	37
 
 : bold.green 
-	green TFCOL bold TFCOL
+	green FCOL bold FCOL
 ;
 
 : colr.reset 
-	color_reset TFCOL
+	creset FCOL
 ;
 
 : Hi 
@@ -244,7 +252,7 @@ ALIAS white 		37
 	bold.green 
 	MSTR SPACE .VERSION 
 	colr.reset 
-	blue TFCOL
+	blue FCOL
 	WORDS CR
 	.' forth.forth  loaded in '  .UPTIME 
 	colr.reset 

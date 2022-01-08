@@ -3,7 +3,6 @@
 
 #include <sys/select.h>
 
-
 // used by KEY? to tell if there is any pending key press.
 extern int kb_hit(void)
 {
