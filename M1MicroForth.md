@@ -1277,7 +1277,7 @@ Create a word 7+ that adds 7 to the value on the stack.
 
 **ALIAS**
 
-Name a word with an ALIAS name
+Names a word with an additional ALIAS name
 
 e.g. ALIAS ten 10
 
@@ -1292,6 +1292,9 @@ It does not create anything real in the dictionary and can not be used with a st
 
 CLRALIAS clears all ALIASes
 
+It is not a good idea to use ALIAS words globally, it will just be confusing, while it does make words more readable locally to have meaningful names.
+
+It is a good idea to assign meaningful names while implementing a word, and then use CLRALIAS to clear them all, before implementing the next one.
 
 
 **APPEND$** 

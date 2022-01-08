@@ -10187,6 +10187,7 @@ randomize:
 
 
 dparamchkz:
+	CBZ     X15, dip_invalid
 	LDR		X0, [X16, #-8]
 	SUB 	X16, X16, #8
 	ADRP	X8, dsp@PAGE		
@@ -10201,7 +10202,7 @@ dparamchkz:
 ; copy n params to LOCALS
 
 dparamsz:
-
+	CBZ     X15, dip_invalid
 	LDR		X0, [X16, #-8]
 	SUB 	X16, X16, #8
 
@@ -11478,8 +11479,6 @@ odict:
 		makeword "PARAMS", dparamsz, 0, 0
 		makeword "PAGE", dpagez, 0, 0
 		makeword "PICK", dpickz, dpickc, 0
-
-	 
 
 pdict:
 

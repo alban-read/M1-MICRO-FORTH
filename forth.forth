@@ -22,6 +22,7 @@ LSP^ 80 256 * 0 FILL
 
 // set up a massive sparse short-strings pool 
 // this is a temporary kludge, hopefully
+
 8519680 HEAPSIZE HEAP^ ALIGN8 TO $^ 
 8519680 256 - $^ + TO $LIMIT^
 $^ 8519680 0 FILL
@@ -30,7 +31,7 @@ $^ 8519680 0 FILL
 // now variables and words can be declared.
 
 
-// save start time
+// save start time from here.
 TICKS  VALUE start_ticks
 
 // Offsets from a words header
@@ -41,10 +42,8 @@ TICKS  VALUE start_ticks
 40 ADDS >DATA2  
 48 ADDS >NAME
 
+// common constants 
 -1 CONSTANT -1
-
-: SIGN 0 < IF -1 ELSE 1 THEN ;   
- 
 
 : PRIVATE 0 ` >NAME C! ; 
 
@@ -63,23 +62,47 @@ PRIVATE HERE^ PRIVATE HLAST^
 
 PRIVATE start_ticks
 
-
-// Add common constants
+// Add common float constants
 3.14159265359   CONSTANT PI
 
- 
+
 // Add the very common fast add and subtract words
-1 ADDS 1+ 1 SUBS 1-
-2 ADDS 2+ 1 SUBS 2-
+ 1  ADDS 1+ 1 SUBS 1-
+ 2 ADDS 2+ 1 SUBS 2-
+16 ADDS 16+
+32 ADDS 32+
 
 // add the common shift words
 1 SHIFTSL 2* 1 SHIFTSR 2/
 2 SHIFTSL 4* 2 SHIFTSR 4/
 
 
+// -------------------------------------------------------
+// list ALIAS words 
+
+: list_alias
+	1 PARAMS
+	CR .' ALIAS words '
+	BEGIN
+		a @ 0= IF EXIT THEN
+		CR a $. SPACE .' ALIAS OF ' a 16+ $.
+		a 32+ a!
+	AGAIN
+	CR
+;
+
+: .ALIAS ALIAS^ list_alias ;
+
+PRIVATE list_alias
+PRIVATE ALIAS^
 
 // -------------------------------------------------------
 // display and count public words
+
+ALIAS	countword 	a++
+ALIAS	wordcount 	a
+ALIAS 	wordsize	64
+ALIAS 	lastword	255
 
 : reset [ FLAT reset ]
 	RMARGIN 1 TO LOCALS ;
@@ -90,18 +113,15 @@ PRIVATE start_ticks
 : reset? ( n -- ) [ FLAT reset? ]
 	1 LOCALS 0< ;
  
-ALIAS	countaword 	a++
-ALIAS	wordcount 	a
-
 : _words
 	reset 
      DO 
-		I >NAME C@ DUP 0> SWAP 255 <> AND IF
-		 	I >NAME $. SPACE countaword
+		I >NAME C@ DUP 0> SWAP lastword <> AND IF
+		 	I >NAME $. SPACE countword
 			I >NAME $len -margin
 			reset? IF CR reset THEN   
 		 THEN 
-	64 +LOOP 
+	wordsize +LOOP 
 	CR wordcount . SPACE .' - Counted words. '
 	;
 
@@ -109,8 +129,7 @@ ALIAS	wordcount 	a
 
 : ALLWORDS FINAL^ `` (EXIT)  _words ;
 
-UNALIAS countaword
-UNALIAS wordcount
+CLRALIAS
 PRIVATE _words
 PRIVATE reset    
 PRIVATE -margin 
@@ -120,9 +139,11 @@ PRIVATE reset?
 // -------------------------------------------------------
 // ALLOT bytes to a variable
 
+ALIAS 	padding	8
+
 : ALLOT ( n -- )
 	LAST ALLOT? IF
-		ALLOT^ + 8 + ALIGN8 TO ALLOT^ 
+		ALLOT^ + padding + ALIGN8 TO ALLOT^ 
 		ALLOT.LAST^ LAST !
 		ALLOT^ TO ALLOT.LAST^
 	ELSE
@@ -136,22 +157,29 @@ PRIVATE ALLOT^
 PRIVATE ALLOT.LAST^ 
 PRIVATE ALLOT.LIMIT^ 
 PRIVATE ALLOT?
+CLRALIAS
 
 // -------------------------------------------------------
 // displays key codes until Q
+
+ALIAS 'Q' 81
+ALIAS 'q' 113
+ALIAS '=' 61
+ALIAS pausetime 100
 
 : .keys NOECHO 
 	 CR .' Press keys to see the key codes.'
 	 CR .' press Q - to quit ' CR
      BEGIN 
 	 	KEY? IF
-		  KEY DDUP EMIT CHAR = EMIT . 32 EMIT FLUSH 
-		  DUP 81 = SWAP 113 = OR IF RETERM EXIT THEN
+		  KEY DDUP EMIT '=' EMIT . SPACE FLUSH 
+		  DUP 'Q' = SWAP 'q' = OR IF RETERM EXIT THEN
 		THEN 
-		100 MS 
+		pausetime MS 
 	AGAIN
  ;
 
+CLRALIAS
 
 // -------------------------------------------------------
 // STRINGS 
@@ -162,7 +190,7 @@ PRIVATE ALLOT?
 
 // how many times is substr in str
 
-ALIAS countit a+
+ALIAS countit a++
 ALIAS counted a 
 
 : $occurs ( substr str -- count )  
@@ -177,8 +205,7 @@ ALIAS counted a
 	AGAIN  
   ;
  
-UNALIAS countit 
-UNALIAS counted 
+CLRALIAS
 
 // make exponent word and assign to ^
 // ^ is predefined without any action.
@@ -186,7 +213,7 @@ UNALIAS counted
 : exp ( x y -- x^y )
    OVERSWAP 1 ?DO OVER * LOOP NIP ; 
 
-` exp ` ^ CCOPY DDROP FORGET
+` exp ` ^ CCPY DDROP FORGET
 
 
 // announce ourselves
