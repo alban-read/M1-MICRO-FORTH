@@ -1290,6 +1290,7 @@ ALIAS is just a *magic trick* that provides a new additional name for an existin
 
 It does not create anything real in the dictionary and can not be used with a string literal for example.
 
+CLRALIAS clears all ALIASes
 
 
 
@@ -1438,6 +1439,11 @@ Potential hazard. Use VALUES instead.
 
 Stores one byte of memory.
 Potential hazard. 
+
+
+**CLRALIAS**
+
+CLEARS all ALIAS 
 
 **CONSTANT** 
 
@@ -1999,6 +2005,8 @@ Time since the program started
 UNALIAS word 
 
 Will remove the alias name.
+
+CLRALIAS  removes all alias names.
 
 **UNTIL** 
 

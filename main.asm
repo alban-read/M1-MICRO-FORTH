@@ -10260,6 +10260,24 @@ dparamsz:
 dparamsc:
 	RET
 
+
+
+clralias:
+	; X1 = fill; X2=count; X0=address
+	STP		LR,  X12, [SP, #-16]!
+	STP		X2,  X13, [SP, #-16]!
+	ADRP	X12, alias_table@PAGE
+	ADD		X12, X12, alias_table@PAGEOFF
+	ADRP	X13, alias_limit@PAGE
+	ADD		X13, X13, alias_limit@PAGEOFF
+	SUB 	X2, X13, X12
+	MOV 	X0, X12
+	MOV 	X1, #0
+	BL 		fill_mem
+	LDP		X2, X13, [SP], #16
+	LDP		LR, X12, [SP], #16	
+	RET
+
 ; UNALIAS word - remove an alias
 
 unalias:
@@ -11292,6 +11310,7 @@ bdict:
 		makeemptywords 256
 		makeword "CHAR", 	dcharz, dcharc, 0
 		makeword "CARRAY", dCcreatarray , dcreat_invalid, 0 
+		makeword "CLRALIAS", clralias, 0, 0	
 		makeword "CVALUES", dCcreatvalues , dcreat_invalid, 0 
 		makeword "C@", 		catz, 0, 0
 		makeword "C!", 		cstorz, 0, 0
