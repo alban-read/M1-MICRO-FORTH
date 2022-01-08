@@ -1294,7 +1294,9 @@ CLRALIAS clears all ALIASes
 
 It is not a good idea to use ALIAS words globally, it will just be confusing, while it does make words more readable locally to have meaningful names.
 
-It is a good idea to assign meaningful names while implementing a word, and then use CLRALIAS to clear them all, before implementing the next one.
+It is a good idea to assign meaningful names while implementing a word, and then use CLRALIAS to clear them all, before implementing the next word.
+
+.ALIAS displays the aliased words, they do not show up as WORDS in the dictionary.
 
 
 **APPEND$** 

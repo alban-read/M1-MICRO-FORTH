@@ -67,7 +67,7 @@ PRIVATE start_ticks
 
 
 // Add the very common fast add and subtract words
- 1  ADDS 1+ 1 SUBS 1-
+ 1 ADDS 1+ 1 SUBS 1-
  2 ADDS 2+ 1 SUBS 2-
 16 ADDS 16+
 32 ADDS 32+
@@ -216,17 +216,45 @@ CLRALIAS
 ` exp ` ^ CCPY DDROP FORGET
 
 
-// announce ourselves
+// basic terminal colours 
 
-PAGE 
+ALIAS color_reset 	0
+ALIAS bold 			1
+ALIAS underline 	2
+ALIAS reversed 		3
+ALIAS black 		30
+ALIAS red 			31
+ALIAS green 		32
+ALIAS yellow 		33
+ALIAS blue 			34
+ALIAS magenta 		35
+ALIAS cyan 			36
+ALIAS white 		37
 
-32 TFCOL
+: bold.green 
+	green TFCOL bold TFCOL
+;
 
-MSTR SPACE .VERSION 
+: colr.reset 
+	color_reset TFCOL
+;
 
-34 TFCOL
+: Hi 
+	PAGE
+	bold.green 
+	MSTR SPACE .VERSION 
+	colr.reset 
+	blue TFCOL
+	WORDS CR
+	.' forth.forth  loaded in '  .UPTIME 
+	colr.reset 
+;
 
-CR WORDS CR
-.' forth.forth  loaded in '  .UPTIME 
- 
-33 TFCOL
+PRIVATE bold.green 
+PRIVATE colr.reset 
+
+// announce ourselves once
+
+Hi 
+
+FORGET
