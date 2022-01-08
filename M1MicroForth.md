@@ -214,6 +214,40 @@ The **a** is set to zero when the word starts, **a++** adds one.
 Be mindful that this is just another name for **0 LOCALS.**
 
 
+### use LOCALS as parameters ###
+
+You can feed up to 8 parameters from the stack into LOCALS with the PARAMS word.
+
+```FORTH
+: sq 1 PARAMS a a * ;
+```
+
+`1 PARAMS` loads the argument into a.
+
+If there are not enough parameters on the stack this will cause an error.
+
+The LOCALS are available in several way
+For example they can be accessed with a .. h
+
+For a word that takes lots of parameters this can be helpful.
+
+The example above really did not need to do this :)
+
+e.g. 
+
+```FORTH 
+: sq DUP * ;
+```
+
+is much nicer.
+
+
+This feature is not necessary most of the time, but if you do have more than three arguments it can make life simpler.
+
+
+ 
+
+
 
 #### Self reference
 
@@ -1413,19 +1447,19 @@ An alias for VALUE that expresses a promise to never use TO.
 
 See VALUE.
 
-Nothing is immutable so why pretend.
+Nothing is immutable but lets pretend.
 
-**COPY** ( src dest -- src1 dest1 )
+**CPY** ( src dest -- src1 dest1 )
 
-COPY 8 bytes from src to dest and increment src and dest.
+COPY 8 bytes from src to dest and increments src and dest by 8.
 
 Can be used to create a fast copying word.
 
 Hazardous, only copy memory you own.
 
-**CCOPY** ( src dest -- src1 dest1 )
+**CCPY** ( src dest -- src1 dest1 )
 
-Short for COPY COPY copies 16 bytes.
+Short for CPY CPY copies 16 bytes increments src and dest by 16.
 
 **CREATE** 
 
@@ -1754,6 +1788,23 @@ Also hides words used only at startup, or that are so dangerous they should be b
 **PAGE** 
 
 Clears the terminal screen
+
+
+**PARAMS** 
+
+Copy N params from the data stack to the LOCALS stack
+
+e.g. 
+```FORTH
+3 PARAMS 
+```
+
+Will load the LOCALS a, b and c from the stack.
+
+You can only take up to 8 params (Locals run from a..h)
+
+PARAMS also checks that the stack is deep enough so this word can also help with error detection.
+
 
 **PICK** 
 

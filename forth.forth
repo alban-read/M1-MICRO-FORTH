@@ -162,18 +162,24 @@ PRIVATE ALLOT?
 
 // how many times is substr in str
 
+ALIAS countit a+
+ALIAS counted a 
+
 : $occurs ( substr str -- count )  
 	 BEGIN
 		OVERSWAP $find  
 		DUP 0= IF 
-		DDROP DROP a EXIT 
+		DDROP DROP countit EXIT 
 		ELSE 
-			a++
+			counted
 			1+ ROT DROP 
 		 THEN 
 	AGAIN  
   ;
  
+UNALIAS countit 
+UNALIAS counted 
+
 // make exponent word and assign to ^
 // ^ is predefined without any action.
 

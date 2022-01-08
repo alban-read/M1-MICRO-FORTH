@@ -1238,8 +1238,6 @@ chkoverflow:; check for stack overflow
 	RET
 
 
-
-
 	; announciate version
 announce:	
 	
@@ -1264,10 +1262,7 @@ finish:
 	LDP		X19, X20, [SP], #16
 	RET
 
-
-
-
-
+; WORD - ignores aliased words
 collectwordnoalias:  ; byte ptr in x23, x22 
 		; copy and advance byte ptr until space.
 
@@ -1321,10 +1316,6 @@ collectwordnoalias:  ; byte ptr in x23, x22
 	RET
 
 
-
-
-
- 
 
 
 ; this is the equivalent of WORD that reads the next
@@ -10195,6 +10186,63 @@ randomize:
 	RET
 
 
+
+; copy n params to LOCALS
+
+dparamsz:
+
+	LDR		X0, [X16, #-8]
+	SUB 	X16, X16, #8
+
+	MOV		X1, #8
+	CMP		X0, X1
+	B.gt 	101f 
+	
+
+	ADRP	X8, dsp@PAGE		
+	ADD		X8, X8, dsp@PAGEOFF
+	LDR		X1, [X8]
+	SUB		X1, X16, X1
+	LSR		X1, X1, #3
+	CMP		X0, X1
+	B.gt 	100f 
+
+	; copy parameters to locals
+	MOV 	X2, X26
+10:
+	LDR		X1, [X16, #-8]
+	STR		X1, [X26, #-8]
+	SUB		X16, X16, #8
+	SUB		X26, X26, #8
+	SUB 	X0, X0, #1
+	CBNZ	X0,	10b 
+90:
+	MOV 	X26, X2 
+	RET
+
+
+	; stack too shallow , quit
+100:
+	ADRP	X0, tcomer48@PAGE
+	ADD		X0, X0, tcomer48@PAGEOFF 
+	B 		110f 
+
+	; only room for 8 parameters
+101:
+	ADRP	X0, tcomer49@PAGE
+	ADD		X0, X0, tcomer49@PAGEOFF 
+	B 		110f 
+ 
+
+110:
+	BL		sayit_err
+	LDP		X14, X26, [SP], #16
+	LDP		LR, X15, [SP], #16	
+	RET 
+
+dparamsc:
+	RET
+
 ; UNALIAS word - remove an alias
 
 unalias:
@@ -10639,6 +10687,14 @@ tcomer46: .ascii "\nError ALIAS name is followed by the old name."
 
    .align	8
 tcomer47: .ascii "\nError ALIAS table full."
+	.zero 16
+
+   .align	8
+tcomer48: .ascii "\nError Not enough parameters (stack underflow)"
+	.zero 16
+
+   .align	8
+tcomer49: .ascii "\nError only room for 8 parameters "
 	.zero 16
 
 
@@ -11229,8 +11285,8 @@ bdict:
 		makeword "c!" , dloccsz, 0, 0
 		makeword "c++" , dloccsppz, 0, 0
 		makeword "CODE^" , dlocjz, 0, 0
-		makeword "COPY" ,  dcopy, 0, 0
-		makeword "CCOPY" ,  d2copy, 0, 0
+		makeword "CPY" ,  dcopy, 0, 0
+		makeword "CCPY" ,  d2copy, 0, 0
 		
 cdict:
 		makeemptywords 256
@@ -11382,7 +11438,7 @@ ndict:
 	
 odict:
 		makeemptywords 256
-
+		makeword "PARAMS", dparamsz, 0, 0
 		makeword "PAGE", dpagez, 0, 0
 		makeword "PICK", dpickz, dpickc, 0
 
