@@ -7,13 +7,11 @@ I would like up arrow to at least work.
 
 
 
-
 VALUES not VARIABLEs
 
 A decent STRING type value for strings
 
 Use a string builder to build strings
-
 
 
 PAIRS fit into the arch64 architecture well.
