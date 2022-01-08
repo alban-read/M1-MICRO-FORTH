@@ -10186,6 +10186,17 @@ randomize:
 	RET
 
 
+dparamchkz:
+	LDR		X0, [X16, #-8]
+	SUB 	X16, X16, #8
+	ADRP	X8, dsp@PAGE		
+	ADD		X8, X8, dsp@PAGEOFF
+	LDR		X1, [X8]
+	SUB		X1, X16, X1
+	LSR		X1, X1, #3
+	CMP		X0, X1 
+	B.gt 	100f 
+	RET
 
 ; copy n params to LOCALS
 
@@ -10223,6 +10234,12 @@ dparamsz:
 
 	; stack too shallow , quit
 100:
+	BL		saycr
+	BL		saylb
+	LDR		X0, [X26, #-72]	 ; self
+	ADD		X0, X0, #48
+	BL 		sayit
+	BL		sayrb
 	ADRP	X0, tcomer48@PAGE
 	ADD		X0, X0, tcomer48@PAGEOFF 
 	B 		110f 
@@ -10690,7 +10707,7 @@ tcomer47: .ascii "\nError ALIAS table full."
 	.zero 16
 
    .align	8
-tcomer48: .ascii "\nError Not enough parameters (stack underflow)"
+tcomer48: .ascii ": Error Not enough parameters (stack underflow)"
 	.zero 16
 
    .align	8
@@ -11438,6 +11455,7 @@ ndict:
 	
 odict:
 		makeemptywords 256
+		makeword "PCHK", dparamchkz, 0, 0
 		makeword "PARAMS", dparamsz, 0, 0
 		makeword "PAGE", dpagez, 0, 0
 		makeword "PICK", dpickz, dpickc, 0

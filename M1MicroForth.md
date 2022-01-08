@@ -1805,6 +1805,14 @@ You can only take up to 8 params (Locals run from a..h)
 
 PARAMS also checks that the stack is deep enough so this word can also help with error detection.
 
+**PCHK** 
+
+n PCHK 
+
+Stops with an error if we dont have the number of params needed on the stack.
+
+A good check to make words safer.
+
 
 **PICK** 
 
