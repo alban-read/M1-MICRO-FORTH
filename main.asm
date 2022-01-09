@@ -1370,6 +1370,9 @@ collectword:  ; byte ptr in x23, x22
 	STRB	W0, [X22], #1
 	
 100: 
+
+	.rept 4
+
 	save_registers
 	ADRP	X1, alias_table@PAGE
 	ADD		X1, X1, alias_table@PAGEOFF
@@ -1383,21 +1386,20 @@ collectword:  ; byte ptr in x23, x22
 	BL		_bsearch
 	restore_registers
 
+ 
+	; alias not found
 	CBZ		X0, 150f 
+
 	MOV 	X12, X0 
 	ADRP	X22, zword@PAGE		
 	ADD		X22, X22, zword@PAGEOFF
 
-	LDP		X0, X1, [X12,#16]
+	LDP		X0, X1, [X12, #16]
 	STP		X0, X1, [X22]
 
+	.endr
 
-110:
-	
-120:
-	
-130: 
-	
+ 
 
 150: 
 95:	LDP		X13, X12, [SP], #16
@@ -10277,40 +10279,57 @@ dparamsc:
 
 
 
-findalias:
-
+findalias2:
 	save_registers
-	
 	ADRP	X12, alias_table@PAGE
 	ADD		X12, X12, alias_table@PAGEOFF
-
 	BL		advancespaces
 	BL		collectwordnoalias
  	BL		get_word
 	BL		empty_wordQ
 	B.eq	190f
-
-
 	BL 		find_alias
-
 	restore_registers
+
+
+	CBZ 	X0, 10f
+
+30:	
+	MOV 	X5, X0 
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	ADD		X4, X0, #16
+	LDP		X0, X1, [X4]
+	STP 	X0, X1, [X22]
+	save_registers
+	BL 		find_alias
+	restore_registers
+	CBZ 	X0, 20f
+	B 		30b
+
+20:
+	MOV 	X0, X5
+10:
 	STR 	X0, [X16], #8 ; thing we found
 	RET
 
 
 
+findalias:
+	save_registers
+	ADRP	X12, alias_table@PAGE
+	ADD		X12, X12, alias_table@PAGEOFF
+	BL		advancespaces
+	BL		collectwordnoalias
+ 	BL		get_word
+	BL		empty_wordQ
+	B.eq	190f
+	BL 		find_alias
+	restore_registers
+	STR 	X0, [X16], #8 ; thing we found
+	RET
+
 find_alias:
-
-;   void *
-;     bsearch(
-;		const void *key,  X0 
-;		const void *base, X1
-;		size_t nel,  W2
-;		size_t width,  W3
-;         int (^compar) (const void *, const void *) X4
-; );
-
-
 	save_registers
 	ADRP	X1, alias_table@PAGE
 	ADD		X1, X1, alias_table@PAGEOFF
@@ -10323,7 +10342,6 @@ find_alias:
 	BL		_bsearch
 	restore_registers
 	RET
-
 
 clralias:
 	; X1 = fill; X2=count; X0=address
@@ -11478,7 +11496,7 @@ edict:
 		makeword "FORGET", clean_last_word , 0, 0 
 		makeword "FINAL^", dvaraddz, 0,  startdict
 		makeword "FINDLIT", dfindlitz, dfindlitc,  0
-		makeword "FINDALIAS", findalias, 0,  0
+		makeword "FINDALIAS", findalias2, 0,  0
 		makeword "FILLVALUES", dfillarrayz, dfillarrayc, 0
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0

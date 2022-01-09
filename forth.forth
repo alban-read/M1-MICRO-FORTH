@@ -81,17 +81,14 @@ PRIVATE start_ticks
 // -------------------------------------------------------
 // list ALIAS words 
  
-: spacepad [ FLAT spacepad ]
-	  24 a $len - 1 DO SPACE LOOP ;  
-;
  
 : list_alias
 	1 PARAMS
-	CR .' ALIAS words '
+	CR 
 	BEGIN
 		a @ -1 = IF EXIT THEN
 		a @ 0> IF
-		CR spacepad a $. .'  :  ' a 16+ DUP $.  
+			a $. .' =[' a 16+ DUP $. .' ]'  CR
 		THEN
 		a 32+ a!
 	AGAIN
@@ -221,30 +218,29 @@ CLRALIAS
 : exp ( x y -- x^y )
    OVERSWAP 1 ?DO OVER * LOOP NIP ; 
 
-` exp ` ^ CCPY DDROP FORGET
-
+` exp ` ^ CCPY DDROP PRIVATE exp
 
 // basic terminal colours 
 
-ALIAS creset 	0
-ALIAS bold 		1
-ALIAS under 	2
-ALIAS reverse   3
-ALIAS black 	30
-ALIAS red 		31
-ALIAS green 	32
-ALIAS yellow 	33
-ALIAS blue 		34
-ALIAS magenta 	35
-ALIAS cyan 		36
-ALIAS white 	37
+ALIAS TCOL.reset 	0
+ALIAS TCOL.bold 	1
+ALIAS TCOL.under 	2
+ALIAS TCOL.reverse  3
+ALIAS TCOL.black 	30
+ALIAS TCOL.red 31
+ALIAS TCOL.green 	32
+ALIAS TCOL.yellow 	33
+ALIAS TCOL.blue 	34
+ALIAS TCOL.magenta 	35
+ALIAS TCOL.cyan 	36
+ALIAS TCOL.white 	37
 
 : bold.green 
-	green FCOL bold FCOL
+	TCOL.green FCOL TCOL.bold FCOL
 ;
 
 : colr.reset 
-	creset FCOL
+	TCOL.reset FCOL
 ;
 
 : Hi 
@@ -252,7 +248,7 @@ ALIAS white 	37
 	bold.green 
 	MSTR SPACE .VERSION 
 	colr.reset 
-	blue FCOL
+	TCOL.blue FCOL
 	WORDS CR
 	.' forth.forth  loaded in '  .UPTIME 
 	colr.reset 

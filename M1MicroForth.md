@@ -1290,13 +1290,11 @@ ALIAS is just a *magic trick* that provides a new additional name for an existin
 
 It does not create anything real in the dictionary and can not be used with a string literal for example.
 
-CLRALIAS clears all ALIASes
-
-It is not a good idea to use ALIAS words globally, it will just be confusing, while it does make words more readable locally to have meaningful names.
+CLRALIAS clears ALL ALIASes
 
 It is a good idea to assign meaningful names while implementing a word, and then use CLRALIAS to clear them all, before implementing the next word.
 
-.ALIAS displays the aliased words, they do not show up as WORDS in the dictionary.
+Use .ALIAS to list the aliases, they do not show up as WORDS in the dictionary.
 
 
 **APPEND$** 
