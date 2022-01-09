@@ -282,7 +282,7 @@ from_startup:
 	save_registers
 	ADRP	X0, startup_file@PAGE		
 	ADD		X0, X0, startup_file@PAGEOFF
- 	ADRP	x1, mode_read@PAGE		
+ 	ADRP	X1, mode_read@PAGE		
 	ADD		X1, X1, mode_read@PAGEOFF
 	BL		_fopen
 	ADRP	X1, input_file@PAGE
@@ -816,17 +816,7 @@ emitchc:	; output X0 as char
 	RET
 
 
-dmstr:
-	ADRP	X0, monster@PAGE	
-	ADD		X0, X0, monster@PAGEOFF
-	ADRP	X8, ___stdoutp@GOTPAGE
-	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
-	LDR		X1, [X8]
-	save_registers
-	BL		_fputs
-	restore_registers
-	RET
-
+ 
 
 
 ; flush the stdout stream
@@ -1306,7 +1296,7 @@ collectwordnoalias:  ; byte ptr in x23, x22
 20:	B		10b
 		
 90:	
-	MOV		W0, #0x00
+	MOV		W0, #0X00
 	STRB	W0, [X22], #1
 	STRB	W0, [X22], #1
 	 
@@ -1365,21 +1355,22 @@ collectword:  ; byte ptr in x23, x22
 20:	B		10b
 		
 90:	
-	MOV		W0, #0x00
+	MOV		W0, #0X00
 	STRB	W0, [X22], #1
 	STRB	W0, [X22], #1
 	
 100: 
 
+	; look for ALIAS, up to 4 levels.
 	.rept 4
 
 	save_registers
 	ADRP	X1, alias_table@PAGE
 	ADD		X1, X1, alias_table@PAGEOFF
-	mov		w2, #256
-	mov		w3, #32
-	adrp	x4, aliassort@PAGE
-	add		x4, x4, aliassort@PAGEOFF
+	MOV		W2, #256
+	MOV		W3, #32
+	ADRP	X4, aliassort@PAGE
+	add		X4, X4, aliassort@PAGEOFF
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
 
@@ -1398,8 +1389,6 @@ collectword:  ; byte ptr in x23, x22
 	STP		X0, X1, [X22]
 
 	.endr
-
- 
 
 150: 
 95:	LDP		X13, X12, [SP], #16
@@ -1913,7 +1902,7 @@ interpret_word:
 	ADD		X22, X22, zword@PAGEOFF
 	LDRB	W0, [X22, #1]
 	CMP		W0, #0
-	B.ne	fw1	
+	B.ne	fW1	
 
 short_words:
 
@@ -1938,12 +1927,12 @@ semicheck2: ; if compiler awake..
 endsemicheck:
 
 	; check if we need to enter the compiler loop.
-	CBZ		X15, fw1  	; compiler is not working on a word.
+	CBZ		X15, fW1  	; compiler is not working on a word.
 	LDRB	W0, [X22]
 	CMP		W0, #']'	; do we re-enter the compiler ?
 	B.eq	reenter_compiler
 
-fw1:
+fW1:
 	BL		start_point	
 
 
@@ -2195,7 +2184,7 @@ find_word_token:
 	SUB		X1, X1, X2
 	LSR		X1, X1, #6	; * 64
 
-	; X1 is token store halfword in [x15]
+	; X1 is token store halfword in [X15]
 	STRH	W1, [X15]
 
 
@@ -2794,7 +2783,7 @@ dtimescz:
 
 	STP		LR,  X15, [SP, #-16]!
 
-	LDP		X3, X1, [X16,#-16]		; x1 word base, x3 count  
+	LDP		X3, X1, [X16,#-16]		; X1 word base, X3 count  
 	SUB 	X16, X16, #16
 
 	LDR		X0, [X1]		; words data
@@ -4580,66 +4569,66 @@ dfillz:
 ; X1 = fill; X2=count; X0=address 
 fill_mem:
 
-	cbz	w2, exit		 
-	mov	x3, x0			 
-	tst	x0, #7
+	cbz	W2, exit		 
+	MOV	X3, X0			 
+	tst	X0, #7
 	b.eq	aligned			 
 
 unaligned:
-	strb	w1, [x3], #1
-	subs	w2, w2, #1
+	strb	W1, [X3], #1
+	subs	W2, W2, #1
 	b.eq	exit			 
-	tst	x3, #7
+	tst	X3, #7
 	b.ne	unaligned		 
 
 /* 8-bytes aligned */
 aligned:
-	cbz	x1, x1_zero
-	bfi	w1, w1, #8, #8		 
-	bfi	w1, w1, #16, #16
-	bfi	x1, x1, #32, #32
+	cbz	X1, X1_zero
+	bfi	W1, W1, #8, #8		 
+	bfi	W1, W1, #16, #16
+	bfi	X1, X1, #32, #32
 
 
-x1_zero:
-	ands	w4, w2, #~0x3f
+X1_zero:
+	ands	W4, W2, #~0X3f
 	b.eq	less_64
  
 
 write_64:
 	.rept	4
-	stp	x1, x1, [x3], #16	/* write 64 bytes in a loop */
+	stp	X1, X1, [X3], #16	/* write 64 bytes in a loop */
 	.endr
-	subs	w4, w4, #64
+	subs	W4, W4, #64
 	b.ne	write_64
-	ands	w2, w2, #0x3f
+	ands	W2, W2, #0X3f
 	b.eq	exit			/* exit if 0 */
 
 	
-less_64:tbz	w2, #5, less_32		/* < 32 bytes */
-	stp	x1, x1, [x3], #16	/* write 32 bytes */
-	stp	x1, x1, [x3], #16
-	ands	w2, w2, #0x1f
+less_64:tbz	W2, #5, less_32		/* < 32 bytes */
+	stp	X1, X1, [X3], #16	/* write 32 bytes */
+	stp	X1, X1, [X3], #16
+	ands	W2, W2, #0X1f
 	b.eq	exit
 
-less_32:tbz	w2, #4, less_16		/* < 16 bytes */
-	stp	x1, x1, [x3], #16	/* write 16 bytes */
-	ands	w2, w2, #0xf
+less_32:tbz	W2, #4, less_16		/* < 16 bytes */
+	stp	X1, X1, [X3], #16	/* write 16 bytes */
+	ands	W2, W2, #0xf
 	b.eq	exit
 
-less_16:tbz	w2, #3, less_8		/* < 8 bytes */
-	str	x1, [x3], #8		/* write 8 bytes */
-	ands	w2, w2, #7
+less_16:tbz	W2, #3, less_8		/* < 8 bytes */
+	str	X1, [X3], #8		/* write 8 bytes */
+	ands	W2, W2, #7
 	b.eq	exit
 
-less_8:	tbz	w2, #2, less_4		/* < 4 bytes */
-	str	w1, [x3], #4		/* write 4 bytes */
-	ands	w2, w2, #3
+less_8:	tbz	W2, #2, less_4		/* < 4 bytes */
+	str	W1, [X3], #4		/* write 4 bytes */
+	ands	W2, W2, #3
 	b.eq	exit
 
-less_4:	tbz	w2, #1, less_2		/* < 2 bytes */
-	strh	w1, [x3], #2		/* write 2 bytes */
-	tbz	w2, #0, exit
-less_2:	strb	w1, [x3]		/* write 1 byte */
+less_4:	tbz	W2, #1, less_2		/* < 2 bytes */
+	strh	W1, [X3], #2		/* write 2 bytes */
+	tbz	W2, #0, exit
+less_2:	strb	W1, [X3]		/* write 1 byte */
 exit:	ret
 
  
@@ -6301,7 +6290,7 @@ fastrunintz:; interpret the list of tokens at X0
 	SUB		X15, X0, #2
  
 
-	; unrolling the loop here x16 makes this a lot faster, 
+	; unrolling the loop here X16 makes this a lot faster, 
 10:	; next token
 	
 	.rept	16
@@ -6337,7 +6326,7 @@ flattracerunintz:; interpret the list of tokens at X0
 	SUB		X15, X0, #2
 	MOV		X20, X15
 
-	; unrolling the loop here x16 makes this a lot faster, 
+	; unrolling the loop here X16 makes this a lot faster, 
 10:	; next token
 	
 	.rept	32
@@ -6371,7 +6360,7 @@ flatrunintz:; interpret the list of tokens at X0
 	SUB		X15, X0, #2
 	MOV		X20, X15
 
-	; unrolling the loop here x16 makes this a lot faster, 
+	; unrolling the loop here X16 makes this a lot faster, 
 10:	; next token
 	
 	.rept	32
@@ -6430,7 +6419,7 @@ step_away:
 	STP		LR,  XZR, [SP, #-16]!
  
 
-	; unrolling the loop here x16 makes this a lot faster, 
+	; unrolling the loop here X16 makes this a lot faster, 
 10:	; next token
 
 
@@ -6495,7 +6484,7 @@ runintz:; interpret the list of tokens at X0
 	SUB		X15, X0, #2
  
 
-	; unrolling the loop here x16 makes this a lot faster, 
+	; unrolling the loop here X16 makes this a lot faster, 
 10:	; next token
 
 	.rept	16
@@ -7516,7 +7505,7 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	; halfword numbers ~32k
 	MOV		X3, #4000
 	LSL		X3, X3, #3  
-	MOV		X1, x0
+	MOV		X1, X0
 	CMP		X0, X3 
 	B.gt	25f  ; too big to be
 
@@ -7582,7 +7571,7 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	RET
 
 
-stackit: ; push x0 to stack.
+stackit: ; push X0 to stack.
 
 	STR		X0, [X16], #8
 	RET
@@ -8787,7 +8776,7 @@ dstrappendbegin:
 	.endr
 	RET
 
-; called by (,) x1 has append_ptr
+; called by (,) X1 has append_ptr
 dstrappendcommafromstack:
 	LDR		X2, [X16, #-8]
 	SUB 	X16, X16, #8
@@ -9015,7 +9004,7 @@ dstrpos:
 
 
 ; slices a string  
-; x3 address. x2 pos, x1 count 
+; X3 address. x2 pos, X1 count 
 ; I feel like the original immutable value ought to be the backing storage for slices.
 ; rather than creating an actual copy.
 ; more figuring out needed.
@@ -9182,7 +9171,7 @@ dSTRINGz: ; return our address..
 	RET
 
 
-; true if x12 contains X13
+; true if X12 contains X13
 dstrcontains:
 
 	LDP		X13, X12, [X16, #-16]
@@ -10178,6 +10167,47 @@ randomize:
 	BL     _getentropy
 	restore_registers
 	RET
+
+ dcopyc:
+	LDP 	X0, X1, [X16, #-16]
+	LDRB	W2, [X0]
+	STRB	W2, [X1]
+	ADD		X0, X0, #1
+	ADD		X1, X1, #1
+	STP 	X0, X1, [X16, #-16]
+	RET
+
+ dcopy2c:
+	LDP 	X0, X1, [X16, #-16]
+	LDRB	W2, [X0]
+	STRB	W2, [X1]
+	ADD		X0, X0, #1
+	ADD		X1, X1, #1
+	LDRB	W2, [X0]
+	STRB	W2, [X1]
+	ADD		X0, X0, #1
+	ADD		X1, X1, #1
+	STP 	X0, X1, [X16, #-16]
+	RET
+
+ dcopy3c:
+	LDP 	X0, X1, [X16, #-16]
+	LDRB	W2, [X0]
+	STRB	W2, [X1]
+	ADD		X0, X0, #1
+	ADD		X1, X1, #1
+	LDRB	W2, [X0]
+	STRB	W2, [X1]
+	ADD		X0, X0, #1
+	ADD		X1, X1, #1
+	LDRB	W2, [X0]
+	STRB	W2, [X1]
+	ADD		X0, X0, #1
+	ADD		X1, X1, #1
+	STP 	X0, X1, [X16, #-16]
+	RET
+
+
  
  dcopy:
 	LDP 	X0, X1, [X16, #-16]
@@ -10279,7 +10309,7 @@ dparamsc:
 
 
 
-findalias2:
+findalias2: ; deep alias resoloution
 	save_registers
 	ADRP	X12, alias_table@PAGE
 	ADD		X12, X12, alias_table@PAGEOFF
@@ -10333,10 +10363,10 @@ find_alias:
 	save_registers
 	ADRP	X1, alias_table@PAGE
 	ADD		X1, X1, alias_table@PAGEOFF
-	mov		w2, #256
-	mov		w3, #32
-	adrp	x4, aliassort@PAGE
-	add		x4, x4, aliassort@PAGEOFF
+	MOV		W2, #256
+	MOV		W3, #32
+	ADRP	X4, aliassort@PAGE
+	add		X4, X4, aliassort@PAGEOFF
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
 	BL		_bsearch
@@ -10359,7 +10389,7 @@ clralias:
 	LDP		LR, X12, [SP], #16	
 	RET
 
-; UNALIAS word - remove an alias
+; UNALIAS word - reMOVe an alias
 
 unalias:
 
@@ -10379,10 +10409,10 @@ unalias:
 	save_registers
 	ADRP	X1, alias_table@PAGE
 	ADD		X1, X1, alias_table@PAGEOFF
-	mov		w2, #256
-	mov		w3, #32
-	adrp	x4, aliassort@PAGE
-	add		x4, x4, aliassort@PAGEOFF
+	MOV		W2, #256
+	MOV		W3, #32
+	ADRP	X4, aliassort@PAGE
+	add		X4, X4, aliassort@PAGEOFF
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
 
@@ -10403,37 +10433,33 @@ unalias:
 	BL		_memcpy
 
 150:
-	; normal exit
-	BL 		sortalias
 	restore_registers
 
 	RET
 
 
- 
-
 ; sort the alias list
 aliassort:
 .cfi_startproc
-	stp	x29, x30, [sp, #-16]!           
-	mov	x29, sp
-	.cfi_def_cfa w29, 16
-	.cfi_offset w30, -8
-	.cfi_offset w29, -16
-	mov	w2, #16
-	bl	_strncmp
-	ldp	x29, x30, [sp], #16           
+	STP	X29, X30, [sp, #-16]!           
+	MOV	X29, sp
+	.cfi_def_cfa W29, 16
+	.cfi_offset W30, -8
+	.cfi_offset W29, -16
+	MOV	W2, #16
+	BL	_strncmp
+	LDP	X29, X30, [sp], #16           
 	ret
 	.cfi_endproc
 
 sortalias:
 	save_registers
- 	adrp	x0, alias_table@PAGE
-	add		x0, x0, alias_table@PAGEOFF
-	adrp	x3, aliassort@PAGE
-	add		x3, x3, aliassort@PAGEOFF
-	mov		w1, #256
-	mov		w2, #32
+ 	ADRP	X0, alias_table@PAGE
+	add		X0, X0, alias_table@PAGEOFF
+	ADRP	X3, aliassort@PAGE
+	add		X3, X3, aliassort@PAGEOFF
+	MOV		W1, #256
+	MOV		W2, #32
 	bl		_qsort
 	restore_registers
 	RET
@@ -10982,15 +11008,12 @@ clear_screen:
  
  .align 8
  screen_at:
-	.asciz "\x1b[%d;%df"
+	.asciz "\X1b[%d;%df"
 
 .align 8
 screen_textcolour:
-	.asciz "\x1b[%dm"
-
-.align 8
-monster:
-	.byte 0xF0, 0x9F, 0x91, 0xBE, 0
+	.asciz "\X1b[%dm"
+ 
 
 largefont:
 .align 8
@@ -11440,6 +11463,9 @@ bdict:
 		makeword "CODE^" , dlocjz, 0, 0
 		makeword "CPY" ,  dcopy, 0, 0
 		makeword "CCPY" ,  d2copy, 0, 0
+		makeword "CPYC" ,  dcopyc, 0, 0
+		makeword "CCPYC" ,  dcopy2c, 0, 0
+		makeword "CCCPYC" ,  dcopy3c, 0, 0
 		
 cdict:
 		makeemptywords 256
@@ -11569,7 +11595,7 @@ ldict:
 		makeemptywords 256
 		makeword "MOD", dmodz, dmodc, 0	
 		makeword "MS", dsleepz , 0, 0 
-		makeword "MSTR", dmstr , 0, 0
+	 
 
  
 
@@ -11712,6 +11738,7 @@ zdict:
 		makeword "$.", ztypez, 0, 0	
 		makeword "}$", dstrappendend , 0, 0 
 		makeword "$}", dstrappendend , 0, 0 
+	;	makeword "$+", dstrappend , 0, 0 
  		makeword "$=", dstrequalz, 0,  0
 		makeword "$==", _dstrequalz, 0,  0
 		makeword "$compare", dstrcmp, 0,  0

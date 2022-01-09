@@ -31,12 +31,13 @@ $^ 8519680 0 FILL
 // -------------------------------------------------------
 // now variables and words can be declared.
 
- 
 // save start time from here.
 TICKS  VALUE start_ticks
 
+
+
 // Offsets from a words header
-8 ADDS >RUN
+8  ADDS >RUN
 16 ADDS >ARG2  
 24 ADDS >COMP
 32 ADDS >DATA1  
@@ -47,6 +48,10 @@ TICKS  VALUE start_ticks
 -1 CONSTANT -1
 
 : PRIVATE 0 ` >NAME C! ; 
+
+: DELWORD  ` 64 0 FILL ; 
+
+: VALDAT ` @ ;
 
 // hide startup internal words
 PRIVATE #DSTACK
@@ -80,8 +85,7 @@ PRIVATE start_ticks
 
 // -------------------------------------------------------
 // list ALIAS words 
- 
- 
+
 : list_alias
 	1 PARAMS
 	CR 
@@ -147,6 +151,7 @@ PRIVATE reset?
 ALIAS 	padding	8
 
 : ALLOT ( n -- )
+    1 PCHK
 	LAST ALLOT? IF
 		ALLOT^ + padding + ALIGN8 TO ALLOT^ 
 		ALLOT.LAST^ LAST !
@@ -190,7 +195,7 @@ CLRALIAS
 // STRINGS 
 
 // is this is an empty string?
-: $empty? 0= IF TRUE ELSE C@ 0= THEN  ;
+: $empty? 1 PCHK 0= IF TRUE ELSE C@ 0= THEN  ;
 
 
 // how many times is substr in str
@@ -199,6 +204,7 @@ ALIAS countit a++
 ALIAS counted a 
 
 : $occurs ( substr str -- count )  
+	2 PCHK
 	 BEGIN
 		OVERSWAP $find  
 		DUP 0= IF 
@@ -218,7 +224,7 @@ CLRALIAS
 : exp ( x y -- x^y )
    OVERSWAP 1 ?DO OVER * LOOP NIP ; 
 
-` exp ` ^ CCPY DDROP PRIVATE exp
+` exp ` ^ CCPY DDROP  DELWORD exp
 
 // basic terminal colours 
 
@@ -227,13 +233,134 @@ ALIAS TCOL.bold 	1
 ALIAS TCOL.under 	2
 ALIAS TCOL.reverse  3
 ALIAS TCOL.black 	30
-ALIAS TCOL.red 31
+ALIAS TCOL.red 		31
 ALIAS TCOL.green 	32
 ALIAS TCOL.yellow 	33
 ALIAS TCOL.blue 	34
 ALIAS TCOL.magenta 	35
 ALIAS TCOL.cyan 	36
 ALIAS TCOL.white 	37
+
+
+
+// -------------------------------------------------------
+// Terminal Brick Out.
+// a dumb game on the terminal using ansi escape codes.
+// 
+
+' #[?25l' STRING coff 27 VALDAT coff C!
+
+' #[?25h' STRING con 27 VALDAT con C!
+
+' #[2K' STRING cln 27 VALDAT cln C!
+
+: curoff coff $. ;
+: curon con $. ;
+: clrln cln $. ;
+
+PRIVATE coff
+PRIVATE con 
+PRIVATE cln
+
+// UTF8 characters
+10062562 	VARIABLE ballone 
+9869282  	VARIABLE lhc
+9934818		VARIABLE rhc
+10524386	VARIABLE fullblock
+
+0 VARIABLE smallbat 24 ALLOT
+
+ALIAS batlen a
+
+: addtobat ( n -- )
+    0 DO
+	  SWAP DROP fullblock SWAP CCCPYC 
+	LOOP ;
+
+: makebat ( n --- )
+    1 PARAMS
+	lhc smallbat CCCPYC
+     batlen addtobat 
+	SWAP DROP rhc SWAP CCCPYC 
+	DDROP
+;
+
+4 makebat 
+
+ALIAS x a 
+ALIAS y b 
+
+
+40 VALUE batx
+30 VALUE baty
+
+
+TCOL.green VALUE batclr
+
+43 VALUE ballx
+29 VALUE bally
+FALSE VALUE ballfree
+TCOL.red VALUE ballclr
+
+: atbat ( x y c --- )
+	3 PARAMS
+	c FCOL 
+	x y AT clrln
+	x y AT smallbat $. 	
+;
+
+: atball ( x y c --- )
+	3 PARAMS
+	c FCOL 
+	ballfree 0= IF 	x y AT clrln THEN
+	x y AT ballone $. 	
+;
+
+
+: showbat ( ) 
+	batclr batx baty atbat ;
+ 
+: showball ( ) 
+	ballclr ballx bally atball ;
+
+
+ALIAS 'z' 122
+ALIAS 'x' 120
+ALIAS 'q' 113
+
+: batkeys
+  NOECHO curoff
+  showbat showball
+ BEGIN
+  KEY? IF 
+	KEY   
+	DUP 'z' = IF 
+		batx 1> IF batx 1- TO batx showbat 
+		ballfree 0= IF ballx 1- TO ballx showball THEN 
+		THEN
+	THEN
+	DUP 'x' = IF 
+		batx 78 < IF batx 1+ TO batx showbat  
+		ballfree 0= IF ballx 1+ TO ballx showball THEN 
+		THEN
+	THEN 
+	DUP 'q' = IF 
+		curon DROP EXIT 
+	THEN 
+  THEN
+  FLUSH // output
+  AGAIN
+;
+
+
+
+// announce ourselves
+
+// define the UTF8 unicode monster
+3197214704 0 VARIABLE monster 8 ALLOT monster !
+
+: MSTR 
+	monster $. ;
 
 : bold.green 
 	TCOL.green FCOL TCOL.bold FCOL
@@ -254,10 +381,11 @@ ALIAS TCOL.white 	37
 	colr.reset 
 ;
 
+PRIVATE monster
 PRIVATE bold.green 
 PRIVATE colr.reset 
 
-// announce ourselves once
+// off we go
 
 Hi 
 
