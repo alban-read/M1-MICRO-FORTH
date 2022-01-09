@@ -258,9 +258,7 @@ ALIAS TCOL.white 	37
 : curon con $. ;
 : clrln cln $. ;
 
-PRIVATE coff
-PRIVATE con 
-PRIVATE cln
+ 
 
 // UTF8 characters
 10062562 	VARIABLE ballone 
@@ -290,12 +288,11 @@ ALIAS batlen a
 ALIAS x a 
 ALIAS y b 
 
-1  VALUE batminx
-80 VALUE batmax
 
 40 VALUE batx
 30 VALUE baty
 0  VALUE batxdir
+
 TCOL.green VALUE batclr
 
 43 VALUE ballx
@@ -340,22 +337,26 @@ TCOL.red VALUE ballclr
 		bally ballx AT 32 EMIT
 		ballx ballxdir + TO ballx 
 		bally ballydir + TO bally	
+		
 		bally 1 < IF 
 			batsball
 		THEN
+		
 		showball 
 ;
 
+
 : batmove 
-		batx batxdir + TO batx 
-		batx batmax > IF -1 TO batxdir THEN
-		batx batminx < IF 1 TO batxdir THEN
+		batx batxdir + TO batx
+		batx 1 < IF 
+			1 TO batxdir
+		THEN
+		batx 70 > IF 
+			-1 TO batxdir
+		THEN
 		showbat
-		ballfree 0= IF
-			batx 3 + TO ballx 
-			showball
-		THEN 
 ;
+
 
 
 ALIAS 'z' 122 // left
@@ -377,16 +378,19 @@ BEGIN
 	THEN 
 	
 	KEY DUP 'z' = IF 
-			batx 1> IF  -1 TO batxdir
+			-1 TO batxdir
 			ballfree 0= IF 
+				ballx 1- TO ballx showball 
 				-1 TO ballxdir
 			THEN 	
 		THEN
 	THEN
 	
 	DUP 'x' = IF 
-		batx 78 < IF 1 TO batxdir
+		batx 78 < IF  
+			1 TO batxdir
 			ballfree 0= IF 
+				ballx 1+ TO ballx showball 
 				1 TO ballxdir
 			THEN 
 		THEN
@@ -408,13 +412,12 @@ BEGIN
   FLUSH  
 
   // only update at set rate
-  TICKS movetime - 984000 > IF 
+  TICKS movetime - 684000 > IF 
   	 TICKS TO movetime
 	 ballfree IF ballmove THEN
-	 batmove
   THEN
   
-  1 MS // do not use 100% CPU
+  1 MS  
 
 AGAIN
 ;

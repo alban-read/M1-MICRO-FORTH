@@ -7254,16 +7254,32 @@ dwatz:
 itsnull: ; error word_desc13
 	MOV		X0, #0
 	STR		X0, [X16, #-8]
+	STP		LR,  XZR, [SP, #-16]!
+	BL		saycr
+	BL		saylb
+	LDR		X0, [X26, #-72]	 ; self
+	ADD		X0, X0, #48
+	BL 		sayit
+	BL		sayrb
 	ADRP	X0, word_desc13@PAGE		
 	ADD		X0, X0, word_desc13@PAGEOFF
-	B		sayit_err
-
+	BL		sayit_err
+	LDP		LR, XZR, [SP], #16
 
 itsnull2: ; error word_desc13
 	SUB		X16, X16, #16
+	STP		LR,  XZR, [SP, #-16]!
+	BL		saycr
+	BL		saylb
+	LDR		X0, [X26, #-72]	 ; self
+	ADD		X0, X0, #48
+	BL 		sayit
+	BL		sayrb
 	ADRP	X0, word_desc13@PAGE		
 	ADD		X0, X0, word_desc13@PAGEOFF
-	B		sayit_err
+	BL		sayit_err
+	LDP		LR, XZR, [SP], #16
+	RET
 
 storz:  ; ( n address -- )
 	LDR		X0, [X16, #-8] 
