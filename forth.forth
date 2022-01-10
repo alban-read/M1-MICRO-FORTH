@@ -37,7 +37,7 @@ TICKS  VALUE start_ticks
 
 
 // Offsets from a words header
-8  ADDS >RUNßß
+8  ADDS >RUN
 16 ADDS >ARG2  
 24 ADDS >COMP
 32 ADDS >DATA1  
@@ -163,10 +163,10 @@ ALIAS 	padding	8
 ;
 
 // private (predefined) allot words.
-ALLOT^ 
-ALLOT.LAST^ 
-ALLOT.LIMIT^ 
-ALLOT?
+PRIVATE ALLOT^ 
+PRIVATE ALLOT.LAST^ 
+PRIVATE ALLOT.LIMIT^ 
+PRIVATE ALLOT?
 CLRALIAS
 
 // -------------------------------------------------------
@@ -361,8 +361,40 @@ TCOL.red VALUE ballclr
 ALIAS 'z' 122 // left
 ALIAS 'x' 120 // right
 ALIAS 'q' 113 // quit game
+ALIAS 'c' 99 // stop
 
 // move bat when keys pressed.
+
+// 
+: batballxdir ( n -- )
+	ballfree 0= IF 
+		TO ballxdir
+	ELSE DROP THEN 
+ ;
+
+: batleft 
+	batx batminx > IF 
+		batxdir 1 = IF 
+			0 TO batxdir
+			0 batballxdir
+		ELSE 
+			-1 TO batxdir
+			-1 batballxdir
+		THEN
+	THEN
+;
+: batright 
+	batx batmax < IF 
+		batxdir -1 = IF 
+			0 TO batxdir
+			0 batballxdir
+		ELSE 
+			1 TO batxdir
+			1 batballxdir
+		THEN
+	THEN
+;
+
 : batkeys  
 batsball
 TICKS TO movetime
@@ -372,24 +404,18 @@ BEGIN
   KEY? IF 
 	
 	keypresses 1+ TO keypresses
-	ballfree 0= keypresses 2 MOD 0= AND IF 
+	ballfree 0= keypresses 4 MOD 0= AND IF 
 		 0 TO ballxdir
 	THEN 
-	
-	KEY DUP 'z' = IF 
-			batx 1> IF  -1 TO batxdir
-			ballfree 0= IF 
-				-1 TO ballxdir
-			THEN 	
-		THEN
+
+	KEY 
+ 
+	DUP 'z' = IF 
+		batleft
 	THEN
 	
 	DUP 'x' = IF 
-		batx 78 < IF 1 TO batxdir
-			ballfree 0= IF 
-				1 TO ballxdir
-			THEN 
-		THEN
+		batright
 	THEN 
 	
 	DUP 32 = IF 
@@ -416,7 +442,7 @@ BEGIN
   
   1 MS // do not use 100% CPU
 
-AGAINßß
+AGAIN
 ;
 
 // announce ourselves
