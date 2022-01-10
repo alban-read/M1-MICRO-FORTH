@@ -248,6 +248,12 @@ ALIAS TCOL.white 	37
 // a dumb game on the terminal using ansi escape codes.
 // 
 
+
+// terminal games need legacy systems font
+// e.g https://github.com/dokutan/legacy_computing-font
+// download install and then select the font for the terminal.
+
+
 ' #[?25l' STRING coff 27 VALDAT coff C!
 
 ' #[?25h' STRING con 27 VALDAT con C!
@@ -263,6 +269,101 @@ PRIVATE con
 PRIVATE cln
 
 // UTF8 characters
+// legacy blocks prelude 240, 159, 172 (2158796784)
+
+
+: makesixl 
+  2 PARAMS       
+  240  a C! 159 a 1+ C! 172 a 2+ C! b a 3 + C!  
+ ;
+
+0 VARIABLE sixls 2048 ALLOT 
+
+: makesxls 
+	128 a!
+	512 0 DO 
+		a sixls I + makesixl 
+		a++
+	8 +LOOP 
+;
+ 
+ makesxls 
+
+ 3 SHIFTSL 8* 
+
+: .sixl ( n )
+	8* sixls + $.
+;
+
+// so we can pick one
+: .sixls 64 0 DO I .sixl CHAR = EMIT I . SPACE LOOP ;
+
+
+: .brick 
+	56 48 48 48 52
+	5 TIMESDO .sixl
+;
+
+ : .dmg2
+	10 48 48 48 52
+	5 TIMESDO .sixl
+;
+
+
+ : .dmg3
+	10 48 48 48 6
+	5 TIMESDO .sixl
+;
+
+: .dmg4
+	10 33 48 48 6
+	5 TIMESDO .sixl
+;
+
+
+: .dmg5
+	10 33 48 33 7
+	5 TIMESDO .sixl
+;
+
+
+: .dmg6
+	7 33 32 33 0
+	5 TIMESDO .sixl
+;
+
+: .dmg7
+	5 TIMESDO SPACE
+;
+
+
+
+: .bricks 
+	9 0 DO 
+	  .brick SPACE SPACE
+	LOOP 
+;
+
+: .wall 
+
+	6  10 AT 
+	TCOL.cyan FCOL .bricks  
+	8  10 AT 
+	TCOL.magenta FCOL .bricks  
+	10 10 AT 
+	TCOL.yellow FCOL .bricks  
+	12 10 AT 
+	TCOL.green FCOL .bricks  
+	14 10 AT
+	TCOL.blue FCOL .bricks  
+	16 10 AT
+	TCOL.red FCOL .bricks  
+
+;
+
+
+
+2158796784	VALUE blockish
 10062562 	VARIABLE ballone 
 9869282  	VARIABLE lhc
 9934818		VARIABLE rhc
@@ -290,7 +391,7 @@ ALIAS batlen a
 ALIAS x a 
 ALIAS y b 
 
-1  VALUE batminx
+2  VALUE batminx
 80 VALUE batmax
 
 40 VALUE batx
