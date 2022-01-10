@@ -248,18 +248,16 @@ ALIAS TCOL.white 	37
 // a dumb game on the terminal using ansi escape codes.
 // 
 
-
 // terminal games need legacy systems font
 // e.g https://github.com/dokutan/legacy_computing-font
 // download install and then select the font for the terminal.
 
-// 8 CARRAY coff 27 , CHAR [ , CHAR ? CHAR 2 , CHAR 5 , CHAR l , 0 ,
 
-' #[?25l' STRING coff 27 VALDAT coff C!
+' #[?25l' STRING coff 27 , 
 
-' #[?25h' STRING con 27 VALDAT con C!
+' #[?25h' STRING con 27 ,
 
-' #[2K' STRING cln 27 VALDAT cln C!
+' #[2K' STRING cln 27 ,
 
 : curoff coff $. ;
 : curon con $. ;
