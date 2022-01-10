@@ -6811,15 +6811,24 @@ dcomaz: ; ,  run time comma action
 	CMP		X0, X8
 	B.ne 	90f  
 	B 		dHWarraycommafromstack
+
 90:
+
+	ADRP	X8, dSTRINGz@PAGE	; high level word.	
+	ADD		X8, X8, dSTRINGz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	100f  
+	B 		dcarraycommafromstack
+
+100: 
 	; we may be appending a string
 	ADRP	X1, append_ptr@PAGE		
 	ADD		X1, X1, append_ptr@PAGEOFF
 	LDR		X1, [X1]
-	CBZ 	X1, 10f
+	CBZ 	X1, 200f
 	B 		dstrappendcomma
 
-100:
+200:
 	RET
 
 dcomac: ; , 
@@ -9504,6 +9513,19 @@ creatstring:
 	; set value from the string on the stack
 	LDR		X1, [X16, #-8]	
 	SUB		X16, X16, #8
+	CMP		X1,  #256
+	B.gt 	150f
+
+	STR		X1, [X28, #32] ; array size 
+	MOV 	X3, #3
+	allotation
+
+	CMP		X0, X12
+	B.gt	allot_memory_full
+	B 		300f
+
+
+150: ; we had a string literal
 	STR		X1, [X28]	; data pointer
 	MOV 	X0, #255
 	STR		X0, [X28, #32]
