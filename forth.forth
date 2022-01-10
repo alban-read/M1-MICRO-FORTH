@@ -253,6 +253,7 @@ ALIAS TCOL.white 	37
 // e.g https://github.com/dokutan/legacy_computing-font
 // download install and then select the font for the terminal.
 
+// 8 CARRAY coff 27 , CHAR [ , CHAR ? CHAR 2 , CHAR 5 , CHAR l , 0 ,
 
 ' #[?25l' STRING coff 27 VALDAT coff C!
 
