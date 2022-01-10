@@ -521,12 +521,12 @@ sayword:
 sayoverflow:
 	ADRP	X0, tovflr@PAGE	
 	ADD		X0, X0, tovflr@PAGEOFF
-	B		sayit
+	B		sayit_err_word
 
 sayunderflow:
 	ADRP	X0, 	tunder@PAGE	
 	ADD		X0, X0, 	tunder@PAGEOFF
-	B		sayit
+	B		sayit_err_word
 
 sayeol:
 	ADRP	X0, texit@PAGE	
@@ -642,6 +642,31 @@ sayit_err:
 	restore_registers
 	MOV		X0, #-1 ; flag err for compiler
 	RET
+
+
+sayit_err_word:
+	
+
+	save_registers
+	MOV 	X5, X0
+	BL		saycr
+	BL		saylb
+	LDR		X0, [X26, #-72]	 ; self
+	ADD		X0, X0, #48
+	BL 		sayit
+	BL		sayrb
+ 
+
+	ADRP	X8, ___stdoutp@GOTPAGE
+	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
+	LDR		X1, [X8]
+	MOV		X0, X5
+ 
+	BL		_fputs	
+	restore_registers
+	MOV		X0, #-1 ; flag err for compiler
+	RET
+
 
 
 ; WORD scanning routines
@@ -1834,9 +1859,20 @@ init:
 	ADRP	X26, lsp@PAGE		
 	ADD		X26, X26, lsp@PAGEOFF
 
+	; give the interpreter some context
+	MOV     X1, #51 ; (FORTH)
+	LSL		X1, X1, #6	; / 64 
+	ADD		X1, X1, X27
+	MOV 	X0, #0
 
-	;  disable tracing, X6 = 0
+	STP		X0,  X1,  [X26],#16 ; data and word address
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	STP		XZR, XZR, [X26],#16
+	; TROFF
 	MOV		X6, #0
+
 
 	; start of outer interpreter/compiler
 	
@@ -5226,6 +5262,7 @@ compile_dCarrayaddz_fill:
 	ADRP	X12, allot_limit@PAGE	
 	ADD		X12, X12, allot_limit@PAGEOFF
 	LDR 	X12, [X12]
+
  .endm
 
 
@@ -5349,6 +5386,7 @@ arrayvaluecreator:
 	STR		X0, [X28, #32] ; array size 
 
 	allotation
+
 	CMP		X0, X12
 	B.gt	allot_memory_full
 
@@ -7317,7 +7355,7 @@ hwstorz:  ; ( n address -- )
 
 catz: ;  ( address -- n ) fetch var.
 	LDR		X0, [X16, #-8] 
-	CBZ		X0, itsnull
+	CBZ		X0, itsnull2
  
 	ADRP	X12, data_base@PAGE		
 	ADD		X12, X12, data_base@PAGEOFF
@@ -10976,7 +11014,7 @@ word_desc12: .ascii "\t\tPRIM COMP"
 
 
 .align	8
-word_desc13: .ascii "\nError: invalid memory access attempt"
+word_desc13: .ascii "Error: invalid memory access attempt"
 	.zero 16
 
 
@@ -11097,17 +11135,17 @@ lasthere_ptr:
 	.quad	0
 here_ptr:
 	.quad	0
-
+ 	.zero  96
  
 
-	.zero 16
+ 
 
 
 ; this is the locals stack
 
 .align  8
-lsp:	 .quad 	0
-
+lsp:	.quad 	0
+ 		.zero  96
 
 
 ; The ALLOTMENT for random data
@@ -11115,11 +11153,12 @@ lsp:	 .quad 	0
 
 .align 	8
 
-
+ 				.zero  96
 allot_last:		.quad	0
 allot_ptr:		.quad	0	
 allot_space:	.quad 	0			
 allot_limit:	.quad 	0 
+ 				.zero  96
 				 
 
 .data 
@@ -11408,9 +11447,11 @@ dend:
 		makeword "(INCR)", 				dincrcz, 	0,  0	; 48
 		makeword "(DECR)", 				ddecrcz, 	0,  0	; 49
 		makeword "(ONRESET)", 			0,  	0,   0		; 50
+		makeword "(FORTH)", 			0, 0, 0				; 51
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
+
 
 		makeemptywords 256
 
@@ -11543,6 +11584,7 @@ edict:
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
 		makeword "FLUSH", dflushz, 0, 0
+		
 		makeword "f" , dlocfz, 0, 0
 		makeword "f!" , dlocfsz, 0, 0	
 		makeword "FCOL", datcolr, 0, 0

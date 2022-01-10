@@ -37,7 +37,7 @@ TICKS  VALUE start_ticks
 
 
 // Offsets from a words header
-8  ADDS >RUN
+8  ADDS >RUNßß
 16 ADDS >ARG2  
 24 ADDS >COMP
 32 ADDS >DATA1  
@@ -163,10 +163,10 @@ ALIAS 	padding	8
 ;
 
 // private (predefined) allot words.
-PRIVATE ALLOT^ 
-PRIVATE ALLOT.LAST^ 
-PRIVATE ALLOT.LIMIT^ 
-PRIVATE ALLOT?
+ALLOT^ 
+ALLOT.LAST^ 
+ALLOT.LIMIT^ 
+ALLOT?
 CLRALIAS
 
 // -------------------------------------------------------
@@ -407,7 +407,7 @@ BEGIN
 
   FLUSH  
 
-  // only update at set rate
+  // only update bat and ball at set rate
   TICKS movetime - 984000 > IF 
   	 TICKS TO movetime
 	 ballfree IF ballmove THEN
@@ -416,7 +416,7 @@ BEGIN
   
   1 MS // do not use 100% CPU
 
-AGAIN
+AGAINßß
 ;
 
 // announce ourselves

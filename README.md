@@ -8,9 +8,27 @@ Inspired by FORTH, especially micro computer FORTHs of the 1980s.
 
 ### purpose
 
-Learn ARM64, have some fun, create useful things.
+Learn ARM64, have fun, create useful things.
 
 Provide a small safe subset of user friendly FORTH (if possible.)
+
+### now in testing phase
+
+- The write a small FORTH in 10,000 lines of assembly or less, is complete.
+
+- The write ten thousand lines of FORTH to test the small FORTH works correctly and safely is now in progress.
+
+- The application is running in the terminal for now.
+
+    - I find running things in a game loop, is a really good way to test they work, so I am writing some dumb terminal games.
+
+- During this phase I also plan to rewrite some of the brutally stupid 'algorithms' in the interpreter.
+    - Any that waste shed loads of memory, or are slow.
+
+I plan to add sound and 2D sprites and escape from the terminal, in the next phase after this.
+
+After that I will finally be able to program aß Mac like it is a micro-computer again.
+
 
 ###  M1 MICRO FORTH - a small, simple, non-standard Forth
 
