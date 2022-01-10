@@ -1873,6 +1873,10 @@ init:
 	; TROFF
 	MOV		X6, #0
 
+	MOV 	X0, #0 ; not appending
+	ADRP	X1, append_ptr@PAGE		
+	ADD		X1, X1, append_ptr@PAGEOFF
+	STR		X0, [X1]
 
 	; start of outer interpreter/compiler
 	
@@ -5132,6 +5136,73 @@ dCarrayaddz_index_error:
 	B		sayit
 	RET
 
+; appends values to the LAST c array
+dcarraycommafromstack:
+	LDR		X2, [X16, #-8]
+	SUB 	X16, X16, #8
+	LDR		X3, [X1, #40] ; used as offset
+	LDR 	X4, [X1, #32]
+	CMP		X3, X4 
+	B.ge	darrayaddz_index_error
+	LDR		X4, [X1] ; data 
+	ADD		X0, X3, X4 
+	STRB 	W2, [X0]
+	ADD		X3, X3, #1
+	STR 	X3, [X1, #40]	
+	RET
+
+; appends values to the LAST  array
+darraycommafromstack:
+
+	LDR		X2, [X16, #-8]
+	SUB 	X16, X16, #8
+	LDR		X3, [X1, #40] ; used as offset
+	LDR 	X4, [X1, #32]
+	CMP		X3, X4 
+	B.ge	darrayaddz_index_error
+	LDR		X4, [X1] ; data 
+	LSL 	X3, X3, #3 ; * 8
+	ADD		X0, X3, X4 
+	STR 	X2, [X0]
+	LSR 	X3, X3, #3  
+	ADD		X3, X3, #1
+	STR 	X3, [X1, #40]	
+	RET
+
+
+dHWarraycommafromstack:
+ 	LDR		X2, [X16, #-8]
+	SUB 	X16, X16, #8
+	LDR		X3, [X1, #40] ; used as offset
+	LDR 	X4, [X1, #32]
+	CMP		X3, X4 
+	B.ge	darrayaddz_index_error
+	LDR		X4, [X1] ; data 
+	LSL 	X3, X3, #1 ; 
+	ADD		X0, X3, X4 
+	STRH  	W2, [X0]
+ 	LSR 	X3, X3, #1  
+    ADD		X3, X3, #1
+	STR 	X3, [X1, #40]	
+	RET
+
+
+dWarraycommafromstack:
+ 	LDR		X2, [X16, #-8]
+	SUB 	X16, X16, #8
+	LDR		X3, [X1, #40] ; used  s offset
+	LDR 	X4, [X1, #32]
+	CMP		X3, X4 
+	B.ge	darrayaddz_index_error
+	LDR		X4, [X1] ; data 
+	LSL 	X3, X3, #2 ;
+	ADD		X0, X3, X4 
+	STR  	W2, [X0]
+ 	LSR 	X3, X3, #2  
+	ADD		X3, X3, #1
+	STR 	X3, [X1, #40]	
+	RET
+
 
 dC1FILLAz:
 
@@ -5349,6 +5420,7 @@ dCcreatarray:
 	ADD		X8, X8, dCarrayaddz@PAGEOFF
 	MOV		X3, #0
 	B 		arrayvaluecreator
+
 
 
 arrayvaluecreator:
@@ -6654,25 +6726,97 @@ dstarz: ; *
 dstarc: ; *
 	RET
 
-; compiled in action for comma
 
-dcomacz:
-
- 	ADRP	X1, append_ptr@PAGE		
-	ADD		X1, X1, append_ptr@PAGEOFF
-	LDR		X1, [X1]
-	CBZ 	X1, 100f
-	B 		dstrappendcommafromstack
-	RET
-
-
+dcomacz: ; , compiled in action for comma
 dcomaz: ; ,  run time comma action
 
+
+
+	; if last word was a C array, we can append to it
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	LDR 	X1, [X1]
+	LDR 	X0, [X1, #8]
+
+10:
+	ADRP	X8, dCarrayaddz@PAGE	; high level word.	
+	ADD		X8, X8, dCarrayaddz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	20f  
+	B 		dcarraycommafromstack
+
+20:
+	; if last word was an array, we can append to it
+	 
+	ADRP	X8, darrayaddz@PAGE	; high level word.	
+	ADD		X8, X8, darrayaddz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	30f  
+	B 		darraycommafromstack
+
+
+30:
+	; if last word was an warray, we can append to it
+ 
+	ADRP	X8, dWarrayaddz@PAGE	; high level word.	
+	ADD		X8, X8, dWarrayaddz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	40f  
+	B 		dWarraycommafromstack
+
+
+40:
+	; if last word was an hwarray, we can append to it
+ 
+	ADRP	X8, dHWarrayaddz@PAGE	; high level word.	
+	ADD		X8, X8, dHWarrayaddz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	50f  
+	B 		dHWarraycommafromstack
+
+50:
+	; if last word was a C values, we can append to it
+ 
+	ADRP	X8, dCarrayvalz@PAGE	; high level word.	
+	ADD		X8, X8, dCarrayvalz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	60f  
+	B 		dcarraycommafromstack
+
+60:
+	; if last word was an array of values, we can append to it
+ 
+	ADRP	X8, darrayvalz@PAGE	; high level word.	
+	ADD		X8, X8, darrayvalz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	70f  
+	B 		darraycommafromstack
+
+
+70:
+	; if last word was an warray of values, we can append to it
+ 
+	ADRP	X8, dWarrayvalz@PAGE	; high level word.	
+	ADD		X8, X8, dWarrayvalz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	80f  
+	B 		dWarraycommafromstack
+
+
+80:
+	; if last word was an hwarray of values, we can append to it
+ 
+	ADRP	X8, dHWarrayvalz@PAGE	; high level word.	
+	ADD		X8, X8, dHWarrayvalz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	90f  
+	B 		dHWarraycommafromstack
+90:
 	; we may be appending a string
 	ADRP	X1, append_ptr@PAGE		
 	ADD		X1, X1, append_ptr@PAGEOFF
 	LDR		X1, [X1]
-	CBZ 	X1, 100f
+	CBZ 	X1, 10f
 	B 		dstrappendcomma
 
 100:
@@ -11761,6 +11905,7 @@ udict:
 		makeword "VALUE", dcreatevalz , dcreat_invalid, 0
 		makeword "VALUES", dcreatvalues , dcreat_invalid, 0 
 		makeword "VARIABLE", dcreatvz , 0, 0
+	
 
 	 
 vdict:
@@ -11843,6 +11988,7 @@ dollardict:
 		makeword "2DUP", ddup2z , 0, 0 
 		makeword "2DROP", ddrop2z , 0, 0 
 		makeword "?DO", dinvalintz , dqoerc, 0 
+		;makeword "2VARIABLE", dcreat2vz , 0, 0
 
 
 zbytewords:
