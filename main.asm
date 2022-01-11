@@ -38,14 +38,11 @@
    
 
 .macro reset_data_stack
-	ADRP	X1, sp1@PAGE		
-	ADD		X1, X1, sp1@PAGEOFF
-	LDR		X1, [X1]
-
+ 
 	ADRP	X0, dsp@PAGE		
 	ADD		X0, X0, dsp@PAGEOFF
-	STR		X1, [X0]
-
+	LDR		X1, [X0]
+	ADD		X1, X1, #48
 	MOV		X16, X1 
 	
 .endm
@@ -518,12 +515,63 @@ sayword:
 	ADD		X0, X0, zword@PAGEOFF
 	B		sayit
 			
+
+calloc_failed: ; yes it can fail.
+
+	RET
+
 sayoverflow:
+	STP		LR,  XZR, [SP, #-16]!
+	BL		saycr
+	BL		saylb
+	LDR		X0, [X26, #-72]	 ; self
+	ADD		X0, X0, #48
+	BL 		sayit
+	BL		sayrb
+	BL		saylb
+	MOV 	X0, X16 
+	BL 		X0addrpr
+	BL		sayrb
+	BL		saylb
+	ADRP	X0, spu@PAGE		
+	ADD		X0, X0, spu@PAGEOFF
+	LDR		X0, [X0]
+	BL 		X0addrpr
+	BL		sayrb
+	BL		saylb
+	ADRP	X0, spo@PAGE		
+	ADD		X0, X0, spo@PAGEOFF
+	LDR		X0, [X0]
+	BL 		X0addrpr
+	BL		sayrb
+
+	LDP		LR, XZR, [SP], #16
+
 	ADRP	X0, tovflr@PAGE	
 	ADD		X0, X0, tovflr@PAGEOFF
 	B		sayit_err_word
 
 sayunderflow:
+	STP		LR,  XZR, [SP, #-16]!
+	BL		saycr
+	BL		saylb
+	LDR		X0, [X26, #-72]	 ; self
+	ADD		X0, X0, #48
+	BL 		sayit
+	BL		sayrb
+	BL		saylb
+	MOV 	X0, X16 
+	BL 		X0addrpr
+	BL		sayrb
+	BL		saylb
+	ADRP	X0, dsp@PAGE		
+	ADD		X0, X0, dsp@PAGEOFF
+	LDR		X0, [X0]
+	BL 		X0addrpr
+	BL		sayrb
+
+
+	LDP		LR, XZR, [SP], #16
 	ADRP	X0, 	tunder@PAGE	
 	ADD		X0, X0, 	tunder@PAGEOFF
 	B		sayit_err_word
@@ -1176,6 +1224,7 @@ word2number:	; converts ascii at word to number
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
 
+
 	save_registers
 	MOV 	W1, #0
 	MOV     W2, #0
@@ -1682,20 +1731,17 @@ dresetz:
 	reset_data_stack
 	reset_return_stack
 	
-	ADRP	X0, sp1@PAGE		
+ 	ADRP	X0, sp1@PAGE		
 	ADD		X0, X0, sp1@PAGEOFF
-	LDR		X0, [X0]
-
-	ADRP	X1, ssize@PAGE			 
-	ADD		X1, X1, ssize@PAGEOFF
-	LDR		X2, [X1]
 	MOV 	X1, #0
-	BL      fill_mem
+	MOV     X2, #512
+	LSL		X2, X2,#3
+	BL 		fill_mem
 	
 	ADRP	X0, rp1@PAGE		
 	ADD		X0, X0, rp1@PAGEOFF
 	MOV 	X1, #0
-	MOV     X2, 512
+	MOV     X2, #512
 	LSL		X2, X2,#3
 	BL 		fill_mem
 
@@ -1763,29 +1809,15 @@ create_dstack:
 
 mini_stack: ; default tiny stack
 
-	MOV 	X0, #48
-	LSL		X0, X0, #3		 
-	MOV 	X13, X0  
-	ADRP	X1, ssize@PAGE			 
-	ADD		X1, X1, ssize@PAGEOFF
-	STR		X13, [X1]
-
-	; chunk of zeros
-	ADRP	X0, sbase@PAGE		
-	ADD		X0, X0, sbase@PAGEOFF
-	MOV 	X12, X0
-
-	B 		make_stack
+	ADRP	X2, dsp@PAGE		
+	ADD		X2, X2, dsp@PAGEOFF
+	LDR 	X0, [X2]
+	ADD		X0, X0, #256
+	MOV		X16, X0
+	RET
 
 make_stack: ; X12 base, X13 size
 
-	STP		LR,  XZR, [SP, #-16]!
-
-	; zero memory
-	MOV 	X1, #0
-	MOV 	X2, X13
-	MOV     X0, X12
-	BL  	fill_mem
 
 	ADRP	X1, spu@PAGE			 
 	ADD		X1, X1, spu@PAGEOFF
@@ -1812,7 +1844,7 @@ make_stack: ; X12 base, X13 size
 	STR		X0, [X1]			 
 
 
-	LDP		LR, XZR, [SP], #16
+ 
 
 	RET
 
@@ -1838,6 +1870,7 @@ main:
 init:	
 
 	BL mini_stack
+	
 
 	; seed RNG
 	BL 		randomize
@@ -2026,13 +2059,9 @@ finish_list: ; we did not find a defined word.
 	B.ne	chkdec
 	; we have a hex number in X22
 	B 		litint
-
-	; look for a number made of decimal digits.
-	; If found immediately push it onto our Data Stack
+	; tolerate a negative number
 
 chkdec:
-	
-	; tolerate a negative number
 
 	MOV 	X3, #0 ; not float
 
@@ -2331,6 +2360,8 @@ finished_compiling_token:
 
 try_compiling_literal:
 
+
+
 	MOV     X3, #0 ; not float
 20:
 	; look for an integer number  
@@ -2363,7 +2394,6 @@ try_compiling_literal:
 
 chkdec2:
 
-	; tolerate a negative number
 	LDRB	W0, [X22]
 	CMP		W0, #'-'
 	B.ne	22f 
@@ -2408,9 +2438,6 @@ chkdec2:
 	FMOV  	X0, D0	; float 
 	B 		25f 	; process as long word
  
-
-
-
 its_an_it:
 	save_registers
 	ADRP	X0, zword@PAGE		
@@ -9552,18 +9579,21 @@ creatstring:
 	ADD		X1, X1, dSTRINGz@PAGEOFF
 	STR		X1, [X28, #8]
 
-	; set value from the string on the stack
-	LDR		X1, [X16, #-8]	
+	; ; set value from the string on the stack
+	LDR		X0, [X16, #-8]	
 	SUB		X16, X16, #8
-	CMP		X1,  #256
+	CMP		X0,  #256
 	B.gt 	150f
 
-	STR		X1, [X28, #32] ; array size 
-	MOV 	X3, #3
-	allotation
-
-	CMP		X0, X12
-	B.gt	allot_memory_full
+	; allotation
+	STR		X0, [X28, #32] ; array size 
+	save_registers
+	MOV 	W1, #1
+	BL		_calloc
+	restore_registers
+	CBZ 	X0, calloc_failed 
+	STR		X0, [X28]
+ 
 	B 		300f
 
 
@@ -10801,7 +10831,80 @@ creatalias:
 	B		sayit_err	
 
 
-;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ALLOT X0 cells
+; cell size is LSL X3
+; X3 = 0, 1, 2, 3
+; n ALLOT
+
+dallot:
+
+	LDR		X0, [X16, #-8]
+	SUB 	X16, X16, #8
+
+   	ADRP	X8, last_word@PAGE		
+	ADD		X8, X8, last_word@PAGEOFF
+	LDR 	X8, [X8]
+	LDR		X2, [X8, #8]
+
+	ADRP	X1, dvaluez@PAGE	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	MOV 	W3, #8
+	B.eq	150f
+
+	ADRP	X1, dvaraddz@PAGE	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	MOV 	W3, #8
+	B.eq	150f
+
+	STP		LR,  XZR, [SP, #-16]!
+
+  	
+	BL		saycr
+	BL		saylb
+
+	ADRP	X8, last_word@PAGE		
+	ADD		X8, X8, last_word@PAGEOFF
+	LDR		X8, [X8]
+	ADD 	X0, X8, #48
+	BL 		sayit
+	BL		sayrb
+
+	ADRP	X0, tcomer41@PAGE		
+	ADD		X0, X0, tcomer41@PAGEOFF
+	BL 		sayit
+	LDP		LR, X15, [SP], #16	
+	RET
+
+150:
+
+
+   	ADRP	X8, last_word@PAGE		
+	ADD		X8, X8, last_word@PAGEOFF
+	LDR		X1, [X8]
+	STR		X0, [X1, #32]
+
+	save_registers
+	MOV 	W1, W3
+	BL		_calloc
+	restore_registers
+	CBZ 	X0, calloc_failed 
+
+	ADRP	X8, last_word@PAGE		
+	ADD		X8, X8, last_word@PAGEOFF
+	LDR		X1, [X8]
+	STR		X0, [X1]
+
+
+	RET
+
+
+;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
 
 .data 
 
@@ -11099,7 +11202,7 @@ tcomer40: .ascii "\nError TO expected a VALUE word to follow."
 
 
    .align	8
-tcomer41: .ascii "\nError n ALLOT> word, expected a variable or value word."
+tcomer41: .ascii " error ALLOT can only allot memory to variables."
 	.zero 16
 
    .align	8
@@ -11371,24 +11474,63 @@ allot_limit:	.quad 	0
 
 .data 
 
+;
 ; this is the data stack
 .align  8
-spu:	.zero 32
-	 
-spo:	.zero 32
-		 
-sp1:	.zero 32
-		 
-dsp:	.zero 32
+
+spu:	
+	.quad base
+
+sps:	.zero 8*8	
+	.quad -111111; underflow patterws
+	.quad -222222
+	.quad -333333
+	.quad -444444
+	.quad -555555
+	.quad -666666
+	.quad -777777
+	.quad -888888
+	.quad -999999
+	.quad 0
+	.quad 0
+
+sp1:  
+	.quad base+128
+
+base:
+	.zero 2048*8
+
+sovfl:
+
+	.quad 0
+	.quad 0
+	.quad 1111111 ; overflow patterns
+	.quad 2222222
+	.quad 3333333
+	.quad 4444444
+	.quad 5555555
+	.quad 6666666
+	.quad 7777777
+	.quad 8888888
+	.quad 9999999
+
+spo:	.quad sovfl
+sp0:	.zero 8*8
+dsp:	.quad sp1
 
 ssize:	.zero 32
-
-sbase:
-		.rept	48
+.rept	1024
 		.quad  0
 		.endr
 
+sbase:
+		.rept	1024
+		.quad  0
+		.endr
 
+.rept	1024
+		.quad  0
+		.endr
 
 ; this is the return stack
 ; used for loop constructs and local variables.
@@ -11683,10 +11825,7 @@ hashdict:
 		makeword "ALIGN8", dalign8 , 0, 0 
 		makeword "ALIGN16", dalign16 , 0, 0 
  
-		makeword "ALLOT^", dvaluez , 0, allot_ptr
-		makeword "ALLOT.LAST^", dvaluez , 0, allot_last
-		makeword "ALLOT.LIMIT^", dvaluez , 0, allot_limit
- 
+ 		makeword  "ALLOT",  dallot,  0, 0 
 		makeword "ALLOT?", dallotablez , 0, 0
 		makeword "ARRAY", dcreatarray ,dcreat_invalid , 0 
 		makeword "ADDR" , daddrz, daddrc, 0
@@ -12147,7 +12286,6 @@ addressbuffer:
 
 .align 8
 heap_ptr:	.quad 0
-
 
 
 
