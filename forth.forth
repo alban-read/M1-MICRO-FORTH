@@ -78,22 +78,22 @@ ALIAS	wordcount 	a
 ALIAS 	wordsize	64
 ALIAS 	lastword	255
 
-: _reset [ FLAT _reset ]
+: _words_reset [ FLAT _words_reset ]
 	RMARGIN 1 TO LOCALS ;
   
-: _margin  ( n -- ) [ FLAT _margin  ]
+: _words_margin  ( n -- ) [ FLAT _words_margin  ]
 	1 LOCALS SWAP 1+ - 1 TO LOCALS ;
 
 : _reset? ( n -- ) [ FLAT _reset? ]
 	1 LOCALS 0< ;
  
 : _words
-	_reset 
+	_words_reset 
      DO 
 		I >NAME C@ DUP 95 <> SWAP lastword <> AND IF
 		 	I >NAME $. SPACE countword
-			I >NAME $len _margin 
-			_reset? IF CR _reset THEN   
+			I >NAME $len _words_margin 
+			_reset? IF CR _words_reset THEN   
 		 THEN 
 	wordsize +LOOP 
 	CR wordcount . SPACE .' - Counted words. '

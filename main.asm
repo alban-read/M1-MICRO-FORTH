@@ -6232,6 +6232,12 @@ duntracable:
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
 	; is it high level
 	LDR		X0, [X28, #8]	; words code
 	ADRP	X8, runintz@PAGE	
@@ -6296,6 +6302,15 @@ dlimited:
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+	
+	
+
+
 	; is it high level
 	LDR		X0, [X28, #8]	; words code
 	ADRP	X8, runintz@PAGE	
@@ -6356,6 +6371,13 @@ dflat:
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
 
 	; is it high level
 	LDR		X0, [X28, #8]	; words code
@@ -6433,6 +6455,12 @@ dflattrace:
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
 
 	; is it high level
 	LDR		X0, [X28, #8]	; words code
