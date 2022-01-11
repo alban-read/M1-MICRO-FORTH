@@ -1,40 +1,16 @@
-// This file is loaded as FORTH starts.
-// -------------------------------------------------------
-// Set up the Dynamic Memory areas
+// startup
 
-// initially the stack is tiny. 
-// parameter stack size (in 64 bit cells)
-512 #DSTACK 
-
-// set allotment size data
-1024 1024 * HEAPSIZE
-HEAP^ ALIGN8 DUP TO ALLOT^ TO ALLOT.LAST^ 
-1020 1024 *  ALLOT^ + TO ALLOT.LIMIT^
-
-// set tokens size 64k HW tokens
 64 1024 2 * * HEAPSIZE
 HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^ 
-HERE^ 64 1024 2 * * 0 FILL
-
-// set locals stack depth (80 bytes)
+ 
 80 256 * HEAPSIZE HEAP^ ALIGN8 TO LSP^
-LSP^ 80 256 * 0 FILL
-
-
-// set up a massive sparse short-strings pool 
-// this is a temporary kludge, hopefully
-
+ 
 8519680 HEAPSIZE HEAP^ ALIGN8 TO $^ 
 8519680 256 - $^ + TO $LIMIT^
-$^ 8519680 0 FILL
-
-// -------------------------------------------------------
-// now variables and words can be declared.
-
+ 
+ 
 // save start time from here.
 TICKS  VALUE start_ticks
-
-
 
 // Offsets from a words header
 8  ADDS >RUN
@@ -47,26 +23,16 @@ TICKS  VALUE start_ticks
 // common constants 
 -1 CONSTANT -1
 
-: PRIVATE 0 ` >NAME C! ; 
-
 : DELWORD  ` 64 0 FILL ; 
 
 : VALDAT ` @ ;
 
-// hide startup internal words
-PRIVATE #DSTACK
-PRIVATE #RSTACK
-PRIVATE $^  PRIVATE $LIMIT^
-PRIVATE LSP^
-PRIVATE HERE^ PRIVATE HLAST^ 
 
 // Display time spent in the program
 
 : .UPTIME
 	TICKS start_ticks - 
 	s>f TPMS s>f f/ f.  .'  ms.'  ;
-
-PRIVATE start_ticks
 
 // Add common float constants
 3.14159265359   CONSTANT PI
@@ -86,7 +52,7 @@ PRIVATE start_ticks
 // -------------------------------------------------------
 // list ALIAS words 
 
-: list_alias
+: _list_alias
 	1 PARAMS
 	CR 
 	BEGIN
@@ -99,10 +65,9 @@ PRIVATE start_ticks
 	CR
 ;
 
-: .ALIAS ALIAS^ list_alias ;
+: .ALIAS ALIAS^ _list_alias ;
 
-PRIVATE spacepad
-PRIVATE list_alias
+
  
 
 // -------------------------------------------------------
@@ -113,22 +78,22 @@ ALIAS	wordcount 	a
 ALIAS 	wordsize	64
 ALIAS 	lastword	255
 
-: reset [ FLAT reset ]
+: _reset [ FLAT _reset ]
 	RMARGIN 1 TO LOCALS ;
   
-: -margin ( n -- ) [ FLAT -margin ]
+: _margin  ( n -- ) [ FLAT _margin  ]
 	1 LOCALS SWAP 1+ - 1 TO LOCALS ;
 
-: reset? ( n -- ) [ FLAT reset? ]
+: _reset? ( n -- ) [ FLAT _reset? ]
 	1 LOCALS 0< ;
  
 : _words
-	reset 
+	_reset 
      DO 
-		I >NAME C@ DUP 0> SWAP lastword <> AND IF
+		I >NAME C@ DUP 95 <> SWAP lastword <> AND IF
 		 	I >NAME $. SPACE countword
-			I >NAME $len -margin
-			reset? IF CR reset THEN   
+			I >NAME $len _margin 
+			_reset? IF CR _reset THEN   
 		 THEN 
 	wordsize +LOOP 
 	CR wordcount . SPACE .' - Counted words. '
@@ -138,36 +103,8 @@ ALIAS 	lastword	255
 
 : ALLWORDS FINAL^ `` (EXIT)  _words ;
 
-CLRALIAS
-PRIVATE _words
-PRIVATE reset    
-PRIVATE -margin 
-PRIVATE reset? 
 
 
-// -------------------------------------------------------
-// ALLOT bytes to a variable
-
-ALIAS 	padding	8
-
-: ALLOT ( n -- )
-    1 PCHK
-	LAST ALLOT? IF
-		ALLOT^ + padding + ALIGN8 TO ALLOT^ 
-		ALLOT.LAST^ LAST !
-		ALLOT^ TO ALLOT.LAST^
-	ELSE
-		CR LAST >NAME $. SPACE 
-		.' is not allotable '
-	THEN 
-;
-
-// private (predefined) allot words.
-PRIVATE ALLOT^ 
-PRIVATE ALLOT.LAST^ 
-PRIVATE ALLOT.LIMIT^ 
-PRIVATE ALLOT?
-CLRALIAS
 
 // -------------------------------------------------------
 // displays key codes until Q
@@ -191,6 +128,7 @@ ALIAS pausetime 100
 
 CLRALIAS
 
+ 
 // -------------------------------------------------------
 // STRINGS 
 
@@ -242,42 +180,57 @@ ALIAS TCOL.cyan 	36
 ALIAS TCOL.white 	37
 
 
-
 // -------------------------------------------------------
 // Terminal Brick Out.
 // a dumb game on the terminal using ansi escape codes.
 // 
 
-// terminal games need legacy systems font
-// e.g https://github.com/dokutan/legacy_computing-font
-// download install and then select the font for the terminal.
+8 STRING coff 
+	27 , CHAR [ , CHAR ? , CHAR 2 , CHAR 5 ,
+	CHAR l ,  0 ,	 
 
+8 STRING con
+	27 , CHAR [ , CHAR ? , CHAR 2 , CHAR 5 ,
+	CHAR h ,  0 ,	 
 
-' #[?25l' STRING coff 27 , 
-
-' #[?25h' STRING con 27 ,
-
-' #[2K' STRING cln 27 ,
+8 STRING cln
+	27 , CHAR [ , CHAR 2 , CHAR K, 0 ,
+ 
 
 : curoff coff $. ;
 : curon con $. ;
 : clrln cln $. ;
 
-PRIVATE coff
-PRIVATE con 
-PRIVATE cln
+8 STRING ballone 
+	0xE2 , 0x97 , 0xAF , 
+	0 , 
 
-// UTF8 characters
-// legacy blocks prelude 240, 159, 172 (2158796784)
+24 STRING smallbat 
+	0xE2 , 0x97 , 0x96 ,
+	0xE2 , 0x96 , 0xA0 ,
+   	0xE2 , 0x96 , 0xA0 ,
+ 	0xE2 , 0x96 , 0xA0 ,
+	0xE2 , 0x97 , 0x97 ,
+	0 ,
 
 
+24 STRING widebat 
+	0xE2 , 0x97 , 0x96 ,
+	0xE2 , 0x96 , 0xA0 ,
+   	0xE2 , 0x96 , 0xA0 ,
+ 	0xE2 , 0x96 , 0xA0 ,
+	0xE2 , 0x96 , 0xA0 ,
+ 	0xE2 , 0x96 , 0xA0 ,
+	0xE2 , 0x97 , 0x97 ,
+	0 ,
+ 
 : makesixl 
   2 PARAMS       
   240  a C! 159 a 1+ C! 172 a 2+ C! b a 3 + C!  
  ;
-
-0 VARIABLE sixls 2048 ALLOT 
-
+ 
+0 VARIABLE sixls 256 ALLOT 
+ 
 : makesxls 
 	128 a!
 	512 0 DO 
@@ -286,8 +239,6 @@ PRIVATE cln
 	8 +LOOP 
 ;
  
- makesxls 
-
  3 SHIFTSL 8* 
 
 : .sixl ( n )
@@ -297,44 +248,10 @@ PRIVATE cln
 // so we can pick one
 : .sixls 64 0 DO I .sixl CHAR = EMIT I . SPACE LOOP ;
 
-
 : .brick 
 	56 48 48 48 52
 	5 TIMESDO .sixl
 ;
-
- : .dmg2
-	10 48 48 48 52
-	5 TIMESDO .sixl
-;
-
-
- : .dmg3
-	10 48 48 48 6
-	5 TIMESDO .sixl
-;
-
-: .dmg4
-	10 33 48 48 6
-	5 TIMESDO .sixl
-;
-
-
-: .dmg5
-	10 33 48 33 7
-	5 TIMESDO .sixl
-;
-
-
-: .dmg6
-	7 33 32 33 0
-	5 TIMESDO .sixl
-;
-
-: .dmg7
-	5 TIMESDO SPACE
-;
-
 
 
 : .bricks 
@@ -344,7 +261,6 @@ PRIVATE cln
 ;
 
 : .wall 
-
 	6  10 AT 
 	TCOL.cyan FCOL .bricks  
 	8  10 AT 
@@ -357,35 +273,8 @@ PRIVATE cln
 	TCOL.blue FCOL .bricks  
 	16 10 AT
 	TCOL.red FCOL .bricks  
-
 ;
-
-
-
-2158796784	VALUE 	 blockish
-10062562 	VARIABLE ballone 
-9869282  	VARIABLE lhc
-9934818		VARIABLE rhc
-10524386	VARIABLE fullblock
-
-0 VARIABLE smallbat 24 ALLOT
-
-ALIAS batlen a
-
-: addtobat ( n -- )
-    0 DO
-	  SWAP DROP fullblock SWAP CCCPYC 
-	LOOP ;
-
-: makebat ( n --- )
-    1 PARAMS
-	lhc smallbat CCCPYC
-     batlen addtobat 
-	SWAP DROP rhc SWAP CCCPYC 
-	DDROP
-;
-
-4 makebat 
+ 
 
 ALIAS x a 
 ALIAS y b 
@@ -393,16 +282,18 @@ ALIAS y b
 2  VALUE batminx
 80 VALUE batmax
 
+ 
 40 VALUE batx
 30 VALUE baty
 0  VALUE batxdir
 TCOL.green VALUE batclr
-
+ 
 43 VALUE ballx
 29 VALUE bally
 FALSE VALUE ballfree
 TCOL.red VALUE ballclr
-0 VALUE ballxdir
+
+0  VALUE ballxdir
 -1 VALUE ballydir
 
 0 VALUE movetime
@@ -425,10 +316,9 @@ TCOL.red VALUE ballclr
 
 : batsball 
 	FALSE TO ballfree
-	batx 3 + TO ballx 
+	batx 2 + TO ballx 
 	baty 1- TO bally
 ;
-
 
 : showbat ( ) 
 	batclr batx baty atbat ;
@@ -452,7 +342,7 @@ TCOL.red VALUE ballclr
 		batx batminx < IF 1 TO batxdir THEN
 		showbat
 		ballfree 0= IF
-			batx 3 + TO ballx 
+			batx 2 + TO ballx 
 			showball
 		THEN 
 ;
@@ -494,6 +384,8 @@ ALIAS 'c' 99 // stop
 		THEN
 	THEN
 ;
+
+
 
 : batkeys  
 batsball
@@ -545,13 +437,22 @@ BEGIN
 AGAIN
 ;
 
+
+
+: START 
+	PAGE
+	makesxls 
+	.wall
+	batkeys
+	;
+
 // announce ourselves
 
 // define the UTF8 unicode monster
-3197214704 0 VARIABLE monster 8 ALLOT monster !
+8 STRING mstr 0xF0 , 0x9F , 0x91 , 0xBE , 0 , 
 
 : MSTR 
-	monster $. ;
+	mstr $. ;
 
 : bold.green 
 	TCOL.green FCOL TCOL.bold FCOL
@@ -562,7 +463,7 @@ AGAIN
 ;
 
 : Hi 
-	PAGE
+ 
 	bold.green 
 	MSTR SPACE .VERSION 
 	colr.reset 
@@ -572,12 +473,11 @@ AGAIN
 	colr.reset 
 ;
 
-PRIVATE monster
-PRIVATE bold.green 
-PRIVATE colr.reset 
-
+ 
+ 
 // off we go
 
 Hi 
 
 FORGET
+ 
