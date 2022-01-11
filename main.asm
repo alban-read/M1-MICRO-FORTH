@@ -1177,7 +1177,9 @@ word2number:	; converts ascii at word to number
 	ADD		X0, X0, zword@PAGEOFF
 
 	save_registers
-	BL		_atoi
+	MOV 	W1, #0
+	MOV     W2, #0
+	BL		_strtol
 	restore_registers  
 	
 	STR		X0, [X16], #8
@@ -2007,12 +2009,28 @@ fW1:
 
 finish_list: ; we did not find a defined word.
 
+	; look for number
+
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+
+
+	; look for a number made of hex digits.
+	; If found immediately push it onto our Data Stack
+
+	LDRB	W0, [X22]
+	CMP		W0, #'0'
+	B.ne 	chkdec
+	LDRB    W0, [X22, #1]
+	CMP		W0, #'x' 
+	B.ne	chkdec
+	; we have a hex number in X22
+	B 		litint
 
 	; look for a number made of decimal digits.
 	; If found immediately push it onto our Data Stack
 
-	ADRP	X22, zword@PAGE		
-	ADD		X22, X22, zword@PAGEOFF
+chkdec:
 	
 	; tolerate a negative number
 
@@ -2315,16 +2333,37 @@ try_compiling_literal:
 
 	MOV     X3, #0 ; not float
 20:
-	; look for an integer number made of decimal digits.
+	; look for an integer number  
 	; If found  store a literal in our word.
 
 	ADRP	X22, zword@PAGE		
 	ADD		X22, X22, zword@PAGEOFF
+
+	LDRB	W0, [X22]
+	CMP		W0, #'0'
+	B.ne 	chkdec2
+	LDRB    W0, [X22, #1]
+	CMP		W0, #'x' 
+	B.ne	chkdec2
+	; we have a hex number in X22
+
+
+	ADRP	X0, zword@PAGE		
+	ADD		X0, X0, zword@PAGEOFF
+
+	save_registers
+	MOV 	W1, #0
+	MOV     W2, #0
+	BL		_strtol
+	restore_registers  
+	
+
+	B 		check_number_size
+
+
+chkdec2:
+
 	; tolerate a negative number
-
-	;MOV		X0, #'!'
-	;BL		X0emit
-
 	LDRB	W0, [X22]
 	CMP		W0, #'-'
 	B.ne	22f 
@@ -2369,6 +2408,9 @@ try_compiling_literal:
 	FMOV  	X0, D0	; float 
 	B 		25f 	; process as long word
  
+
+
+
 its_an_it:
 	save_registers
 	ADRP	X0, zword@PAGE		
