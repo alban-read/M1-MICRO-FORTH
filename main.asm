@@ -1479,6 +1479,12 @@ get_word: ; get word from zword into x22
 	ADD		X22, X22, zword@PAGEOFF
 	LDR		X22, [X22]
 	RET
+
+get_word2: ; get word from zword into x22
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	LDR		X22, [X22, #8]
+	RET
 	
 empty_wordQ: ; is word empty?
 	ADRP	X22, zword@PAGE		
@@ -2009,10 +2015,16 @@ endsemicheck:
 
 fW1:
 	BL		start_point	
+	B 		252f
 
+251:	 
+	SUB		X28, X28, #64
+ 
 
 252: 
-	BL		get_word
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	LDR		X22, [X22]
 	
 	LDR		X21, [X28, #48]		; name field
 	CMP		X21, #0				; end of list?
@@ -2021,13 +2033,25 @@ fW1:
 	b.eq	251b
 
 	CMP		X21, X22		; is this our word?
-	B.ne	251b
+	B.ne	251b			; that was 8 bytes..
+
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	LDR		X22, [X22, #8]
+	LDR		X21, [X28, #56] ; next 8
+	CMP		X21, X22		;  
+	B.ne	251b			; that was 16 bytes..
+
+
 
 	; we found our word, execute its runtime function
  
 	LDR		X2, [X28, #8]  
 	CMP		X2, #0 
 	B.eq	finish_list
+
+
+
 
 	LDR		X0, [X28] ; data (argument)
 	STP		X28, XZR, [SP, #-16]!
@@ -2153,8 +2177,18 @@ scan_words:
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
 	CMP		X1, X0
+	b.eq	next_half	
+
+	b 		scan_next
+
+next_half:
+	LDR		X1, [X28, #56] ; its a word of 
+	LDR		X0, [X22, #8]  ; two halves
+	CMP		X1, X0
 	B.eq	exit_compiler_word_exists; word exists
 
+
+scan_next:
 	CMP		X1, #0		; end of list?
 	B.eq	exit_compiler ; no room in dictionary
 
@@ -2244,7 +2278,7 @@ reenter_compiler:
 
 find_word_token:
 
-	LDR		X21, [X28, #48] ; name field
+	LDR		X21, [X28, #48] ; name field 1
 	ADD		X0, X28, #48
 	
 	CMP		X21, #0	; no word found
@@ -2259,6 +2293,12 @@ find_word_token:
 	CMP		X21, X22		; is this our word?
 	B.ne	keep_finding_tokens
 
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+	LDR		X22, [X22, #8]
+	LDR		X21, [X28, #56] ; name field 2
+	CMP		X21, X22		; is this our word?
+	B.ne	keep_finding_tokens
 	
 	; yes we have found our word
 	;MOV		X0, #'.'
@@ -2947,6 +2987,12 @@ dtimesdoz:
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
 
 	; found word in X28, stack address of word
 
@@ -3977,7 +4023,7 @@ dseez:
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
-
+ 
 
 	; see word
 
