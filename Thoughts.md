@@ -341,3 +341,19 @@ HEAP^ TO ALLOT.LAST^
   ELSE 
   	2DROP 1
   THEN ;
+
+
+  DRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+
+	; look for a number made of hex digits.
+	; If found immediately push it onto our Data Stack
+
+	;LDRB	W0, [X22]
+	;CMP		W0, #'0'
+	;B.ne 	10f
+	;LDRB    W0, [X22, #1]
+	;CMP		W0, #'x' 
+	;B.eq	10f
+	; we have a hex number in X22
+	;B 		its_an_it
