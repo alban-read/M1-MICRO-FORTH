@@ -516,16 +516,17 @@ sayword:
 	B		sayit
 			
 
+ 
 calloc_failed: ; yes it can fail and yes that is totally fatal.
-	STP		LR,  XZR, [SP, #-16]!
-	ADRP	X0, calloc_error@PAGE	
-	ADD		X0, X0, calloc_error@PAGEOFF
-	BL 		sayit
-	MOV		X0, #-1
-	BL		_exit ; thats that.
-	; ... this never happens.
-	LDP		LR, XZR, [SP], #16
-	RET
+ 	STP		LR,  XZR, [SP, #-16]!
+ 	ADRP	X0, calloc_error@PAGE	
+ 	ADD		X0, X0, calloc_error@PAGEOFF
+ 	BL 		sayit
+ 	MOV		X0, #-1
+ 	BL		_exit ; thats that.
+ 	; ... this never happens.
+ 	LDP		LR, XZR, [SP], #16
+ 	RET
 
 sayoverflow:
 	STP		LR,  XZR, [SP, #-16]!
@@ -5720,10 +5721,11 @@ dselectit:
 	B.ne	170f			; that was 16 bytes..
 
 	; found word, stack address of word
-
-	MOV	X0, 	X28  
 	restore_registers
-	ADRP
+ 	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR 	X28, [X1]
+	RET
 
 170:	; next word in dictionary
 	SUB		X28, X28, #64
@@ -5773,9 +5775,7 @@ dtickz: ; ' - get address of NEXT words data field
 
 	MOV	X0, 	X28  
 	restore_registers
- 	ADRP	X1, last_word@PAGE		
-	ADD		X1, X1, last_word@PAGEOFF
-	STR 	X0, [X1]
+	B  stackit
 
 
 170:	; next word in dictionary
@@ -9769,7 +9769,7 @@ creatstring:
 
 
 150: ; we had a string literal
-	STR		X1, [X28]	; data pointer
+	STR		X0, [X28]	; data pointer
 	MOV 	X0, #255
 	STR		X0, [X28, #32]
 	B		300f
@@ -11563,10 +11563,9 @@ screen_textcolour:
 spaces:	.ascii "										"
 	.zero 16
 
- .align	8
-calloc_error: .ascii "\nCALLOC failed. Out of memory. Bye."
-	.zero 16
-
+.align	8
+ calloc_error: .ascii "\nCALLOC failed. Out of memory. Bye."
+ 	.zero 16
 
 .data
 
