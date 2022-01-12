@@ -1,4 +1,4 @@
-# 👾 M1 MICRO FORTH 0.73 
+# 👾 M1 MICRO FORTH  
 
 ##### (TOKEN THREADED) 2022
 
@@ -14,9 +14,9 @@ Provide a small safe subset of user friendly FORTH (if possible.)
 
 ### now in testing phase
 
-- The write a small FORTH in 10,000 lines of assembly or less, is complete.
+- The "write a small FORTH in 10,000 lines of assembly or less", is almost complete.
 
-- The write ten thousand lines of FORTH to test the small FORTH works correctly and safely is now in progress.
+- The write "ten thousand lines of FORTH to test the small FORTH works correctly and safely" is now in progress.
 
 - The application is running in the terminal for now.
 
@@ -27,7 +27,7 @@ Provide a small safe subset of user friendly FORTH (if possible.)
 
 I plan to add sound and 2D sprites and escape from the terminal, in the next phase after this.
 
-After that I will finally be able to program aß Mac like it is a micro-computer again.
+After that I will finally be able to program a Mac like it is a micro-computer again, even if it did turn into Unix.
 
 
 ###  M1 MICRO FORTH - a small, simple, non-standard Forth
@@ -46,8 +46,7 @@ Aims to provide a small safe set of user/application level words.
     - There are words to name strings
         - ```' Hello World' STRING hello_world```
     - There are words to build new strings (from substrings)
-        - ```${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} STRING appender ```
-    - I am trying to make strings safe to use.
+    - I am still trying to make strings safe to use.
 - The dictionary is simplified into a single array for the headers :-
     - There are no vocabularies, a few hundred words are defined not thousands.
     - Headers are seperated from 'code' (tokens), literals, and data.

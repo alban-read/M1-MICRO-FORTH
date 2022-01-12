@@ -256,7 +256,7 @@ data_base:
 
 .align 8
 ;; VERSION OF THE APP
-ver:	.double 0.734
+ver:	.double 0.831
 tver:	.ascii  "M1 MICRO FORTH %2.2f TOKEN THREADED 2022\n"
 	.zero	4
 
@@ -516,8 +516,15 @@ sayword:
 	B		sayit
 			
 
-calloc_failed: ; yes it can fail.
-
+calloc_failed: ; yes it can fail and yes that is totally fatal.
+	STP		LR,  XZR, [SP, #-16]!
+	ADRP	X0, calloc_error@PAGE	
+	ADD		X0, X0, calloc_error@PAGEOFF
+	BL 		sayit
+	MOV		X0, #-1
+	BL		_exit ; thats that.
+	; ... this never happens.
+	LDP		LR, XZR, [SP], #16
 	RET
 
 sayoverflow:
@@ -904,23 +911,7 @@ dflushz:
 
 
 
-; Perhaps code 50 is Not Implemented?
-dlargefont:
-	ADRP	X0, largefont@PAGE	
-	ADD		X0, X0, largefont@PAGEOFF
-	ADRP	X8, ___stdoutp@GOTPAGE
-	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
-	LDR		X1, [X8]
-	save_registers
-	BL		_fputs
-	; we need to flush
-	ADRP	X8, ___stdoutp@GOTPAGE
-	LDR		X8, [X8, ___stdoutp@GOTPAGEOFF]
-	LDR		X0, [X8]
-	BL		_fflush
-	restore_registers
-	RET
-
+ 
 
 ; TERMINAL commands
 
@@ -1877,6 +1868,8 @@ init:
 
 	BL mini_stack
 	
+ 
+  
 
 	; seed RNG
 	BL 		randomize
@@ -3062,6 +3055,12 @@ dtimesdoc:
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
 
 	; found word in X28, stack address of word
 
@@ -4830,6 +4829,12 @@ dfillarrayz: ; RUNTIME at command line
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
 	; found word 
 	restore_registers
 
@@ -4928,6 +4933,12 @@ dfillarrayc: ; COMPILE array fill operations
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
 
 	; found word 
 	restore_registers
@@ -5676,6 +5687,55 @@ dcreatstack:
 
 
 
+dselectit:
+
+
+100:	
+	save_registers
+	
+	BL		advancespaces
+	BL		collectword
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f			; not found 
+	CMP		X21, #-1		; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+	; found word, stack address of word
+
+	MOV	X0, 	X28  
+	restore_registers
+	ADRP
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	; error out 
+	MOV		X0, #0
+	restore_registers
+	B	stackit
+	RET
+
+
 dtickz: ; ' - get address of NEXT words data field
 
 100:	
@@ -5702,11 +5762,21 @@ dtickz: ; ' - get address of NEXT words data field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
+
 	; found word, stack address of word
 
 	MOV	X0, 	X28  
 	restore_registers
-	B		stackit
+ 	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR 	X0, [X1]
+
 
 170:	; next word in dictionary
 	SUB		X28, X28, #64
@@ -5958,6 +6028,12 @@ dtickc: ; `` at compile time, turn address of word into literal
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
 	MOV 	X0, X28 
 	BL 		longlitit
 	B 		200f
@@ -6072,6 +6148,12 @@ dtimeitz: ; time the next words execution
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
 	MOV		X1, 	X28  
  
 	; WORD IN X1
@@ -6172,6 +6254,12 @@ dtracable:
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
 
 	; is it high level
 	LDR		X0, [X28, #8]	; words code
@@ -6306,10 +6394,6 @@ dlimited:
 	BL		get_word2
 	CMP		X21, X22		;  
 	B.ne	170f			; that was 16 bytes..
-
-	
-	
-
 
 	; is it high level
 	LDR		X0, [X28, #8]	; words code
@@ -8543,6 +8627,13 @@ dtoz:
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
 
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
 	; found word, update it
  
 	restore_registers
@@ -8595,6 +8686,12 @@ dtoc:	; COMPILE in address of next word followed by (*TO)
 	LDR		X21, [X28, #48] ; name field
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
 
 	LDR		X2,	 [X28, #8] 
 
@@ -11025,7 +11122,15 @@ zstdin: .zero 16
 
 ;; text literals
 
- 
+ .align 8
+
+.zero 	4096
+ prot4:
+
+ivars:
+
+.text
+
 
 .align 8
 literal_name:
@@ -11435,7 +11540,7 @@ ip_error: .ascii "\nError: IP (instruction pointer) invalid."
 	.zero 16
 
 
-
+.align	4
 not_appending_err:
 .align	8
 .ascii "\nError: Not appending."
@@ -11453,17 +11558,14 @@ clear_screen:
 screen_textcolour:
 	.asciz "\X1b[%dm"
  
-
-largefont:
-.align 8
-	.byte 27
-	.ascii "]50;Monaco 36"
-	.byte 7, 0
-
+ 
 .align	8
 spaces:	.ascii "										"
 	.zero 16
 
+ .align	8
+calloc_error: .ascii "\nCALLOC failed. Out of memory. Bye."
+	.zero 16
 
 
 .data
@@ -11521,9 +11623,6 @@ lasthere_ptr:
 here_ptr:
 	.quad	0
  	.zero  96
- 
-
- 
 
 
 ; this is the locals stack
@@ -11546,10 +11645,17 @@ allot_limit:	.quad 	0
  				.zero  96
 				 
 
-.data 
+.data
 
 ;
 ; this is the data stack
+
+.align 16
+	.zero	4096
+prot1:
+	.zero	4096
+
+
 .align  8
 
 spu:	
@@ -11606,6 +11712,13 @@ sbase:
 		.quad  0
 		.endr
 
+
+.align 16
+	.zero	4096
+prot2:
+	.zero	4096
+
+
 ; this is the return stack
 ; used for loop constructs and local variables.
 
@@ -11614,19 +11727,32 @@ sbase:
 .align  8
 rps:	.zero 8*8	
 rpu:	.zero 8
-rp1:	.zero 512*8  
+rp1:	.zero 1024*8  
 rpo:	.zero 8
 rp0:	.zero 8*8
 rsp:	.quad rp1
 
 
+
+.align 16
+	 .rept  512
+	 .quad -123456
+	 .endr
+ 
+prot3:
+	 .rept 512
+	 .quad -123456
+	 .endr
+
+
 .data
 ; global, single letter, integer variables
 .align 16
-ivars:	.zero 256*16	
 
-	.zero	512
 
+
+
+ 
 
      .data
 
@@ -11664,7 +11790,7 @@ quadlits:
 	.quad  512
 	.quad  1024
 
-	.rept  8192	; <-- increase if literal pool full error arises.
+	.rept  16384	; <-- increase if literal pool full error arises.
 	.quad -1
 	.endr
 	.quad  -2 ; end of literal pool. 
@@ -11685,7 +11811,7 @@ below_string_space:
 .align 16
 string_buffer:
 .asciz "Strings"
-.zero 2048
+.zero 4096
 
  ; short strings are sparse and not sorted
  ; the search at compile time is split over 27 buckets by first letter.
@@ -11698,7 +11824,7 @@ short_strings_end: .quad 0
 
 .align 16
 slice_string:
-	.zero 1024
+	.zero 4096
 
 .align 16
 rmargin: 	.quad 80
@@ -11708,7 +11834,7 @@ rmargin: 	.quad 80
 ; used for line input
 .align 16
 zpad:	.ascii "ZPAD STARTS HERE"
-	.zero 1024
+	.zero 4096
 
 
 
@@ -11757,9 +11883,6 @@ accepted:
 acceptptr: 		.quad string_buffer
 
 acceptcap:		.quad  2048
-
-
-
 
 .align 	8
 acceptlen:			
@@ -12043,6 +12166,7 @@ hdict:
 		makeword "I", diloopz, diloopc,  0
 		makeword "IF", difz, difc,  0
 		makeword "INVERT", dinvertz, 0,  0
+		makeword "IVARS", dvaraddz, 0, ivars
  
 idict:
 		makeemptywords 256
@@ -12059,7 +12183,7 @@ kdict:
 		makeemptywords 256
 		
 	
-		makeqvword 108
+ 
 		makeword "LSP^", dvaluez , 0, heap_ptr
 	
 		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
@@ -12074,10 +12198,7 @@ ldict:
 		makeemptywords 256
 		makeword "MOD", dmodz, dmodc, 0	
 		makeword "MS", dsleepz , 0, 0 
-	 
-
- 
-
+	
  
 mdict:
 		makeemptywords 256
@@ -12146,6 +12267,7 @@ rdict:
 	 	makeword "SP@", fetchspz , 0, 0 
 		makeword "SEE", dseez , 0, 0 
 		makeword "SELF^" , dlociz, 0, 0
+		makeword "SELECTIT" , dselectit, 0, 0
 
  
 

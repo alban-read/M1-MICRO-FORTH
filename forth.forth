@@ -1,4 +1,5 @@
 // startup
+TICKS 
 
 64 1024 2 * * HEAPSIZE
 HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^ 
@@ -8,9 +9,8 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 8519680 HEAPSIZE HEAP^ ALIGN8 TO $^ 
 8519680 256 - $^ + TO $LIMIT^
  
- 
 // save start time from here.
-TICKS  VALUE start_ticks
+ VALUE start_ticks
 
 // Offsets from a words header
 8  ADDS >RUN
@@ -201,9 +201,46 @@ ALIAS TCOL.white 	37
 : curon con $. ;
 : clrln cln $. ;
 
-8 STRING ballone 
-	0xE2 , 0x97 , 0xAF , 
-	0 , 
+4 STRING ballone 
+	0xE2 , 0x97 , 0xAF , 0 , 
+
+4 STRING balltwo 
+	0xE2 , 0x8D , 0x9F , 0 ,
+
+4 STRING ballthree
+	0xE2 , 0x8A , 0x9B , 0 ,
+
+4 STRING ballfour
+	0xE2 , 0x8A , 0x9A , 0 ,
+
+
+4 STRING ballfive
+	0xE2 , 0x9A  , 0xAB , 0 ,
+
+4 STRING ballsix
+	0xE2 , 0x9A , 0xAA , 0 ,
+
+
+4 STRING badfall1
+	0xE2 , 0x98 , 0xA2 , 0 ,
+
+4 STRING badfall2
+	0xE2 , 0x98 , 0xA3 , 0 ,
+
+4 STRING badfall3
+	0xE2 , 0x98 , 0xA0 , 0 ,
+
+4 STRING goodfall1
+	0xE2 , 0x98 , 0xAE , 0 ,
+
+4 STRING goodfall2
+	0xE2 , 0x9A , 0x9B , 0 ,
+
+4 STRING goodfall3
+	0xE2 , 0x9A , 0x9A , 0 ,
+
+4 STRING goodfall4
+	0xE2 , 0x9A , 0x98 , 0 ,
 
 24 STRING smallbat 
 	0xE2 , 0x97 , 0x96 ,
@@ -427,6 +464,7 @@ BEGIN
 
   // only update bat and ball at set rate
   TICKS movetime - 984000 > IF 
+	 .wall
   	 TICKS TO movetime
 	 ballfree IF ballmove THEN
 	 batmove
@@ -463,7 +501,7 @@ AGAIN
 ;
 
 : Hi 
- 
+	PAGE
 	bold.green 
 	MSTR SPACE .VERSION 
 	colr.reset 
@@ -481,3 +519,9 @@ Hi
 
 FORGET
  
+
+
+ : t1 
+   IVARS 8192 + IVARS 8192 - DO
+	I . CHAR = EMIT  I @ . CR 
+    8 +LOOP ;
