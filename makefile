@@ -1,5 +1,5 @@
 LDFLAGS = -syslibroot `xcrun -sdk macosx --show-sdk-path` -lSystem -e _start -arch arm64 
-CFLAGS = -lc -e main  
+CFLAGS = -lc -e main  -O3
 LSTFLGS =
 DEBUGFLGS =
 
