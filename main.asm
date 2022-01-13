@@ -1870,7 +1870,9 @@ init:
 	BL mini_stack
 	
  
-  
+    save_registers
+	BL _init_string_pool
+	restore_registers
 
 	; seed RNG
 	BL 		randomize
@@ -5584,10 +5586,14 @@ arrayvaluecreator:
 	SUB		X16, X16, #8
 	STR		X0, [X28, #32] ; array size 
 
-	allotation
-
-	CMP		X0, X12
-	B.gt	allot_memory_full
+	
+	save_registers
+	MOV 	W1, W3
+	BL		_calloc
+	restore_registers
+	CBZ 	X0, calloc_failed 
+	STR 	X0, [X28]
+ 
 
 B		300f
 
@@ -7053,7 +7059,7 @@ dcomaz: ; ,  run time comma action
 	ADD		X1, X1, append_ptr@PAGEOFF
 	LDR		X1, [X1]
 	CBZ 	X1, 200f
-	B 		dstrappendcomma
+	B 		dstrappendcomma 
 
 200:
 	RET
@@ -9101,90 +9107,16 @@ dstfromappendbuffer:
 	STP		X12,  X13, [SP, #-16]!
 	STP		X3,  X5, [SP, #-16]!
 
-	ADRP	X12, append_buffer@PAGE		
-	ADD		X12, X12, append_buffer@PAGEOFF
+	ADRP	X0, append_buffer@PAGE		
+	ADD		X0, X0, append_buffer@PAGEOFF
 	
-	ADRP	X13, short_strings@PAGE		
-	ADD		X13, X13, short_strings@PAGEOFF
-	LDR		X13, [X13]
-	; add offset based on first letter
-	LDRB	W0, [X12]	; first letter
-	ORR		W0, W0, 0x20
-	CMP		W0, #'z'
-	B.gt 	710f
-	CMP		W0, #'a'
-	B.lt	710f
-	; * 256 slots per letter, * 256 bytes
-	SUB 	W0, W0, #90
-	LSL		X0, X0, #16  
-	ADD		X13, X13, X0 
-710: 
-
-	; find a free slot or a match in the short strings
-
-140:
-
-	ADRP	X1, short_strings_end@PAGE		
-	ADD		X1, X1, short_strings_end@PAGEOFF
-	LDR		X1, [X1]
-	CMP		X13, X1  ; check for string space
-	B.gt 	490f
-
-	; is this next string slot free
-	LDRB	W0, [X13]
-	CBZ 	W0, 180f 
+	save_registers
+	BL 		_add_string
+	restore_registers
 
 
-
-	; no, is this string a duplicate ?
-	MOV		X5,  X13 ; save pos
-
-	; compare up to 256 bytes 16 at a time
-	.rept 16
-		LDP		X0, X1, [X13], #16
-		LDP		X2, X3, [X12], #16
-		CMP		X0, X2
-		B.ne	160f 
-		CMP		X1, X3
-		B.ne	160f 
-		CMP     X0, #0	; end of string
-		B.eq	150f
-	.endr
-
-
-	; the strings in the buffer and the slot are equal
-	; avoid adding any duplicates
-150:
-	MOV		X13,  X5 
-	B 	450f
-
-
-
-160: ; strings not equal so we must check next slot to find space
-	MOV		X13,  X5 
-	ADRP	X12, append_buffer@PAGE		
-	ADD		X12, X12, append_buffer@PAGEOFF
-	ADD		X13, X13, #256	
-	B 		140b
-
-; found free slot so we fill with our string.
-180:
-	MOV 	X5, X13
-
+450:
  
-185:
-
-	; copy from string buffer to string
-	ADRP	X12, append_buffer@PAGE		
-	ADD		X12, X12, append_buffer@PAGEOFF
-	.rept 16
-		LDP		X0, X1, [X12], #16
-		STP		X0, X1, [X13], #16
-	.endr
-
-450:	
-
-	MOV 	X0, X5
 	BL		stackit
 
 	LDP		X3, X5, [SP], #16	
@@ -9218,50 +9150,44 @@ dstrappendbegin:
     ADRP	X0, append_ptr@PAGE		
 	ADD		X0, X0, append_ptr@PAGEOFF
     STR		X1, [X0] ;
-	.rept	64
-		STP		XZR, XZR, [X1], #16
-	.endr
+	MOV 	X0, #0
+	STRB	W0, [X1] 
 	RET
 
 ; called by (,) X1 has append_ptr
 dstrappendcommafromstack:
-	LDR		X2, [X16, #-8]
+	LDR		X1, [X16, #-8]
 	SUB 	X16, X16, #8
 	B		dstrappender
 
-; add string to append$ from buffer$.
-dstrappendnext:
-
-	ADRP	X1, append_ptr@PAGE		
-	ADD		X1, X1, append_ptr@PAGEOFF
-	LDR		X1, [X1]
-	CBZ		X1, 500f ; not appending
-
+ 
 dstrappendcomma:
 
-	ADRP	X2, string_buffer@PAGE		
-	ADD		X2, X2, string_buffer@PAGEOFF
+	ADRP	X1, string_buffer@PAGE		
+	ADD		X1, X1, string_buffer@PAGEOFF
 
 dstrappender:
 
-80:	
-	LDRB	W0, [X1], #1
-	CBZ		W0, 90f  
-	B  		80b
-
-90:	
-	SUB		X1, X1, #1
-
-100:
-	LDRB	W0, [X2], #1
-	STRB	W0, [X1], #1	
- 	CBNZ	W0, 100b  
-
-110:
-	SUB		X1, X1, #1
 	ADRP	X0, append_ptr@PAGE		
 	ADD		X0, X0, append_ptr@PAGEOFF
-	STR		X1, [X0]
+	LDR		X0, [X0]
+
+ 
+	MOV 	W2, #0
+	MOV 	W3, #255
+	save_registers
+
+	BL 		_memccpy
+
+	restore_registers
+	; X0 has new address for appender
+
+110:
+ 
+	ADRP	X1, append_ptr@PAGE		
+	ADD		X1, X1, append_ptr@PAGEOFF
+	STR		X0, [X1]
+	RET
 
 500:
 	ADRP	X0, not_appending_err@PAGE		
@@ -9283,6 +9209,7 @@ dstrappendend:
 
 ; dumb as a rock append
 dstrappend:
+
 	; prepare buffer
 	ADRP	X1, string_buffer@PAGE		
 	ADD		X1, X1, string_buffer@PAGEOFF
@@ -9314,7 +9241,19 @@ dstrappend:
 
 500:
 
-	B 	intern_string_from_buffer
+	ADRP	X0, string_buffer@PAGE		
+	ADD		X0, X0, string_buffer@PAGEOFF
+	save_registers
+	BL 		_add_string
+	restore_registers
+ 
+
+450:	
+	BL		stackit
+
+	LDP		X3, X5, [SP], #16	
+	LDP		X12, X13, [SP], #16	
+	LDP		LR, XZR, [SP], #16	
 
 	RET
 
@@ -9376,85 +9315,31 @@ _dstrequalz:
  
 dstrlen:
 
-	LDR 	X1, [X16, #-8]
-	MOV     X2, X1
-	CBZ 	X1, 90f
-
-	;ADRP	X12, below_string_space@PAGE		
-	;ADD		X12, X12, below_string_space@PAGEOFF
-	;CMP 	X1, X12
-	;B.lt 	98f
-
-
-	; search for zero over N bytes 
-	.rept 128
-		LDR		X0, [X1]
-		CBZ		X0, 10f
-		ADD		X1, X1, #8
-	.endr
-	B 	10f
-
-10: ; back track
-	SUB 	X1, X1, #8
-	.rept 	8
-	LDRB	W0, [X1], #1
-	CBZ		W0, 80f
-	.endr
-
-80:
-	SUB 	X0, X1, X2
-	SUB 	X0, X0, #1
+	LDR 	X0, [X16, #-8]
+	CBZ		X0, 10f
+	save_registers
+	BL		_strlen
+	restore_registers
+10:
 	STR 	X0, [X16, #-8]
 	RET
 
-90:
-	MOV 	X0, #0
-	STR 	X0, [X16, #-8]
-98:
-	RET
+ 
 
 
 dstrpos:
-
-	LDP		X0, X1, [X16, #-16]
+	LDP		X1, X0, [X16, #-16]
 	SUB 	X16, X16, #16
-
-	CBZ		X1, 20f
-	ADRP	X12, below_string_space@PAGE		
-	ADD		X12, X12, below_string_space@PAGEOFF
-	CMP 	X1, X12
-	B.lt 	20f
-
-	.rept 	256
-	LDRB	W2, [X1], #1
-	CMP		X2, X0
-	B.eq	80f
-	CBZ     X2, 10f 
-	.endr
-
-10:
-	; not found
-	MOV 	X0, #256
+	save_registers
+	BL 		 _strchr
+	restore_registers	 
 	STR		X0, [X16], #8
-	RET
-
-
-20:
-	MOV 	X0, #0
-	STR		X0, [X16], #8
-	RET
- 
-80:
-	SUB 	X1, X1, #1
-	STR		X1, [X16], #8
 	RET
 
 
 ; slices a string  
 ; X3 address. x2 pos, X1 count 
-; I feel like the original immutable value ought to be the backing storage for slices.
-; rather than creating an actual copy.
-; more figuring out needed.
+; I feel like the original immutable value ought to be the backing storage for a slice.
 
 dstrslice:
 
@@ -9527,6 +9412,8 @@ dstrslice:
 	B 		stackit
 	RET
 
+
+
 dstrcmp:
 
 	; just use c library
@@ -9540,7 +9427,7 @@ dstrcmp:
 	RET
  
 
-	; not using C library
+	; ...  not using C library
 	LDP		X12, X13, [X16, #-16]
 	SUB		X16, X16, #16
 	
@@ -9826,109 +9713,19 @@ dstrdotz:
 	MOV 	W0, #0
 	STRB	W0, [X12]
 
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	
-	ADRP	X13, short_strings@PAGE		
-	ADD		X13, X13, short_strings@PAGEOFF
-	LDR 	X13, [X13]
-	; add offset based on first letter
-	LDRB	W0, [X12]	; first letter
-	ORR		W0, W0, 0x20
-	CMP		W0, #'z'
-	B.gt 	710f
-	CMP		W0, #'a'
-	B.lt	710f
-	; * 256 slots per letter, * 256 bytes
-	SUB 	W0, W0, #90 ; 7 * 256 for non alpha
-	LSL		X0, X0, #16  
-	ADD		X13, X13, X0 
-710: 
 
- 
-	; find a free slot or a match in the short strings
-
-140:
-
-	ADRP	X1, short_strings_end@PAGE		
-	ADD		X1, X1, short_strings_end@PAGEOFF
-	LDR		X1, [X1]
-	CMP		X13, X1  ; check for string space
-	B.gt 	490f
-
-	; is this next string slot free
-	LDRB	W0, [X13]
-	CBZ 	W0, 180f 
-
-	; no, is this string a duplicate ?
-	MOV		X5,  X13 ; save pos
-
-	; compare up to 256 bytes 16 at a time
-	.rept 16
-		LDP		X0, X1, [X13], #16
-		LDP		X2, X3, [X12], #16
-		CMP		X0, X2
-		B.ne	160f 
-		CMP		X1, X3
-		B.ne	160f 
-		CMP     X0, #0	; end of string
-		B.eq	150f
-	.endr
-
-
-	; the strings in the buffer and the slot are equal
-	; avoid adding any duplicates
-150:
-	MOV		X13,  X5 
-	B 	450f
-
-
-160: ; strings not equal so we must check next slot to find space
-	MOV		X13,  X5 
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	ADD		X13, X13, #256	
-	B 		140b
-
-; found free slot so we fill with our string.
-180:
-	MOV 	X5, X13
-
-185:
-
-	; copy from string buffer to string
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	.rept 16
-		LDP		X0, X1, [X12], #16
-		STP		X0, X1, [X13], #16
-	.endr
-450:	
-
-	MOV 	X0, X5
+	ADRP	X0, string_buffer@PAGE		
+	ADD		X0, X0, string_buffer@PAGEOFF
+	save_registers
+	BL 		_add_string
+	restore_registers
 	BL		sayit
-
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, X15, [SP], #16	
 
 	RET
 
-490:
-	ADRP	X0, tcomer36@PAGE		
-	ADD		X0, X0, tcomer36@PAGEOFF
-	BL 		sayit_err	
-	LDP		X3, X5, [SP], #16	
-	LDP		X12, X13, [SP], #16	
-	LDP		LR, X15, [SP], #16	
-	MOV 	X0, #-1
-	RET
-
-500:	
-	LDP		X3, X5, [SP], #16	
-	LDP		X12, X13, [SP], #16	
-	LDP		LR, X15, [SP], #16	
-	RET
 
  
 dstrstksz: ; runtime S" .. " stash and return address
@@ -9972,122 +9769,20 @@ dstrstksz: ; runtime S" .. " stash and return address
 	STRB	W0, [X12]
 
 intern_string_from_buffer:
-
-	; we have to intern if we are compiling.
-	CBNZ	X15, 128f
-	; exit if appending do not store
-	ADRP	X1, append_ptr@PAGE		
-	ADD		X1, X1, append_ptr@PAGEOFF
-	LDR		X1, [X1]
-	CBNZ 	X1, 500f
-
-128:
-
-
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	
-	ADRP	X13, short_strings@PAGE		
-	ADD		X13, X13, short_strings@PAGEOFF
-	LDR		X13, [X13]
-	; add offset based on first letter
-	LDRB	W0, [X12]	; first letter
-	ORR		W0, W0, 0x20
-	CMP		W0, #'z'
-	B.gt 	710f
-	CMP		W0, #'a'
-	B.lt	710f
-	; * 256 slots per letter, * 256 bytes
-	SUB 	W0, W0, #90 
-	LSL		X0, X0, #16  
-	ADD		X13, X13, X0 
-710: 
-
-
-	; find a free slot or a match in the short strings
-
-140:
-
-	ADRP	X1, short_strings_end@PAGE		
-	ADD		X1, X1, short_strings_end@PAGEOFF
-	LDR		X1, [X1]
-	CMP		X13, X1  ; check for string space
-	B.gt 	490f
-
-	; is this next string slot free
-	LDRB	W0, [X13]
-	CBZ 	W0, 180f 
-
-	; no, is this string a duplicate ?
-	MOV		X5,  X13 ; save pos
-	; compare up to 256 bytes 16 at a time
-	.rept 16
-		LDP		X0, X1, [X13], #16
-		LDP		X2, X3, [X12], #16
-		CMP		X0, X2
-		B.ne	160f 
-		CMP		X1, X3
-		B.ne	160f 
-		CMP     X0, #0	; end of string
-		B.eq	150f
-	.endr
-
-
-	; the strings in the buffer and the slot are equal
-	; avoid adding any duplicates
-150:
-	MOV		X13,  X5 
-	B 		450f
-
-
-160: ; strings not equal so we must check next slot to find space
-	MOV		X13,  X5 
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	ADD		X13, X13, #256	
-	B 		140b
-
-; found free slot so we fill with our string.
-180:
-	MOV 	X5, X13
-
-185:
-
-	; copy from string buffer to string
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	.rept 16
-		LDP		X0, X1, [X12], #16
-		STP		X0, X1, [X13], #16
-	.endr
-
+	ADRP	X0, string_buffer@PAGE		
+	ADD		X0, X0, string_buffer@PAGEOFF
+	save_registers
+	BL 		_add_string
+	restore_registers
+ 
 
 450:	
-
-	MOV 	X0, X5
 	BL		stackit
 
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
 
-	RET
-
-490:
-	ADRP	X0, tcomer36@PAGE		
-	ADD		X0, X0, tcomer36@PAGEOFF
-	BL 		sayit_err	
-	LDP		X3, X5, [SP], #16	
-	LDP		X12, X13, [SP], #16	
-	LDP		LR, XZR, [SP], #16	
-	MOV 	X0, #-1
-	RET
-
-500:	
-	LDP		X3, X5, [SP], #16	
-	LDP		X12, X13, [SP], #16	
-	LDP		LR, XZR, [SP], #16	
-	
 	RET
 
 
@@ -10132,95 +9827,19 @@ dstrdotc:
 	MOV 	W0, #0
 	STRB	W0, [X12]
 
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	
-	ADRP	X13, short_strings@PAGE		
-	ADD		X13, X13, short_strings@PAGEOFF
-	LDR		X13, [X13]
-	; add offset based on first letter
-	LDRB	W0, [X12]	; first letter
-	ORR		W0, W0, 0x20
-	CMP		W0, #'z'
-	B.gt 	710f
-	CMP		W0, #'a'
-	B.lt	710f
-	; * 256 slots per letter, * 256 bytes
-	SUB 	W0, W0, #90
-	LSL		X0, X0, #16  
-	ADD		X13, X13, X0 
-710: 
+	ADRP	X0, string_buffer@PAGE		
+	ADD		X0, X0, string_buffer@PAGEOFF
+	 
+	save_registers
+	BL 		_add_string
+	restore_registers
 
+	BL 		longlitit
 
-	; find a free slot or a match in the short strings
-
-140:
-
-	ADRP	X1, short_strings_end@PAGE		
-	ADD		X1, X1, short_strings_end@PAGEOFF
-	LDR		X1,[X1]
-	CMP		X13, X1  ; check for string space
-	B.gt 	490f
-
-	; is this next string slot free
-	LDRB	W0, [X13]
-	CBZ 	W0, 180f 
-
-	; no, is this string a duplicate ?
-	MOV		X5,  X13 ; save pos
-
-	; compare up to 256 bytes 16 at a time
-	.rept 16
-		LDP		X0, X1, [X13], #16
-		LDP		X2, X3, [X12], #16
-		CMP		X0, X2
-		B.ne	160f 
-		CMP		X1, X3
-		B.ne	160f 
-		CMP     X0, #0	; end of string
-		B.eq	150f
-	.endr
-
-	; the strings in the buffer and the slot are equal
-	; avoid adding any duplicates
-150:
-	MOV		X13,  X5 
-	B 	450f
-
-
-160: ; strings not equal so we must check next slot to find space
-	MOV		X13,  X5 
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	ADD		X13, X13, #256	
-	B 		140b
-
-; found free slot so we fill with our string.
-180:
-	MOV 	X5, X13
-
-185:
-
-	; copy from string buffer to string
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	.rept 16
-		LDP		X0, X1, [X12], #16
-		STP		X0, X1, [X13], #16
-	.endr
-
-450:	
-
-	ADRP	X1, short_strings@PAGE		
-	ADD		X1, X1, short_strings@PAGEOFF
-	LDR		X1, [X1]
-	MOV     X2, #256
-	SUB  	X5, X5, X1
-	UDIV 	X3, X5, X2
-
+	ADD		X15, X15, #2
 	MOV		W0, #12 ; (.S)
-	STRH	W0, [X15], #2
-	STRH	W3, [X15]
+	STRH	W0, [X15] 
+ 
 	 
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
@@ -10287,88 +9906,11 @@ dstrstksc: ; compile literal that returns its address.
 	MOV 	W0, #0
 	STRB	W0, [X12]
 
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	
-	ADRP	X13, short_strings@PAGE		
-	ADD		X13, X13, short_strings@PAGEOFF
-	LDR		X13, [X13]
-
-	; add offset based on first letter
-	LDRB	W0, [X12]	; first letter
-	ORR		W0, W0, 0x20
-	CMP		W0, #'z'
-	B.gt 	710f
-	CMP		W0, #'a'
-	B.lt	710f
-	; * 256 slots per letter, * 256 bytes
-	SUB 	W0, W0, #90
-	LSL		X0, X0, #16  
-	ADD		X13, X13, X0 
-710: 
-
-
-	; find a free slot or a match in the short strings
-
-140:
-
-	ADRP	X1, short_strings_end@PAGE		
-	ADD		X1, X1, short_strings_end@PAGEOFF
-	LDR		X1, [X1]
-	CMP		X13, X1  ; check for string space
-	B.gt 	490f
-
-	; is this next string slot free
-	LDRB	W0, [X13]
-	CBZ 	W0, 180f 
-
-	; no, is this string a duplicate ?
-	MOV		X5,  X13 ; save pos
-	; compare up to 256 bytes 16 at a time
-	.rept 16
-		LDP		X0, X1, [X13], #16
-		LDP		X2, X3, [X12], #16
-		CMP		X0, X2
-		B.ne	160f 
-		CMP		X1, X3
-		B.ne	160f 
-		CMP     X0, #0	; end of string
-		B.eq	150f
-	.endr
-
-
-	; the strings in the buffer and the slot are equal
-	; avoid adding any duplicates
-150:
-	MOV		X13,  X5 
-	B 		450f
-
-
-160: ; strings not equal so we must check next slot to find space
-	MOV		X13,  X5 
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	ADD		X13, X13, #256	
-	B 		140b
-
-; found free slot so we fill with our string.
-180:
-	MOV 	X5, X13
-
-185:
-
-	; copy from string buffer to string
-	ADRP	X12, string_buffer@PAGE		
-	ADD		X12, X12, string_buffer@PAGEOFF
-	.rept 16
-		LDP		X0, X1, [X12], #16
-		STP		X0, X1, [X13], #16
-	.endr
-
-
-450:	
-
-	MOV 	X0, X5
+	ADRP	X0, string_buffer@PAGE		
+	ADD		X0, X0, string_buffer@PAGEOFF
+	save_registers
+	BL 		_add_string
+	restore_registers
 	BL		longlitit
 
 	LDP		X3, X5, [SP], #16	
@@ -10395,41 +9937,14 @@ dstrstksc: ; compile literal that returns its address.
 	RET
 
 
-; print a short literal string, inline literal
+; print a short literal string, lit on stack
 dslitSzdot: 
-	
-	STP		LR,  X12, [SP, #-16]!
-	STP		X0,  X8, [SP, #-16]!
-
-	ADRP	X8, short_strings@PAGE		
-	ADD		X12, X8, short_strings@PAGEOFF
-	LDR		X12, [X12]
-	ADD		X15, X15, #2		
-	LDRH	W0, [X15]
- 
- 
-	LSL		X0, X0, #8
-	ADD		X0, X0, X12
-
-	BL		sayit
-	
-	LDP		X0, X8, [SP], #16
-	LDP		LR, X12, [SP], #16
-
+	B 		ztypez
+	 
 	RET
 
 ; fetch address of a short literal string, inline literal
 dslitSz:
-	ADRP	X8, short_strings@PAGE		
-	ADD		X8, X8, short_strings@PAGEOFF
-	LDR		X12, [X8]	 
-	ADD		X15, X15, #2		
-	LDRH	W0, [X15]
-	SUB		W0, W0, #32 ; avoid confusion
-	LSL		X0, X0, #6
-	ADD		X0, X0, X12
-	B		stackit
-	;
 	RET
 
 
@@ -11071,6 +10586,14 @@ dallot:
 
 	RET
 
+
+dliststrings:
+	save_registers
+	BL _list_strings
+	restore_registers
+	RET
+
+ 
 
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -11811,15 +11334,7 @@ below_string_space:
 string_buffer:
 .asciz "Strings"
 .zero 4096
-
- ; short strings are sparse and not sorted
- ; the search at compile time is split over 27 buckets by first letter.
- ; at runtime access is just direct.
-
-
  
-short_strings: 	.quad 	0
-short_strings_end: .quad 0
 
 .align 16
 slice_string:
@@ -11840,7 +11355,7 @@ zpad:	.ascii "ZPAD STARTS HERE"
 .align 16
 append_buffer:
 	.asciz "Append Buffer"
-	.zero 2048
+	.zero 4096
 .align 16
 append_ptr:
 	.quad 0		; 0 = not appending
@@ -12189,6 +11704,7 @@ kdict:
 		makeword "LEAVE",  dinvalintz, dleavec, 0 
 		makeword "LOOP", dinvalintz , dloopc, 0 
 		makeword "LIMIT", dlimited , 0, 0 
+		makeword "LISTSTRINGS", dliststrings , 0, 0 
 		makeword "LAST", get_last_word, 0,  0
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
 
@@ -12273,7 +11789,7 @@ rdict:
 sdict:
 		makeemptywords 256
 
- 
+ 	 
 		makeword "TO", dtoz, dtoc, 0
 		makeword "TIMEIT", dtimeitz, dtimeitc, 0
 		makeword "TRACE", dtracable, 0, 0
@@ -12337,9 +11853,7 @@ zdict:
 
 		makeword "${", dstrappendbegin , 0, 0 
 		makeword "$.", ztypez, 0, 0	
-		makeword "}$", dstrappendend , 0, 0 
-		makeword "$}", dstrappendend , 0, 0 
-	;	makeword "$+", dstrappend , 0, 0 
+ 		makeword "$}", dstrappendend , 0, 0 
  		makeword "$=", dstrequalz, 0,  0
 		makeword "$==", _dstrequalz, 0,  0
 		makeword "$compare", dstrcmp, 0,  0
@@ -12350,13 +11864,14 @@ zdict:
 		makeword "$slice", dstrslice, 0,  0
 		makeword "$''", 	stackit, 	stackit, 	0
 		makeword "$intern", 	intern, 	intern, 	0
-		makeword "$^", dvaluez , 0, short_strings
-		makeword "$LIMIT^", dvaluez , 0, short_strings_end
-		makeword "$$", dstringstoragearrayvalz , 0,  short_strings, 0, 10240
 	 
 dollardict:
 	 	
 		makeemptywords 256
+		
+		makeword "}$", dstrappendend , 0, 0 
+		makeword "{$", dstrappendbegin , 0, 0 
+
 		makeword "*/", dstarslshz, 0,  10
 		makeword "*/MOD", dstarslshzmod, 0,  10
 		 

@@ -6,9 +6,6 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
  
 80 256 * HEAPSIZE HEAP^ ALIGN8 TO LSP^
  
-8519680 HEAPSIZE HEAP^ ALIGN8 TO $^ 
-8519680 256 - $^ + TO $LIMIT^
- 
 // save start time from here.
  VALUE start_ticks
 
@@ -68,8 +65,6 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 : .ALIAS ALIAS^ _list_alias ;
 
 
- 
-
 // -------------------------------------------------------
 // display and count public words
 
@@ -102,8 +97,6 @@ ALIAS 	lastword	255
 : WORDS FINAL^ `` (  _words ;
 
 : ALLWORDS FINAL^ `` (EXIT)  _words ;
-
-
 
 
 // -------------------------------------------------------
@@ -423,7 +416,6 @@ ALIAS 'c' 99 // stop
 ;
 
 
-
 : batkeys  
 batsball
 TICKS TO movetime
@@ -475,8 +467,6 @@ BEGIN
 AGAIN
 ;
 
-
-
 : START 
 	PAGE
 	makesxls 
@@ -511,17 +501,13 @@ AGAIN
 	colr.reset 
 ;
 
- 
- 
+
 // off we go
 
 Hi 
-
-FORGET
- 
-
 
  : t1 
    IVARS 8192 + IVARS 8192 - DO
 	I . CHAR = EMIT  I @ . CR 
     8 +LOOP ;
+ 
