@@ -245,10 +245,6 @@ is much nicer.
 This feature is not necessary most of the time, but if you do have more than three arguments it can make life simpler.
 
 
- 
-
-
-
 #### Self reference
 
 A word can refer to it self in its own definition (recursion) like FIB above.

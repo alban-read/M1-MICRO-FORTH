@@ -21,7 +21,7 @@ extern int kb_hit(void)
 
 }
 
-// sorted string pool
+// sorted string pool  
 // I got fed up with the string literal pool, and added this for the time being.
 
 const int pool_size = 4096;
@@ -37,7 +37,8 @@ int stringcompare(const void *a, const void *b) {
      // other wise look at string contents
      char* as = *(char **)a;
      char* bs = *(char **)b;
-     int r = strncmp(   as, bs, 96 );  
+     //printf("\ncompare %s with %s", as, bs);
+     int r = strncmp(   as, bs, 256 );  
      return r;
 }
 
@@ -55,12 +56,12 @@ int free_index() {
 }
 
 void sort_strings() {
-       qsort( pool, next_string, sizeof(char *), stringcompare);       
+      qsort( pool, next_string, sizeof(char *), stringcompare);       
 }
 
 char** find_string( const char *s) {
-      const char* key = s;  
-      return  (char**)bsearch( (const void *)&key, pool, next_string, sizeof(char*), stringcompare);           
+        const char* key = s; 
+        return  (char**)bsearch( (const void *)&key, pool, next_string, sizeof(char*), stringcompare);                
 }
 
 extern void list_strings() {

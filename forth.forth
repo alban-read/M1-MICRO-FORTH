@@ -490,6 +490,9 @@ AGAIN
 	TCOL.reset FCOL
 ;
 
+: ?DAY  DUP 1 <  SWAP 31 > +  IF .' No way ' ELSE .' Looks good ' THEN ;
+
+
 : Hi 
 	PAGE
 	bold.green 
@@ -506,8 +509,3 @@ AGAIN
 
 Hi 
 
- : t1 
-   IVARS 8192 + IVARS 8192 - DO
-	I . CHAR = EMIT  I @ . CR 
-    8 +LOOP ;
- 

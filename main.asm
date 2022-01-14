@@ -63,9 +63,12 @@
 	STP		X6,  X7,  [SP, #-16]!
 	STP		X4,  X5,  [SP, #-16]!
 	STP		X2,  X3,  [SP, #-16]!
+ 	STP		X22,  X24,  [SP, #-16]!
+ 
 .endm
 
 .macro restore_registers  
+ 	LDP		X22, X24, [SP], #16
 	LDP		X2, X3, [SP], #16
 	LDP		X4, X5, [SP], #16
 	LDP		X6, X7, [SP], #16
@@ -9013,8 +9016,6 @@ stack_loop_var:
 	B		stackit
 	RET
 
- 
-
 
 loop_index_err:
 	reset_return_stack
@@ -9720,6 +9721,7 @@ dstrdotz:
 	BL 		_add_string
 	restore_registers
 	BL		sayit
+
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, X15, [SP], #16	
@@ -9769,6 +9771,16 @@ dstrstksz: ; runtime S" .. " stash and return address
 	STRB	W0, [X12]
 
 intern_string_from_buffer:
+
+	; we have to intern if we are compiling.
+	CBNZ	X15, 128f
+	; exit if appending do not store
+	ADRP	X1, append_ptr@PAGE		
+	ADD		X1, X1, append_ptr@PAGEOFF
+	LDR		X1, [X1]
+	CBNZ 	X1, 500f
+
+128:
 	ADRP	X0, string_buffer@PAGE		
 	ADD		X0, X0, string_buffer@PAGEOFF
 	save_registers
@@ -9786,13 +9798,13 @@ intern_string_from_buffer:
 	RET
 
 
-; compiles string into the string literal pool.
-; compiles string literal token and value into word.
+
 dstrdotc:
 
 	STP		LR,  XZR, [SP, #-16]!
 	STP		X12,  X13, [SP, #-16]!
 	STP		X3,  X5, [SP, #-16]!
+	 
 
 	ADRP	X12, string_buffer@PAGE		
 	ADD		X12, X12, string_buffer@PAGEOFF
@@ -9829,18 +9841,20 @@ dstrdotc:
 
 	ADRP	X0, string_buffer@PAGE		
 	ADD		X0, X0, string_buffer@PAGEOFF
-	 
+
+ 
 	save_registers
 	BL 		_add_string
 	restore_registers
+ 
 
-	BL 		longlitit
-
+	BL 		longlitit 
+ 
 	ADD		X15, X15, #2
-	MOV		W0, #12 ; (.S)
+	MOV		W0, #52 ; (.S)
 	STRH	W0, [X15] 
  
-	 
+
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
@@ -9851,16 +9865,20 @@ dstrdotc:
 	ADRP	X0, tcomer36@PAGE		
 	ADD		X0, X0, tcomer36@PAGEOFF
 	BL 		sayit_err	
+
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
+	
 	MOV 	X0, #-1
 	RET
 
 500:	
+
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
+	
 	
 	RET
 
@@ -9872,6 +9890,7 @@ dstrstksc: ; compile literal that returns its address.
 	STP		LR,  XZR, [SP, #-16]!
 	STP		X12,  X13, [SP, #-16]!
 	STP		X3,  X5, [SP, #-16]!
+ 
 
 	ADRP	X12, string_buffer@PAGE		
 	ADD		X12, X12, string_buffer@PAGEOFF
@@ -9911,11 +9930,13 @@ dstrstksc: ; compile literal that returns its address.
 	save_registers
 	BL 		_add_string
 	restore_registers
+	
 	BL		longlitit
-
+ 
+ 
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
-	LDP		LR, XZR, [SP], #16	
+	LDP		LR, XZR, [SP], #16		
 
 	RET
 
@@ -9930,6 +9951,7 @@ dstrstksc: ; compile literal that returns its address.
 	RET
 
 500:	
+
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16	
@@ -9937,14 +9959,20 @@ dstrstksc: ; compile literal that returns its address.
 	RET
 
 
-; print a short literal string, lit on stack
+; print a literal string, lit on stack
 dslitSzdot: 
+ 
+   
 	B 		ztypez
-	 
+	
+ 
 	RET
 
 ; fetch address of a short literal string, inline literal
 dslitSz:
+	 
+
+ 
 	RET
 
 
@@ -10321,8 +10349,6 @@ findalias2: ; deep alias resoloution
 	STR 	X0, [X16], #8 ; thing we found
 	RET
 
-
-
 findalias:
 	save_registers
 	ADRP	X12, alias_table@PAGE
@@ -10593,12 +10619,8 @@ dliststrings:
 	restore_registers
 	RET
 
- 
 
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
 
 .data 
 
@@ -10636,7 +10658,6 @@ last_word:
 .data 
 
 
-
 .align 8
  
 
@@ -10653,7 +10674,6 @@ zstdin: .zero 16
 ivars:
 
 .text
-
 
 .align 8
 literal_name:
@@ -10807,11 +10827,9 @@ tcomer14: .ascii "\nDO .. LOOP - LOOP could not find DO.."
 tcomer15: .ascii "\nDO .. LOOP - +LOOP could not find DO.."
 	.zero 16
 
-
 	.align	8
 tcomer16: .ascii "\nDO .. LOOP - DO could not find LOOP.."
 	.zero 16
-
 
 	.align	8
 tcomer17: .ascii "\nDO .. LOOP - LOOP index error.."
@@ -10839,7 +10857,6 @@ tcomer21: .ascii "  : ms to run ( "
 
 tcomer22: .ascii "  ) ns \n "
 	.zero 16
-
 
 .align	8
 tcomer23: .ascii "BEGIN .. AGAIN error - AGAIN/UNTIL needs BEGIN.\n "
@@ -10940,14 +10957,9 @@ tcomer48: .ascii ": Error Not enough parameters (stack underflow)"
    .align	8
 tcomer49: .ascii "\nError only room for 8 parameters "
 	.zero 16
-
-
-
 .align	8
 tforget: .ascii "\nForgeting last_word word: "
 	.zero 16
-
-
 
 
 .align	8
@@ -10990,11 +11002,9 @@ word_desc7: .ascii "\t\tVALUE "
 word_desc8: .ascii "\t\t^VALUE "
 	.zero 16
 
-
 .align	8
 word_desc9: .ascii "\t\t^TOKENS "
 	.zero 16
-
 
 .align	8
 word_desc10: .ascii "\t\tARGUMENT 1"
@@ -11012,19 +11022,13 @@ word_desc10_2: .ascii "\t\tExtra DATA 1"
 word_desc10_3: .ascii "\t\tExtra DATA 2"
 	.zero 16
 
-
-
 .align	8
 word_desc11: .ascii "SEE WORD :"
 	.zero 16
 
-
 .align	8
 word_desc12: .ascii "\t\tPRIM COMP"
 	.zero 16
-
-
-
 
 .align	8
 word_desc13: .ascii "Error: invalid memory access attempt"
@@ -11129,10 +11133,6 @@ read_fd:
 
 time_value:
 	.zero 128
-
-
-
-
 
 ; this is the tokens pool
 ; code for token compiled words is compiled into here
@@ -11271,10 +11271,6 @@ prot3:
 ; global, single letter, integer variables
 .align 16
 
-
-
-
- 
 
      .data
 
@@ -11509,6 +11505,7 @@ dend:
 		makeword "(DECR)", 				ddecrcz, 	0,  0	; 49
 		makeword "(ONRESET)", 			0,  	0,   0		; 50
 		makeword "(FORTH)", 			0, 0, 0				; 51
+		makeword "(.')", 				dslitSzdot, 0,  0	; 52
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
