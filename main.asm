@@ -1523,6 +1523,7 @@ start_point: ; finds where to start searching the dictionary
 	; lower case and check for a..z
 	ORR		W0, W0, 0x20
 
+ 
 	CMP		W0, #'z'	
 	B.gt	searchall
 	
@@ -1719,6 +1720,7 @@ searchall:
 	; from here X28 is current word in sdict
 	ADRP	X28, startdict@PAGE		
 	ADD		X28, X28, startdict@PAGEOFF
+
 251:	
 	SUB		X28, X28, #64
 
@@ -4686,7 +4688,7 @@ dcreatvz:
 	ADD		X1, X1, dvaraddz@PAGEOFF
 	STR		X1, [X28, #8]
 
-	ADD		X1, 	X28, #32
+	ADD		X1, X28, #32
 	STR		X1, [X28]
 
 	; set variable from tos.
@@ -11595,18 +11597,21 @@ cdict:
 
 		
 ddict:
-		makeemptywords 256 
-	
-		makeword "EXECUTE", dcallz, dcallc, 0
+
+ 		makeemptywords 256 
+		makeword "EXEC", dcallz, dcallc, 0
 		makeword "ELSE", 0 , delsec, 0 
 		makeword "ENDIF", dendifz , dendifc, 0 
 		makeword "EMIT", emitz , 0, 0 
 		makeword "EXIT", dexitz, 	0,  0	
 		makeword "e" , dlocez, 0, 0
 		makeword "e!" , dlocesz, 0, 0	
+
 	 
 		
 edict:
+
+
 		makeemptywords 256
 		makeword "f<>", fneqz, 0,  0 
 		makeword "f=", feqz, 0,  0 
@@ -11815,7 +11820,7 @@ udict:
 
 		makeword "VALUE", dcreatevalz , dcreat_invalid, 0
 		makeword "VALUES", dcreatvalues , dcreat_invalid, 0 
-		makeword "VARIABLE", dcreatvz , 0, 0
+		makeword "VARIABLE", dcreatvz , dcreat_invalid, 0
 	
 
 	 

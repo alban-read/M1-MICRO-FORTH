@@ -20,7 +20,7 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 // common constants 
 -1 CONSTANT -1
 
-: DELWORD  ` 64 0 FILL ; 
+ 
 
 : VALDAT ` @ ;
 
@@ -155,7 +155,7 @@ CLRALIAS
 : exp ( x y -- x^y )
    OVERSWAP 1 ?DO OVER * LOOP NIP ; 
 
-` exp ` ^ CCPY DDROP  DELWORD exp
+` exp ` ^ CCPY DDROP  
 
 // basic terminal colours 
 
@@ -505,7 +505,7 @@ AGAIN
 ;
 
 
-// off we go
+// off we go 
 
 Hi 
 
