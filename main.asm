@@ -306,38 +306,47 @@ derrstrz:
 	RET
 
 
-; chain loads a file; after this file closes; 
-; or last line of a file.
+; load loads a file
+; and then reverts to stdin
 
-dchainz:
+dfloadfromstackz:
 
-	;save_registers
-	; close file  
-	;ADRP	X0, input_file@PAGE
-	;ADD		X0, X0, input_file@PAGEOFF
-	;LDR		X0,	[X0]
-
-	;save_registers
-	;BL		_fclose
-	;restore_registers
-
+10:
 
 	LDR		X0, [X16, #-8]	; string filename
 	SUB		X16, X16, #8
-	 
+
+dfloadx0:
 	save_registers
  	ADRP	X1, mode_read@PAGE		
 	ADD		X1, X1, mode_read@PAGEOFF
 	BL		_fopen
-	CBZ		X0, 10f		; failed
+	CBZ		X0, 90f		; failed
 	ADRP	X1, input_file@PAGE
 	ADD		X1, X1, input_file@PAGEOFF
 	STR		X0,	[X1]
-10:	
+90:	
 	restore_registers
 	STR 	X0, [X16], #8
 	RET
  
+
+dfload:
+save_registers
+	save_registers
+	BL		advancespaces
+	BL		collectwordnoalias
+ 	BL		get_word
+	BL		empty_wordQ
+	restore_registers
+	B.eq	190f
+
+	ADRP	X0, zword@PAGE		
+	ADD		X0, X0, zword@PAGEOFF
+	B 		dfloadx0
+190:
+	RET 
+
 
 from_startup:
 	 
@@ -11398,14 +11407,11 @@ quadlits:
 .align 16
 below_string_space:
 
-
-
 .align 16
 string_buffer:
 .asciz "Strings"
 .zero 4096
  
-
 .align 16
 slice_string:
 	.zero 4096
@@ -11413,14 +11419,10 @@ slice_string:
 .align 16
 rmargin: 	.quad 80
 
-
-
 ; used for line input
 .align 16
 zpad:	.ascii "ZPAD STARTS HERE"
 	.zero 4096
-
-
 
 .align 16
 append_buffer:
@@ -11433,8 +11435,6 @@ append_ptr:
 
 ; most likely an error to read a string above here
 above_string_space:
-
-
 
 ; the word being processed
 .align 8
@@ -11455,6 +11455,11 @@ mode_read:
 input_file:			
 				.quad	0
 				.quad	0
+
+last_input_file:			
+				.quad	0
+				.quad	0
+
 
 .align 	8
 accepted:			
@@ -11634,7 +11639,7 @@ adict:
 		
 bdict:
 		makeemptywords 256
-		makeword "CHAIN", 	dchainz, 0, 0
+		
 		makeword "CHAR", 	dcharz, dcharc, 0
 		makeword "CARRAY", dCcreatarray , dcreat_invalid, 0 
 		makeword "CLRALIAS", clralias, 0, 0	
@@ -11688,6 +11693,7 @@ edict:
 
 
 		makeemptywords 256
+		makeword "FLOAD", 	dfload, 0, 0
 		makeword "f<>", fneqz, 0,  0 
 		makeword "f=", feqz, 0,  0 
 		makeword "f>=0", fgtzz, 0,  0 
