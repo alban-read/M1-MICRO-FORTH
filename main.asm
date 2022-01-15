@@ -4119,6 +4119,12 @@ dseez:
 	CMP		X21, X22		; is this our word?
 	B.ne	170f
  
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
 
 	; see word
 
