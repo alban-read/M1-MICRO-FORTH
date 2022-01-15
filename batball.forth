@@ -218,12 +218,6 @@ TCOL.red VALUE ballclr
 ;
 
 
-
-ALIAS 'z' 122 // left
-ALIAS 'x' 120 // right
-ALIAS 'q' 113 // quit game
-ALIAS 'c' 99 // stop
-
 // move bat when keys pressed.
 
 // 

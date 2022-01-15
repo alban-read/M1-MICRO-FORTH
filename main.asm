@@ -5844,9 +5844,15 @@ dcreatstack:
 
 
 
+dselectitfromstackz:
+	LDR 	X0, [X16, #-8]
+	ADD		X16, X16, #8
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	STR 	X0, [X1]
+	RET 
+
 dselectit:
-
-
 100:	
 	save_registers
 	
@@ -5943,8 +5949,6 @@ dtickz: ; ' - get address of NEXT words data field
 	restore_registers
 	B	stackit
 	RET
-
-
 
 
 
@@ -7111,9 +7115,10 @@ dstarc: ; *
 
 
 dcomacz: ; , compiled in action for comma
+
+
+
 dcomaz: ; ,  run time comma action
-
-
 
 	; if last word was a C array, we can append to it
 	ADRP	X1, last_word@PAGE		
@@ -10681,7 +10686,7 @@ daliasfromstackz:
 
 50:
  	SUB 	X16, X16, #16
-	 
+
 	save_registers
 	BL 		sortalias
 	restore_registers
@@ -11728,6 +11733,7 @@ dend:
 		makeword "(FORTH)", 			0, 0, 0				; 51
 		makeword "(.')", 				dslitSzdot, 0,  0	; 52
 		makeword "(ALIAS)", 			daliasfromstackz, 0, 0	; 53
+		makeword "(SELECTIT)" , 		dselectitfromstackz, 0, 0
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment

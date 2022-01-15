@@ -43,6 +43,42 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 1 SHIFTSL 2* 1 SHIFTSR 2/
 2 SHIFTSL 4* 2 SHIFTSR 4/
 
+// -------------------------------------------------------
+// print numbers
+
+10 VALUE BASE
+
+: U.             
+   BASE /MOD      
+      ?DUP IF          
+      U.        
+   THEN
+   DUP 10 < IF
+      CHAR 0        
+   ELSE
+      10 -           
+      CHAR A
+   THEN
+   +
+   EMIT
+   ;
+
+// copy number to string. 
+: U,             
+   BASE /MOD      
+      ?DUP IF          
+      U,        
+   THEN
+   DUP 10 < IF
+      CHAR 0        
+   ELSE
+      10 -           
+      CHAR A
+   THEN
+   +
+   ,
+   ;
+
 
 // -------------------------------------------------------
 // list ALIAS words 
@@ -62,6 +98,23 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 
 : .ALIAS ALIAS^ _list_alias ;
 
+// alias letters allows 'A' rather than CHAR A or 65.
+
+16 STRING _left
+16 STRING _right
+
+: _alias_letters
+	`` _left 
+	`` _right  
+	2 PARAMS
+	126 32 DO  
+		a (SELECTIT) 0 a 40 + !
+		CHAR ' , I , CHAR ' ,
+		b (SELECTIT)  0 b 40 + !
+		I U, 
+		_right _left (ALIAS)
+	LOOP ;		
+ 
 
 // -------------------------------------------------------
 // display and count public words
@@ -100,9 +153,6 @@ ALIAS 	lastword	255
 // -------------------------------------------------------
 // displays key codes until Q
 
-ALIAS 'Q' 81
-ALIAS 'q' 113
-ALIAS '=' 61
 ALIAS pausetime 100
 
 : .keys NOECHO 
@@ -170,8 +220,6 @@ ALIAS TCOL.magenta 	35
 ALIAS TCOL.cyan 	36
 ALIAS TCOL.white 	37
 
-
-
 // announce ourselves
 
 // define the UTF8 unicode monster
@@ -192,6 +240,7 @@ ALIAS TCOL.white 	37
 
 
 : Hi 
+	_alias_letters
 	PAGE
 	bold.green 
 	MSTR SPACE .VERSION 
