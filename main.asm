@@ -4718,13 +4718,17 @@ dcreatcz:
 
 280:	; error dictionary FULL
 
-290:	; error word exist
-	restore_registers_not_stack
-	B err_word_exists
+
 
 300:
 	restore_registers_not_stack
 	RET
+
+
+the_word_exists:
+290:	; error word exist
+	restore_registers_not_stack
+	B err_word_exists
 
 
 dcreatcc:
@@ -9702,12 +9706,20 @@ creatstring:
 	BL		start_point
 
 100:	; find free word and start building it
-
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
 	CMP		X1, X0
-	B.eq	290b
+	B.ne	120f
 
+110: ; the word may exist (check 2nd half)
+	LDR		X1, [X28, #56] ; next 8	
+	LDR		X0, [X22,#8]
+	CMP		X1, X0		;  
+	B.ne	120f	
+
+	B 		the_word_exists
+
+120:
 	CMP		X1, #0		; end of list?
 	B.eq	280f		; not found 
 	CMP		X1, #-1		; undefined entry in list?

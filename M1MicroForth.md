@@ -2103,3 +2103,10 @@ Take BUFFER$ and intern it into string storage
 
 Access to string storage, not very useful, since it is sparse.
 
+## General Learnings
+
+Assembler code can be fragile, a mistake in a new feature can trash essential registers and blow up some part of the program, that is nowhere near the new change.
+
+It is important to test after every single minor change to the ASM code.
+
+
