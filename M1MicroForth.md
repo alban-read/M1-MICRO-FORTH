@@ -1229,6 +1229,22 @@ Although a dumb machine code word would probably be ten times faster at branches
 MPE have commercial Forth products that produce fast code.
 
 
+## Dictionary
+
+FORTH words are stored in the dictionary.
+
+Word names may be up to 15 characters in length.
+
+FORTH names were originally only five characters in length, I thought eight might do, but later made the interpreter check both fields, which allows for 15 letters.
+
+This is handy as I also decided to make words starting with _ private.
+
+That just means they are hidden when listed.
+
+The idea is to make words that only used to implement another word private.
+
+You can also ALIAS words, which just means naming them with a different name.
+
 
 ------
 

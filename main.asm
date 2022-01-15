@@ -4618,11 +4618,20 @@ dcreatz:
 
 100:	; find free word and start building it
 
-
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
 	CMP		X1, X0
-	B.eq	290f
+	B.ne	120f
+
+110: ; the word may exist (check 2nd half)
+	LDR		X1, [X28, #56] ; next 8	
+	LDR		X0, [X22,#8]
+	CMP		X1, X0		;  
+	B.ne	120f	
+
+	B 		the_word_exists
+
+120:
 
 	CMP		X1, #0		; end of list?
 	B.eq	280f			; not found 
@@ -4686,13 +4695,22 @@ dcreatcz:
 
 	BL		start_point
 
-100:	; find free word slot and start building a word in it
-
+100:	; find free word and start building it
 
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
 	CMP		X1, X0
-	B.eq	290f
+	B.ne	120f
+
+110: ; the word may exist (check 2nd half)
+	LDR		X1, [X28, #56] ; next 8	
+	LDR		X0, [X22,#8]
+	CMP		X1, X0		;  
+	B.ne	120f	
+
+	B 		the_word_exists
+
+120:
 	CMP		X1, #0		; end of list?
 	B.eq	280f			; not found 
 	CMP		X1, #-1		; undefined entry in list?
@@ -4759,13 +4777,22 @@ dcreatvz:
 
 	BL		start_point
 
+
 100:	; find free word and start building it
-
-
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
 	CMP		X1, X0
-	B.eq	290b
+	B.ne	120f
+
+110: ; the word may exist (check 2nd half)
+	LDR		X1, [X28, #56] ; next 8	
+	LDR		X0, [X22,#8]
+	CMP		X1, X0		;  
+	B.ne	120f	
+
+	B 		the_word_exists
+
+120:
 
 	CMP		X1, #0		; end of list?
 	B.eq	280f			; not found 
@@ -5657,12 +5684,22 @@ dCcreatarray:
 
 arrayvaluecreator:
 
-100:	; find free word and start building it
 
+100:	; find free word and start building it
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
 	CMP		X1, X0
-	B.eq	290b
+	B.ne	120f
+
+110: ; the word may exist (check 2nd half)
+	LDR		X1, [X28, #56] ; next 8	
+	LDR		X0, [X22,#8]
+	CMP		X1, X0		;  
+	B.ne	120f	
+
+	B 		the_word_exists
+
+120:
 
 	CMP		X1, #0		; end of list?
 	B.eq	280f		; not found 
@@ -5745,12 +5782,22 @@ dcreatstack:
 	ADD		X8, X8, dstackz@PAGEOFF
 	MOV		X3, #3
  
-100:	; find free word and start building it
 
+100:	; find free word and start building it
 	LDR		X1, [X28, #48] ; name field
 	LDR		X0, [X22]
 	CMP		X1, X0
-	B.eq	290b
+	B.ne	120f
+
+110: ; the word may exist (check 2nd half)
+	LDR		X1, [X28, #56] ; next 8	
+	LDR		X0, [X22,#8]
+	CMP		X1, X0		;  
+	B.ne	120f	
+
+	B 		the_word_exists
+
+120:
 
 	CMP		X1, #0		; end of list?
 	B.eq	280f		; not found 
@@ -10576,6 +10623,74 @@ sortalias:
 	restore_registers
 	RET
 
+
+daliasfromstackz:
+	
+ 
+
+	ADRP	X12, alias_table@PAGE
+	ADD		X12, X12, alias_table@PAGEOFF
+
+	ADRP	X13, alias_limit@PAGE
+	ADD		X13, X13, alias_limit@PAGEOFF
+
+	; find free alias slot
+
+10:	LDRB	W0, [X12]	
+	CBZ		X0,  15f 
+	ADD		X12, X12, #32
+	CMP		X12, X13
+	B.gt	50f
+	B 		10b
+ 
+ 15:
+
+	ADD 	X13, X12, #16 ;  
+	STR		XZR, [X12]
+	STR		XZR, [X13]
+	; copy first string
+	LDR		X0, [X16, #-16]
+ 
+
+	MOV 	X2, #16
+
+
+20:	
+	LDRB	W1, [X0], #1
+	STRB	W1, [X12], #1
+	CBZ		X1, 30f  
+	SUB 	X2, X2,#1
+	CBZ 	X2, 30f 
+	B 		20b 
+
+30:
+ 
+
+	; copy second string
+	LDR		X0, [X16, #-8]
+
+	MOV 	X2, #16
+
+40:	
+	LDRB	W1, [X0], #1
+	STRB	W1, [X13], #1
+	CBZ		X1, 50f  
+	SUB 	X2, X2,#1
+	CBZ 	X2, 50f 
+	B 		40b 
+
+50:
+ 	SUB 	X16, X16, #16
+	 
+	save_registers
+	BL 		sortalias
+	restore_registers
+
+	RET
+
+
+
+
 ; add an alias (text substitution) to the alias table
 
 creatalias:
@@ -10726,6 +10841,8 @@ dliststrings:
 	BL _list_strings
 	restore_registers
 	RET
+
+
 
 
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -11610,6 +11727,7 @@ dend:
 		makeword "(ONRESET)", 			0,  	0,   0		; 50
 		makeword "(FORTH)", 			0, 0, 0				; 51
 		makeword "(.')", 				dslitSzdot, 0,  0	; 52
+		makeword "(ALIAS)", 			daliasfromstackz, 0, 0	; 53
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment

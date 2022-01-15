@@ -22,6 +22,28 @@ extern int kb_hit(void)
 
 }
 
+extern char *uitoa( uint32_t    value,
+                char        *buf,
+                int         size)
+{
+    if(size > 1){
+        int i=size-1, offset, bytes;
+        buf[i--]='\0';
+        do{
+            buf[i--]=(value % 10)+'0';
+            value = value/10;
+        }while((value > 0) && (i>=0));
+        offset=i+1;
+        if(offset > 0){
+            bytes=size-i-1;
+            for(i=0;i<bytes;i++)
+                buf[i]=buf[i+offset];
+        }
+        return buf;
+    }else
+        return NULL;
+}
+
 
 extern int get_errno(){
         return errno;
