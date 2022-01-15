@@ -5,6 +5,7 @@
 #include <string.h> 
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 
 // used by KEY? to tell if there is any pending key press.
 extern int kb_hit(void)
@@ -20,6 +21,17 @@ extern int kb_hit(void)
         return select( 1, &read_fd, 0, 0, &tv);
 
 }
+
+
+extern int get_errno(){
+        return errno;
+}
+
+extern char* get_errstr(int n){
+        return strerror(n);
+}
+
+
 
 // sorted string pool  
 // I got fed up with the string literal pool, and added this for the time being.
@@ -96,7 +108,7 @@ extern long locate_string( const char* s) {
         return (long)*l;
 }
 
-// add string literal. if we dont have it already
+// add string literal. only if we don't have it already
 extern long add_string( const char* s) {
         long l=locate_string(s);
         if( l==0) {

@@ -181,7 +181,6 @@
 	CBZ		X6, 	999f
 
 	STP		LR,  X0, [SP, #-16]!
- 
 	
 	ADD		X2,  X1, #48
 	MOV		X0,  X1
@@ -190,7 +189,6 @@
 	LDRH	W0, [X15]
 	BL		X0halfpr
 
- 
 	MOV		X0, X2
 	LDRH    W1, [X15,#-2] 
  
@@ -271,6 +269,16 @@ tver:	.ascii  "M1 MICRO FORTH %2.2f TOKEN THREADED 2022\n"
 
 
 
+dsystem:
+
+	LDR		X0, [X16, #-8]
+	SUB		X16, X16, #8
+	save_registers
+	bl		_system
+	restore_registers
+	RET
+
+
 beloud:
 	ADRP	X0, bequiet@PAGE
 	ADD		X0, X0, bequiet@PAGEOFF
@@ -278,10 +286,64 @@ beloud:
 	STR		X1, [X0]
 	RET
 
-from_startup:
+derrnoz:
+	LDR		X0, [X16, #-8]
+	SUB		X16, X16, #8
 	save_registers
+	BL 	_get_errno
+	restore_registers
+	STR		X0, [X16], #8
+	RET
+
+
+derrstrz:
+	LDR		X0, [X16, #-8]
+	SUB		X16, X16, #8
+	save_registers
+	BL 	_get_errstr
+	restore_registers
+	STR		X0, [X16], #8
+	RET
+
+
+; chain loads a file; after this file closes; 
+; or last line of a file.
+
+dchainz:
+
+	;save_registers
+	; close file  
+	;ADRP	X0, input_file@PAGE
+	;ADD		X0, X0, input_file@PAGEOFF
+	;LDR		X0,	[X0]
+
+	;save_registers
+	;BL		_fclose
+	;restore_registers
+
+
+	LDR		X0, [X16, #-8]	; string filename
+	SUB		X16, X16, #8
+	 
+	save_registers
+ 	ADRP	X1, mode_read@PAGE		
+	ADD		X1, X1, mode_read@PAGEOFF
+	BL		_fopen
+	CBZ		X0, 10f		; failed
+	ADRP	X1, input_file@PAGE
+	ADD		X1, X1, input_file@PAGEOFF
+	STR		X0,	[X1]
+10:	
+	restore_registers
+	STR 	X0, [X16], #8
+	RET
+ 
+
+from_startup:
+	 
 	ADRP	X0, startup_file@PAGE		
 	ADD		X0, X0, startup_file@PAGEOFF
+	save_registers
  	ADRP	X1, mode_read@PAGE		
 	ADD		X1, X1, mode_read@PAGEOFF
 	BL		_fopen
@@ -1505,6 +1567,10 @@ start_point: ; finds where to start searching the dictionary
 	CMP		W0, #'$'	
 	B.eq	155f
 
+	CMP		W0, #'.'	
+	B.eq	156f
+
+
 	CMP		W0, #'('	
 	B.ne	200f
 
@@ -1516,6 +1582,12 @@ start_point: ; finds where to start searching the dictionary
 155:
 	ADRP	X28, dollardict@PAGE		
 	ADD		X28, X28, dollardict@PAGEOFF	
+	B		251f
+
+
+156:
+	ADRP	X28, dotdict@PAGE		
+	ADD		X28, X28, dotdict@PAGEOFF	
 	B		251f
 
 
@@ -11562,6 +11634,7 @@ adict:
 		
 bdict:
 		makeemptywords 256
+		makeword "CHAIN", 	dchainz, 0, 0
 		makeword "CHAR", 	dcharz, dcharc, 0
 		makeword "CARRAY", dCcreatarray , dcreat_invalid, 0 
 		makeword "CLRALIAS", clralias, 0, 0	
@@ -11604,6 +11677,8 @@ ddict:
 		makeword "ENDIF", dendifz , dendifc, 0 
 		makeword "EMIT", emitz , 0, 0 
 		makeword "EXIT", dexitz, 	0,  0	
+		makeword "ERRNO", derrnoz, 	0,  0	
+		makeword "ERRSTR", derrstrz, 	0,  0	
 		makeword "e" , dlocez, 0, 0
 		makeword "e!" , dlocesz, 0, 0	
 
@@ -11706,7 +11781,7 @@ kdict:
 		makeword "LEAVE",  dinvalintz, dleavec, 0 
 		makeword "LOOP", dinvalintz , dloopc, 0 
 		makeword "LIMIT", dlimited , 0, 0 
-		makeword "LISTSTRINGS", dliststrings , 0, 0 
+
 		makeword "LAST", get_last_word, 0,  0
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
 
@@ -11785,7 +11860,7 @@ rdict:
 		makeword "SEE", dseez , 0, 0 
 		makeword "SELF^" , dlociz, 0, 0
 		makeword "SELECTIT" , dselectit, 0, 0
-
+		makeword "SYSTEM" , dsystem, 0, 0
  
 
 sdict:
@@ -11868,7 +11943,17 @@ zdict:
 		makeword "$intern", 	intern, 	intern, 	0
 	 
 dollardict:
-	 	
+
+	 	makeemptywords 256
+		makeword ".STRINGS", dliststrings , 0, 0 
+		makeword ".'", dstrdotz, dstrdotc , 0
+		makeword ".R", ddotrz, 0 , 0
+		makeword ".S", ddotsz, 0 , 0
+		makeword ".VERSION", announce , 0, 0
+		makeword ".", ddotz , 0, 0
+
+dotdict:
+
 		makeemptywords 256
 		
 		makeword "}$", dstrappendend , 0, 0 
@@ -11887,22 +11972,18 @@ dollardict:
 		makeword "/MOD", dsmodz , dsmodc, 0
 
 		makeword "//", dlcmntz , dlcmntc, 0
-
-		makeword ".VERSION", announce , 0, 0
-
 		makeword "?DUP", dqdupz, dqdupc, 0
 		makeword ">R", dtorz , dtorc, 0 
 		makeword "+LOOP", dinvalintz , dploopc, 0
 		makeword "-LOOP", dinvalintz , dmloopc, 0
-		makeword ".R", ddotrz, 0 , 0
-		makeword ".S", ddotsz, 0 , 0
-		makeword ".'", dstrdotz, dstrdotc , 0
+	
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
 		makeword "``", 0, dtickc , 0
 		makeword "2DUP", ddup2z , 0, 0 
 		makeword "2DROP", ddrop2z , 0, 0 
 		makeword "?DO", dinvalintz , dqoerc, 0 
+
 		;makeword "2VARIABLE", dcreat2vz , 0, 0
 
 

@@ -734,12 +734,18 @@ There are commercial FORTH compilers that generate code that is closer in speed 
 
 ### C integration
 
-The intention is to write this as much as reasonbly possible in Assembler.
+The intention is to write as much as reasonbly possible in Assembler.
 
 - The assembler code can call into C code and does so for a few functions.
 - This is necessary otherwise using only system calls would be limiting even in the terminal.
 - You can add C functions to addons.c and call them from your assembler code.
 - Some existing use of C will be replaced with assembler over time.
+
+Over time I have added a bit more C code to the project, and used more c functions.
+
+Writing C code is not always easier than writing assembler.
+
+
 
 ### Interactivity
 
