@@ -666,6 +666,12 @@ Terminals accept a wide variety of commands.
 
 FORTH typically only implements `PAGE` to clear the screen and `AT-XY` to place the cursor.
 
+
+The input normally just uses UNIX getline, which is not very nice from a user perspective, but doed have the advantage that is redirectable to a file.
+So loading a file is the same as just opening it and running the interpreter loop.
+
+You can load another file with FLOAD filename (from the ok prompt)
+
 ##### Line input
 
 You can accept a line of text from the user with ACCEPT e.g.

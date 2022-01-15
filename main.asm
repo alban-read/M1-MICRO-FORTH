@@ -312,7 +312,6 @@ derrstrz:
 dfloadfromstackz:
 
 10:
-
 	LDR		X0, [X16, #-8]	; string filename
 	SUB		X16, X16, #8
 
@@ -325,11 +324,19 @@ dfloadx0:
 	ADRP	X1, input_file@PAGE
 	ADD		X1, X1, input_file@PAGEOFF
 	STR		X0,	[X1]
+	B 		99f
 90:	
+	BL 	_get_errno
+	BL 	_get_errstr
+	BL	sayit
+99:
 	restore_registers
 	STR 	X0, [X16], #8
 	RET
  
+
+
+
 
 dfload:
 save_registers
