@@ -87,7 +87,6 @@
  ;
  
 
-
 0 VARIABLE sixls 256 ALLOT 
  
 : makesxls 
@@ -105,7 +104,6 @@
 ;
 
  
-
 // so we can pick one
 : .sixls 64 0 DO I .sixl CHAR = EMIT I . SPACE LOOP ;
 
@@ -114,15 +112,11 @@
 	5 TIMESDO .sixl
 ;
 
-
 : .bricks 
 	9 0 DO 
 	  .brick SPACE SPACE
 	LOOP 
 ;
-
-
-
 
 : .wall 
 	6  10 AT 
@@ -146,8 +140,6 @@ ALIAS y b
 
 2  VALUE batminx
 80 VALUE batmax
-
- 
 
 40 VALUE batx
 30 VALUE baty
@@ -179,8 +171,6 @@ TCOL.red VALUE ballclr
 	x y AT ballone $. 	
 ;
 
-
-
 : batsball 
 	FALSE TO ballfree
 	batx 2 + TO ballx 
@@ -202,8 +192,6 @@ TCOL.red VALUE ballclr
 		THEN
 		showball 
 ;
-
-
 
 
 : batmove 

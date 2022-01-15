@@ -22,29 +22,7 @@ extern int kb_hit(void)
 
 }
 
-extern char *uitoa( uint32_t    value,
-                char        *buf,
-                int         size)
-{
-    if(size > 1){
-        int i=size-1, offset, bytes;
-        buf[i--]='\0';
-        do{
-            buf[i--]=(value % 10)+'0';
-            value = value/10;
-        }while((value > 0) && (i>=0));
-        offset=i+1;
-        if(offset > 0){
-            bytes=size-i-1;
-            for(i=0;i<bytes;i++)
-                buf[i]=buf[i+offset];
-        }
-        return buf;
-    }else
-        return NULL;
-}
-
-
+// assist with file errors from C runtime.
 extern int get_errno(){
         return errno;
 }
@@ -56,7 +34,8 @@ extern char* get_errstr(int n){
 
 
 // sorted string pool  
-// I got fed up with the string literal pool, and added this for the time being.
+// I got fed up with the huge sparse string literal pool,
+// and added this for the time being.
 
 const int pool_size = 4096;
 int next_string=0;
@@ -71,7 +50,6 @@ int stringcompare(const void *a, const void *b) {
      // other wise look at string contents
      char* as = *(char **)a;
      char* bs = *(char **)b;
-     //printf("\ncompare %s with %s", as, bs);
      int r = strncmp(   as, bs, 256 );  
      return r;
 }
@@ -111,7 +89,6 @@ extern void list_strings() {
 void del_string( const char* s) {
         char** l =find_string(s);
         int n=((long)l-(long)&pool)/sizeof(char*); 
-        // printf("\ndel: %s", pool[n]);
         if( pool[n] !=NULL) {
                 free(pool[n]);
         }
@@ -126,7 +103,6 @@ extern long locate_string( const char* s) {
         if( l==NULL) {
                 return 0;
         }
-        // int n=((long)l-(long)&pool)/sizeof(char*); 
         return (long)*l;
 }
 

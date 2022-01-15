@@ -10812,7 +10812,6 @@ dallot:
 
 150:
 
-
    	ADRP	X8, last_word@PAGE		
 	ADD		X8, X8, last_word@PAGEOFF
 	LDR		X1, [X8]
@@ -10838,8 +10837,6 @@ dliststrings:
 	BL _list_strings
 	restore_registers
 	RET
-
-
 
 
 ;;;; DATA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
