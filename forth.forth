@@ -98,7 +98,7 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 
 : .ALIAS ALIAS^ _list_alias ;
 
-//  allows 'A' rather than CHAR A or 65.
+//  allows 'A' rather than CHAR A  
 
 16 STRING _left
 16 STRING _right
@@ -106,9 +106,9 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 : _alias_letters
 	2 PARAMS
 	126 32 DO  
-		a (SELECTIT) 0 a 40 + !
+		a >LAST 0 a 40 + !
 		CHAR ' , I , CHAR ' ,
-		b (SELECTIT)  0 b 40 + !
+		b >LAST 0 b 40 + !
 		I U, 
 		_right _left (ALIAS)
 	LOOP ;		
@@ -136,7 +136,7 @@ ALIAS 	lastword	255
 : _words
 	_words_reset 
      DO 
-		I >NAME C@ DUP 95 <> SWAP lastword <> AND IF
+		I >NAME C@ DUP '_' <> SWAP lastword <> AND IF
 		 	I >NAME $. SPACE countword
 			I >NAME $len _words_margin 
 			_reset? IF CR _words_reset THEN   
@@ -208,6 +208,7 @@ UNALIAS counted
    OVERSWAP 1 ?DO OVER * LOOP NIP ; 
 
 ` exp ` ^ CCPY DDROP  
+` exp >LAST FORGET
 
 // basic terminal colours 
 

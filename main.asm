@@ -11728,7 +11728,7 @@ dend:
 		makeword "(FORTH)", 			0, 0, 0				; 51
 		makeword "(.')", 				dslitSzdot, 0,  0	; 52
 		makeword "(ALIAS)", 			daliasfromstackz, 0, 0	; 53
-		makeword "(SELECTIT)" , 		dselectitfromstackz, 0, 0
+	
 
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
@@ -12133,6 +12133,7 @@ dotdict:
 		makeword "2DUP", ddup2z , 0, 0 
 		makeword "2DROP", ddrop2z , 0, 0 
 		makeword "?DO", dinvalintz , dqoerc, 0 
+		makeword ">LAST" , 		dselectitfromstackz, 0, 0
 
 		;makeword "2VARIABLE", dcreat2vz , 0, 0
 

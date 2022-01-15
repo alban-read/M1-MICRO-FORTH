@@ -6,15 +6,13 @@
 // 
 
 8 STRING coff 
-	27 , CHAR [ , CHAR ? , CHAR 2 , CHAR 5 ,
-	CHAR l ,  0 ,	 
+	27 , '[' , '?' , '2' , '5' , 'l' ,  0 ,	 
 
 8 STRING con
-	27 , CHAR [ , CHAR ? , CHAR 2 , CHAR 5 ,
-	CHAR h ,  0 ,	 
+	27 , '[' , '?' , '2' , '5' , 'h' ,  0 ,	 
 
 8 STRING cln
-	27 , CHAR [ , CHAR 2 , CHAR K, 0 ,
+	27 , '[' , '2' , 'K' , 0 ,
  
 
 : curoff coff $. ;
@@ -105,7 +103,7 @@
 
  
 // so we can pick one
-: .sixls 64 0 DO I .sixl CHAR = EMIT I . SPACE LOOP ;
+: .sixls 64 0 DO I .sixl '=' EMIT I . SPACE LOOP ;
 
 : .brick 
 	56 48 48 48 52

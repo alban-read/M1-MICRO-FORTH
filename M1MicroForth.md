@@ -1592,6 +1592,17 @@ Forgets the LAST word created.
 
 Handy if you make a mistake and want to start a word over.
 
+In standard FORTH, FORGET forgets all the words created after the word being forgotten this is not the case in this implementation, only one word is removed by FORGET, and it is normally the LAST one you created.
+
+Only the words header is removed, this does not reclaim memory used by the word for example in the code token space.
+
+You can delete any word by making it LAST them forgetting it.
+
+myword >LAST FORGET
+
+
+
+
 **FINAL^** 
 
 The final word in the dictionary
@@ -1711,8 +1722,19 @@ It is the word that ALLOT will try to add more data bytes to.
 ```FORTH
 LAST >NAME $.
 ```
-
 prints the last words name.
+
+You can change LAST with >LAST e.g. 
+````FORTH 
+` DUP >LAST
+LAST >NAME $.
+```
+
+Would print "DUP"
+
+This is useful if you want to use ALLOT and/or , to change a words data.
+
+The last word is also the word that FORGET will delete for you.
 
 **LOCALS**
 
