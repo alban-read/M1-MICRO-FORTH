@@ -10584,19 +10584,11 @@ unalias:
 	restore_registers
   	CBZ		X0, 150f 
 	MOV 	X12, X0 
-
-130: 
-	MOV 	X0, X12	; dest
-	ADD		X1, X12, #32 ; source
-
-	ADRP	X12, alias_table@PAGE
-	ADD		X12, X12, alias_table@PAGEOFF
-	SUB 	X3, X0, X12
-	MOV     X2, #8192
-	SUB  	X2, X2, X3
-	BL		_memcpy
+	STR 	XZR, [X0]
+	STR 	XZR, [X0,#16]
 
 150:
+	BL 		sortalias
 	restore_registers
 
 	RET
@@ -10855,13 +10847,19 @@ dliststrings:
 .data 
 
 alias_table:    
-	.rept 256
+	.rept 4096
 	.quad 0
 	.quad 0
 	.quad 0
 	.quad 0
 	.endr
 alias_limit:   
+	.rept 4096
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.endr
 	.quad 0
 	.quad 0
  	.quad 0

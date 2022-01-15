@@ -98,14 +98,12 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 
 : .ALIAS ALIAS^ _list_alias ;
 
-// alias letters allows 'A' rather than CHAR A or 65.
+//  allows 'A' rather than CHAR A or 65.
 
 16 STRING _left
 16 STRING _right
 
 : _alias_letters
-	`` _left 
-	`` _right  
 	2 PARAMS
 	126 32 DO  
 		a (SELECTIT) 0 a 40 + !
@@ -115,6 +113,8 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 		_right _left (ALIAS)
 	LOOP ;		
  
+` _left ` _right _alias_letters
+
 
 // -------------------------------------------------------
 // display and count public words
@@ -149,6 +149,10 @@ ALIAS 	lastword	255
 
 : ALLWORDS FINAL^ `` (EXIT)  _words ;
 
+UNALIAS	countword 	 
+UNALIAS	wordcount  
+UNALIAS lastword	 
+UNALIAS wordsize	 
 
 // -------------------------------------------------------
 // displays key codes until Q
@@ -167,8 +171,7 @@ ALIAS pausetime 100
 	AGAIN
  ;
 
-CLRALIAS
-
+UNALIAS pausetime
  
 // -------------------------------------------------------
 // STRINGS 
@@ -195,7 +198,8 @@ ALIAS counted a
 	AGAIN  
   ;
  
-CLRALIAS
+UNALIAS countit 
+UNALIAS counted
 
 // make exponent word and assign to ^
 // ^ is predefined without any action.
@@ -240,7 +244,6 @@ ALIAS TCOL.white 	37
 
 
 : Hi 
-	_alias_letters
 	PAGE
 	bold.green 
 	MSTR SPACE .VERSION 
