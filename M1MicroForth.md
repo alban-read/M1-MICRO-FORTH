@@ -1568,10 +1568,7 @@ See LOCALS section.
 
 Not TRUE, 0 in particular.
 
-**FORGET**
 
-Forgets the last word, and not very well.
-Does not tidy up any storage the last word has grabbed.
 
 **FILLVALUES** 
 
@@ -1617,7 +1614,8 @@ You can delete *any specific word* by making it LAST then forgetting it.
 
 myword >LAST FORGET
 
-
+If you just want to change a word, consider just redefining the word instead with :: 
+ 
 
 
 **FINAL^** 

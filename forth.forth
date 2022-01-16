@@ -203,14 +203,11 @@ ALIAS counted a
 UNALIAS countit 
 UNALIAS counted
 
-// make exponent word and assigns it to ^
+// redefine  ^
 // ^ is predefined without any action.
 
-: exp ( x y -- x^y )
+:: ^ 
    OVERSWAP 1 ?DO OVER * LOOP NIP ; 
-
-` exp ` ^ CCPY DDROP  
-
 
 // basic terminal colours 
 
