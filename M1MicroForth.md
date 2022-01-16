@@ -74,7 +74,7 @@ An array of values is created with the VALUES plural word.
 ```FORTH
 128 VALUES myvalues 
 ```
-The VALUES are allotted from s pool of memory that is zero filled, so all values will initially read as 0.
+The VALUES are allotted from pools of memory that are zero filled, so all values will initially read as 0.
 
 To change every value.
 ```FORTH
@@ -729,6 +729,8 @@ This implementation is using a simple token interpreter that is mostly written i
 I have paid some attention to the performance of the inner loop, it is easy to test as you can try out different versions and time the results.
 
 I chose to use 16bit tokens to represent words, rather than 64 bit addresses, the addresses would probably be faster, but that would be a different implementation, as lots of words are tuned for the token memory layout. 64 bit addresses felt.. wastefull ..  
+
+Forth words typically use dozens of tokens, very large words may use a few hundred.
 
 It is a simple interpreter but FORTH is also a simple and lean language.
 
@@ -1576,6 +1578,12 @@ A dangerouse but fast memory block filling word.
 A potential hazard.
 Copyrighted by ARM, Released as BSD licensed so at least no one will be sued when they accidentally write the same nice but still obvious code.
 
+**FREE**
+
+Dangerous word that frees memmory given a pointer as an argument.
+
+
+
 **Floating point**
 
 f<> f= f>=0 f<0 f<= f>= f< f> f. f+ f- f* f/ fsqrt fneg fabs s>f f>s 
@@ -1594,9 +1602,9 @@ Handy if you make a mistake and want to start a word over.
 
 In standard FORTH, FORGET forgets all the words created after the word being forgotten this is not the case in this implementation, only one word is removed by FORGET, and it is normally the LAST one you created.
 
-Only the words header is removed, this does not reclaim memory used by the word for example in the code token space.
+The words header is removed, this does not reclaim memory used by the word although it does back up the address of the token space the word used.
 
-You can delete any word by making it LAST them forgetting it.
+You can delete any word by making it LAST then forgetting it.
 
 myword >LAST FORGET
 
@@ -1734,7 +1742,7 @@ Would print "DUP"
 
 This is useful if you want to use ALLOT and/or , to change a words data.
 
-The last word is also the word that FORGET will delete for you.
+ 
 
 **LOCALS**
 

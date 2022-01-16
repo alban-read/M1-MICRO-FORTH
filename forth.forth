@@ -2,7 +2,7 @@
 TICKS 
 
 // this is the token space
-64 1024 2 * * HEAPSIZE
+4 1024 2 * * HEAPSIZE
 HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^ 
 
 // this is the locals stack
@@ -201,14 +201,14 @@ ALIAS counted a
 UNALIAS countit 
 UNALIAS counted
 
-// make exponent word and assign to ^
+// make exponent word and assigns it to ^
 // ^ is predefined without any action.
 
 : exp ( x y -- x^y )
    OVERSWAP 1 ?DO OVER * LOOP NIP ; 
 
 ` exp ` ^ CCPY DDROP  
-` exp >LAST FORGET
+
 
 // basic terminal colours 
 
@@ -241,11 +241,8 @@ ALIAS TCOL.white 	37
 	TCOL.reset FCOL
 ;
 
-: ?DAY  DUP 1 <  SWAP 31 > +  IF .' No way ' ELSE .' Looks good ' THEN ;
-
-
 : Hi 
-	PAGE
+	// PAGE
 	bold.green 
 	MSTR SPACE .VERSION 
 	colr.reset 

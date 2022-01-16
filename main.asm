@@ -2308,15 +2308,23 @@ faster_mode:
 
 set_word_runtime:
 
+
+	MOV 	X0, #4096   
+	save_registers
+	MOV     W1, #1
+	BL		_calloc
+	restore_registers
+	CBZ 	X0, calloc_failed 
+	MOV		X15, X0
+	STR		X15, [X28]		; set start point 
+
 	ADRP	X8, here_ptr@PAGE	
 	ADD		X8, X8, here_ptr@PAGEOFF
-	LDR		X15, [X8]
+	STR		X0, [X8]
 
 	ADRP	X8, lasthere_ptr@PAGE	
 	ADD		X8, X8, lasthere_ptr@PAGEOFF
-	STR		X15, [X8]
-
-	STR		X15, [X28]		; set start point 
+	STR		X0, [X8]
 	B		compile_words
 
 	
@@ -2341,10 +2349,7 @@ compile_next_word:
 
 	ADRP	X1, last_word@PAGE		
 	ADD		X1, X1, last_word@PAGEOFF
-	;LDR		X1, [X1]
-	;SUB		X0, X15, X1
-	;CMP		X0, #124
-	;B.gt	exit_compiler_word_full
+
 
 reenter_compiler:
 	; get next word from line
@@ -2748,21 +2753,32 @@ exit_compiler: ; NORMAL success exit
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
 
-	ADRP	X1, last_word@PAGE		
-	ADD		X1, X1, last_word@PAGEOFF
-	LDR		X1, [X1]
-	
 	ADRP	X8, here_ptr@PAGE	
 	ADD		X8, X8, here_ptr@PAGEOFF
-	STR		X15, [X8]
-
-	ADRP	X8, lasthere_ptr@PAGE	
-	ADD		X8, X8, lasthere_ptr@PAGEOFF
 	LDR		X0, [X8]
+	SUB		X1, X15, X0
 
-	SUB		X0, X15, X0
-	;BL		X0print
-	;BL		saycompfin
+	ADRP	X8, last_word@PAGE		
+	ADD		X8, X8, last_word@PAGEOFF
+	LDR		X8, [X8]
+	STR 	X1, [X8, #40]
+
+	LDR		X0, [X8]
+ 
+	save_registers
+	BL		_realloc
+	restore_registers 
+	CBZ 	X0, calloc_failed 
+
+
+	ADRP	X8, last_word@PAGE		
+	ADD		X8, X8, last_word@PAGEOFF
+	LDR		X8, [X8]
+ 	STR 	X0, [X8]
+ 	
+	BL 		X0addrprln
+
+	
 	MOV 	X15, #0
  
 	B		advance_word ; back to main loop
@@ -4031,13 +4047,22 @@ get_last_word:
 	RET
  
 
-clean_last_word:
+ clean_last_word:
 
 	STP		X0, X1, [SP, #-16]!
-	ADRP	X1, last_word@PAGE		
+	ADRP	X1, last_word@PAGE			
 	ADD		X1, X1, last_word@PAGEOFF
 	LDR		X0, [X1]
-	CMP		X0, #-1
+	LDR 	X0, [X0]
+	save_registers
+	BL		_free
+	restore_registers
+
+	ADRP	X1, last_word@PAGE			
+	ADD		X1, X1, last_word@PAGEOFF
+	LDR		X0, [X1]
+
+ 	CMP		X0, #-1
 	B.eq	100f 
 
 	MOV		X1, #-1
@@ -4048,15 +4073,6 @@ clean_last_word:
 	MOV		X1, #-1
 	STP		X1, X1, [X0], #16
 
-
-	ADRP	X8, lasthere_ptr@PAGE	
-	ADD		X8, X8, lasthere_ptr@PAGEOFF
-	LDR		X0, [X8]
-
-	ADRP	X8, here_ptr@PAGE	
-	ADD		X8, X8, here_ptr@PAGEOFF
-	STR		X0, [X8]
-	
 	MOV 	X15, #0 ; we failed. compilation stopped.
 
 	RET
@@ -5566,6 +5582,16 @@ compile_dCarrayaddz_fill:
 ; cell size is LSL X3
 ; X3 = 0, 1, 2, 3
 
+
+dfreez:
+	LDR 	X0, [X16, #-8]
+	SUB 	X16, X16, #8
+	save_registers
+	BL		_free 
+	restore_registers
+	RET
+
+
 .macro allotation
 
 	ADRP	X12, allot_ptr@PAGE	
@@ -5735,7 +5761,7 @@ arrayvaluecreator:
 	STR 	X0, [X28]
  
 
-B		300f
+	B		300f
 
 
 260:	; try next word in dictionary
@@ -5841,8 +5867,6 @@ dcreatstack:
 	restore_registers_not_stack
 
 	RET
-
-
 
 dselectitfromstackz:
 	LDR 	X0, [X16, #-8]
@@ -10872,12 +10896,6 @@ alias_limit:
 .align 8
 fc1:		.double 	1.0
 
-; variables
-.align 8 
-last_word:	
-	.quad	-1		; last_word word being updated.
-	.quad	0
-	.quad	0
 
 
 .data 
@@ -11869,6 +11887,7 @@ edict:
 		makeword "FILLARRAY", dfillarrayz, dfillarrayc, 0
 		makeword "FILL", dfillz, 0, 0
 		makeword "FLUSH", dflushz, 0, 0
+		makeword "FREE", dfreez, 0, 0
 		
 		makeword "f" , dlocfz, 0, 0
 		makeword "f!" , dlocfsz, 0, 0	
@@ -12231,6 +12250,30 @@ addressbuffer:
 .align 8
 heap_ptr:	.quad 0
 
+
+; variables
+.align 8 
+
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+
+last_word:	
+		.quad	-1		; last_word word being updated.
+	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
+		.quad 0	
 
 
 
