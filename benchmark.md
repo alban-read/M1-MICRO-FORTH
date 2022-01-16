@@ -32,12 +32,9 @@ TIMEIT t1
 TIMEIT t1
 3397  : ms to run ( 33978  ) ns 
 
-// just for comparison, FFIB is a fast iterative assembler version.
-// not useful as a benchmark.
-: FFIB34 [ FLAT FFIB34] 34 FFIB DROP ;
-: t2 10000 10000 * TIMESDO FFIB34 ;
-TIMEIT t2
-245  : ms to run ( 2458  ) ns 
+// Jan 16th
+FLOAD FIB.forth
+3413  : ms to run ( 34136  ) ns 
 
 
 // PRIME SIEVE benchmark
@@ -68,38 +65,12 @@ FLAGS 8190 + EFLAG !
 // 26th December
 // t2 7851  : ms to run ( 78510  ) ns 
 // t2 (FLAT) 6978  : ms to run ( 69781  ) ns 
+
+
+// 16th January
+FLOAD PRIME.forth
+7953  : ms to run ( 79535  ) ns 
  
 
-: FAC DUP 1> IF DUP 1- FAC * ELSE DROP 1 ENDIF ;
-: t3 100 FAC ;
 
-
-
-: pos  
-  a! b! 
-  BEGIN
-   a C@ c!
-   a++
-   c b = IF a 1- LEAVE THEN 
-  c 0= UNTIL ;
-
-
-' This is, a string, with some commas, and a full stop. To seek for. ' 
-STRING test 
-
-
-  : pos
-    DUP 255 + SWAP DO 
-      // I . CHAR = EMIT I C@ . CR
-      DUP I C@ = 0 I C@ = OR IF DROP I EXIT THEN
-    LOOP ;
-
-  : t1 46 test pos DROP ;
-
-  : t3 100000 1 DO ( CR I . SPACE .' test run ' CR  ) t1  LOOP ;
-
-  : t2 46 test $pos DROP ;
-
-  : t4 100000 1 DO t2 LOOP ;
-
- : t
+ 

@@ -1,4 +1,4 @@
-
+// misc FORTH words
 
 : ?DAY  DUP 1 <  SWAP 31 > +  IF .' No way ' ELSE .' Looks good ' THEN ;
 
@@ -20,20 +20,3 @@
    6 >  ROT 22 >  ROT 19 >  AND AND IF .' Big enough ' THEN ;
 
 : QUADRATIC  ( a b c x -- n )   >R SWAP ROT R@ *  + R> *  + ;
-
-
-10 VALUE BASE
-: U.             
-   BASE /MOD      
-      ?DUP IF          
-      U.        
-   THEN
-   DUP 10 < IF
-      CHAR 0        
-   ELSE
-      10 -           
-      CHAR A
-   THEN
-   +
-   EMIT
-   ;
