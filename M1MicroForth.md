@@ -1598,13 +1598,13 @@ Machine code FIB.
 
 Forgets the LAST word created.
 
-Handy if you make a mistake and want to start a word over.
+Handy if you just made a mistake and want to start a word over.
 
-In standard FORTH, FORGET forgets all the words created after the word being forgotten this is not the case in this implementation, only one word is removed by FORGET, and it is normally the LAST one you created.
+In standard FORTH, FORGET forgets all the words created after the word being forgotten, this is not the case in this implementation, only one word is removed by FORGET, and it is normally the LAST one you created.
 
-The words header is removed, this does not reclaim memory used by the word although it does back up the address of the token space the word used.
+The words header is removed, dynamic memory used by the word is reclaimed.
 
-You can delete any word by making it LAST then forgetting it.
+You can delete *any specific word* by making it LAST then forgetting it.
 
 myword >LAST FORGET
 
@@ -1850,6 +1850,9 @@ You can only take up to 8 params (Locals run from a..h)
 
 PARAMS also checks that the stack is deep enough so this word can also help with error detection.
 
+It is also a fast way to load up to 8 arguments into the locals when a word starts up.
+
+
 **PCHK** 
 
 n PCHK 
@@ -1863,7 +1866,7 @@ A good check to make words safer.
 
 A stack operation that picks the nth word from the stack.
 
-*The fact that pick is actually super fast, is the everlasting shame of the stack machine.*
+*The fact that pick is actually super fast, is interesting.*
 
 ~~**QUIET**~~ 
 
@@ -1954,13 +1957,28 @@ Displays what the compiler did to compile the word into tokens.
 
 Shows details about a word.
 
+
+**SELECTIT**
+
+SELECTIT WORD 
+
+Makes the word the last word.
+
+
 **SELF^**
 
 In a compiled word, points to the running words dictionary.
 
-**TOKENS**
 
-A values view over the half word token pool.
+**SYSTEM**
+
+Issues a system command
+
+' ls -l ' SYSTEM 
+
+Lists the files in the folder.
+
+
 
 **TO** 
 
@@ -2032,7 +2050,7 @@ Ends the f .. IF ... ELSE ... THEN .. statment
 
 **TUCK**
 
-short for SWAP OVER
+short for and faster than SWAP OVER
 
 **UPTIME** 
 

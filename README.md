@@ -89,6 +89,8 @@ Aims to provide a small safe set of user/application level words.
     - There are words to SEE words, and to trace word execution.
     - There are values that are views over the various storage pools.
     - It is possible to STEP through words.
+- Memory storage
+    - The least powerful target system has 8GB of memory, and even if the OS uses 3/4 of that by itself, it leaves a vast range of memory for FORTH, given that unrestricted scenario, this implementation allocates as much memory as requested to words.
 
 ### Selfie
 ![Selfie](selfie.png)

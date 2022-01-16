@@ -2775,10 +2775,7 @@ exit_compiler: ; NORMAL success exit
 	ADD		X8, X8, last_word@PAGEOFF
 	LDR		X8, [X8]
  	STR 	X0, [X8]
- 	
-	BL 		X0addrprln
 
-	
 	MOV 	X15, #0
  
 	B		advance_word ; back to main loop
@@ -4049,7 +4046,29 @@ get_last_word:
 
  clean_last_word:
 
-	STP		X0, X1, [SP, #-16]!
+	; STP		X0, X1, [SP, #-16]!
+
+	; some words data is in a shared pool
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	LDR 	X1, [X1]
+	LDR 	X0, [X1, #8]
+
+	CMP		X0, #-1
+	B.eq	cleaninvalid 
+
+	ADD		X8, X8, dSTRINGz@PAGEOFF
+	CMP		X0, X8
+	B.ne 	freeit
+
+	LDR 	X0, [X1, #32]
+	CMP		X0, #255		; string pool string
+	B.ne	freeit
+ 
+	B		cleanit
+
+freeit:
+
 	ADRP	X1, last_word@PAGE			
 	ADD		X1, X1, last_word@PAGEOFF
 	LDR		X0, [X1]
@@ -4061,9 +4080,8 @@ get_last_word:
 	ADRP	X1, last_word@PAGE			
 	ADD		X1, X1, last_word@PAGEOFF
 	LDR		X0, [X1]
-
- 	CMP		X0, #-1
-	B.eq	100f 
+	
+cleanit:
 
 	MOV		X1, #-1
 	STP		X1, X1, [X0], #16
@@ -4073,7 +4091,9 @@ get_last_word:
 	MOV		X1, #-1
 	STP		X1, X1, [X0], #16
 
-	MOV 	X15, #0 ; we failed. compilation stopped.
+	MOV 	X15, #0 ; compilation stopped.
+
+cleaninvalid:
 
 	RET
 
@@ -9825,7 +9845,7 @@ creatstring:
 	; ; set value from the string on the stack
 	LDR		X0, [X16, #-8]	
 	SUB		X16, X16, #8
-	CMP		X0,  #256
+	CMP		X0,  #16384
 	B.gt 	150f
 
 	; allotation
@@ -11754,8 +11774,8 @@ dend:
 
 		makeemptywords 256
 
-		makeword "#DSTACK", create_dstack, dcreat_invalid, 0	
-		makeword "#RSTACK", create_rstack, dcreat_invalid, 0	
+		;makeword "#DSTACK", create_dstack, dcreat_invalid, 0	
+		;makeword "#RSTACK", create_rstack, dcreat_invalid, 0	
 
 
 hashdict:	
@@ -12148,7 +12168,7 @@ dotdict:
 	
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
-		makeword "``", 0, dtickc , 0
+		makeword "``", dtickz, dtickc , 0
 		makeword "2DUP", ddup2z , 0, 0 
 		makeword "2DROP", ddrop2z , 0, 0 
 		makeword "?DO", dinvalintz , dqoerc, 0 
