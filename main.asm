@@ -2248,6 +2248,20 @@ compiler:
 
 enter_compiler:
 
+	MOV 	X0, #0
+	ADRP	X8, redef_word@PAGE		
+	ADD		X8, X8, redef_word@PAGEOFF
+	STR		X0, [X8]
+
+	LDRB	W0, [X22, #1]
+	CMP		W0, #':'	; redefine?
+	B.ne	not_redefinition
+
+	MOV 	X0, #-1	
+	STR		X0, [X8]
+
+not_redefinition:
+
 	; look for the name of the new word we are compiling.
 	BL 		advancespaces
 	BL 		collectword
@@ -2274,18 +2288,34 @@ next_half:
 	LDR		X1, [X28, #56] ; its a word of 
 	LDR		X0, [X22, #8]  ; two halves
 	CMP		X1, X0
-	B.eq	exit_compiler_word_exists; word exists
+	B.eq	check_redef; word exists
 
+	b 		scan_next
 
+check_redef:
+	ADRP	X8, redef_word@PAGE		
+	ADD		X8, X8, redef_word@PAGEOFF
+	LDR		X0, [X8]
+	CBNZ	X0, free_and_build_word ; we just redefine this word
+	
 scan_next:
+
+	LDR		X1, [X28, #48] ; name field
 	CMP		X1, #0		; end of list?
 	B.eq	exit_compiler ; no room in dictionary
 
 	CMP		X1, #-1		; undefined entry in list?
 	b.ne	try_next_word
+	b 		build_word
 
-	; undefined word found so build the word here
+free_and_build_word:
+	; redefing word so free its old allocated memory
+	LDR		X0, [X28]
+	save_registers
+	BL		_free
+	restore_registers
 
+build_word:
 	; this is now the last_word word being built.
 	ADRP	X1, last_word@PAGE		
 	ADD		X1, X1, last_word@PAGEOFF
@@ -2308,6 +2338,22 @@ faster_mode:
 
 set_word_runtime:
 
+	;ADRP	X8, redef_word@PAGE		
+	;ADD		X8, X8, redef_word@PAGEOFF
+	;LDR		X0, [X8]
+	;CBZ 	X0, allocnew
+
+	; if redefining word then free existing
+ 
+	;ADRP	X1, last_word@PAGE			
+	;ADD		X1, X1, last_word@PAGEOFF
+	;LDR		X0, [X1]
+	;LDR 	X0, [X0]
+	;save_registers
+	;BL		_free
+	;restore_registers
+
+allocnew:
 
 	MOV 	X0, #4096   
 	save_registers
@@ -2334,7 +2380,6 @@ try_next_word:	; try next word in dictionary
 	
 	
 ; we created a word header and stored it in last_word word
-
 
 compile_words:
 
@@ -12295,5 +12340,5 @@ last_word:
 		.quad 0	
 		.quad 0	
 
-
-
+redef_word:	
+		.quad	0

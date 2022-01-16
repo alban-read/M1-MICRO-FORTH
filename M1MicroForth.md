@@ -1264,16 +1264,27 @@ Move to fields within a words dictionary entry.
 e.g. ` DUP >NAME $.  prints the name of DUP, which is DUP
 
 
+*:* 
 
-**#DSTACK**
+Creates a new word 
+e.g.
+```FORTH
+: SQ DUP * ;
+```
 
-Only used in the startup file, to set the size of the data (parameter) stack.
+*::* 
+
+Redefines a word
 
 e.g. 
+```FORTH
+:: SQ DUP * . ;
+```
+Will redefine an existing word created with : to have a new behaviour.
 
-256 #DSTACK
+The new behaviour will apply to all existing words that call the redefined word.
 
-Switches from the temporary mini stack to a new larger stack.
+The key point being the new word has the same TOKEN CODE as the old word that it over writes.
 
 
 
@@ -1300,9 +1311,7 @@ It does not create anything real in the dictionary and can not be used with a st
 
 CLRALIAS clears ALL ALIASes
 
-It is a good idea to assign meaningful names while implementing a word, and then use CLRALIAS to clear them all, before implementing the next word.
-
-Use .ALIAS to list the aliases, they do not show up as WORDS in the dictionary.
+Use .ALIAS to list all the aliases, they do not show up as WORDS in the dictionary.
 
 
 **APPEND$** 

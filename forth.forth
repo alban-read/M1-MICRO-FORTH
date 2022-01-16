@@ -42,6 +42,8 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 // add the common shift words
 1 SHIFTSL 2* 1 SHIFTSR 2/
 2 SHIFTSL 4* 2 SHIFTSR 4/
+3 SHIFTSL 8* 3 SHIFTSR 8/
+
 
 // -------------------------------------------------------
 // print numbers
@@ -173,8 +175,6 @@ ALIAS pausetime 100
 
 UNALIAS pausetime
 
- 
- 
 // -------------------------------------------------------
 // STRINGS 
 
