@@ -1586,6 +1586,8 @@ start_point: ; finds where to start searching the dictionary
 	CMP		W0, #'.'	
 	B.eq	156f
 
+	CMP		W0, #'_'	
+	B.eq	157f
 
 	CMP		W0, #'('	
 	B.ne	200f
@@ -1605,6 +1607,13 @@ start_point: ; finds where to start searching the dictionary
 	ADRP	X28, dotdict@PAGE		
 	ADD		X28, X28, dotdict@PAGEOFF	
 	B		251f
+
+
+157:
+	ADRP	X28, underdict@PAGE		
+	ADD		X28, X28, underdict@PAGEOFF	
+	B		251f
+
 
 
 200:
@@ -2015,7 +2024,7 @@ init:
 	BL 	dfrom_startup
 
 input:	
-
+	MOV  X15, #0
 	BL  chkoverflow
 	BL  chkunderflow
 	BL  sayok
@@ -4136,10 +4145,10 @@ cleanit:
 	MOV		X1, #-1
 	STP		X1, X1, [X0], #16
 
-	MOV 	X15, #0 ; compilation stopped.
+
 
 cleaninvalid:
-
+	MOV 	X15, #0 
 	RET
 
 
@@ -5772,9 +5781,7 @@ dCcreatarray:
 	B 		arrayvaluecreator
 
 
-
 arrayvaluecreator:
-
 
 100:	; find free word and start building it
 	LDR		X1, [X28, #48] ; name field
@@ -5914,10 +5921,15 @@ dcreatstack:
 	SUB		X16, X16, #8
 	STR		X0, [X28, #32] ; array size 
 
-	MOV 	X3, #3
-	allotation
-	CMP		X0, X12
-	B.gt	allot_memory_full
+	; allotation
+	STR		X0, [X28, #32] ; array size 
+	save_registers
+	MOV 	W1, #8
+	BL		_calloc
+	restore_registers
+	CBZ 	X0, calloc_failed 
+	STR		X0, [X28]
+ 
 	B		300f
 
 
@@ -5988,7 +6000,6 @@ dselectit:
 	B	stackit
 	RET
 
-
 dtickz: ; ' - get address of NEXT words data field
 
 100:	
@@ -6019,8 +6030,6 @@ dtickz: ; ' - get address of NEXT words data field
 	BL		get_word2
 	CMP		X21, X22		;  
 	B.ne	170f			; that was 16 bytes..
-
-
 
 	; found word, stack address of word
 
@@ -6075,8 +6084,6 @@ dcharc: ; char - convert Char to small lit while compiling.
 	MOV 	X0, #0
 	RET
  
-
-
 ; control flow
 ; condition IF .. ELSE .. ENDIF 
 
@@ -6105,6 +6112,9 @@ difc:
 dendifz: ; AKA THEN AKA ENDIF
 	CBZ     X15, dinterp_invalid
 	RET
+
+
+	
 
 ; ENDIF	
 ; We are part of IF ..  ENDIF or IF .. ELSE  .. ENDIF
@@ -11604,6 +11614,7 @@ step_skip:
 ; as a short word in the high level threads.
 ;  
 
+
 quadbase: .quad quadlits
 
 quadlits:	
@@ -11621,7 +11632,7 @@ quadlits:
 	.endr
 	.quad  -2 ; end of literal pool. 
 	.quad  -2 
-
+	.zero 4096
 
 
 ; STRINGS ASCII
@@ -11813,6 +11824,10 @@ dend:
 		makeword "(ALIAS)", 			daliasfromstackz, 0, 0	; 53
 	
 
+		makeemptywords 256
+
+underdict:	
+
 		; just regular words starting with (
 		makeword "(", 			dlrbz, dlrbc, 	0		; ( comment
 
@@ -11989,7 +12004,7 @@ hdict:
 		makeword "IP+", dipplusz, 0,  0
 		makeword "IN", dvaluez, 0,  input_file
 		makeword "I", diloopz, diloopc,  0
-		makeword "IF", difz, difc,  0
+		makeword "IF", difz, difc,  0 
 		makeword "INVERT", dinvertz, 0,  0
 		makeword "IVARS", dvaraddz, 0, ivars
  
@@ -12017,7 +12032,7 @@ kdict:
 		makeword "LIMIT", dlimited , 0, 0 
 
 		makeword "LAST", get_last_word, 0,  0
-		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 1024
+		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 16384
 
 
 ldict:

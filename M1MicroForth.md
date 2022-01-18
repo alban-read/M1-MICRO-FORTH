@@ -1248,6 +1248,7 @@ The idea is to make words that only used to implement another word private.
 You can also ALIAS words, which just means naming them with a different name.
 
 
+
 ------
 
 
@@ -1266,7 +1267,7 @@ e.g. ` DUP >NAME $.  prints the name of DUP, which is DUP
 
 *:* 
 
-Creates a new word 
+Defines a new high level word 
 e.g.
 ```FORTH
 : SQ DUP * ;
@@ -1274,7 +1275,7 @@ e.g.
 
 *::* 
 
-Redefines a word
+Redefines an existing high level word
 
 e.g. 
 ```FORTH
@@ -1282,9 +1283,9 @@ e.g.
 ```
 Will redefine an existing word created with : to have a new behaviour.
 
-The new behaviour will apply to all existing words that call the redefined word.
+The new behaviour will apply to all existing words that used the redefined word.
 
-The key point being the new word has the same TOKEN CODE as the old word that it over writes.
+The key point being the new word has the same TOKEN as the  word that it redefined.
 
 
 
@@ -1614,8 +1615,9 @@ You can delete *any specific word* by making it LAST then forgetting it.
 
 myword >LAST FORGET
 
-If you just want to change a word, consider just redefining the word instead with :: 
- 
+If you just want to *change an existing word*, consider redefining the word with :: 
+
+
 
 
 **FINAL^** 

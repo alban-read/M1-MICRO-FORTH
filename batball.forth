@@ -89,14 +89,12 @@
  
 : makesxls 
 	128 a!
-	512 0 DO 
+	640 0 DO 
 		a sixls I + makesixl 
 		a++
 	8 +LOOP 
 ;
  
- 3 SHIFTSL 8* 
-
 : .sixl ( n )
 	8* sixls + $.
 ;
