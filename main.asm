@@ -257,8 +257,8 @@ data_base:
 
 .align 8
 ;; VERSION OF THE APP
-ver:	.double 0.831
-tver:	.ascii  "M1 MICRO FORTH %2.2f TOKEN THREADED 2022\n"
+ver:	.double 0.842
+tver:	.ascii  "M1 MICRO FORTH %2.2f JAN 2022\n"
 	.zero	4
 
 .text
@@ -679,7 +679,7 @@ sayliteral:
 
 
 ; WORDS - displays words in the dictionary.
-; not used as implemented in FORTH
+; not typically used as redefined in startup to add colour.
 
 alldotwords:
 
@@ -9989,7 +9989,7 @@ dstrdotz:
 
 
  
-dstrstksz: ; runtime S" .. " stash and return address
+dstrstksz: ; runtime ' .. ' stash and return address
 
 	STP		LR,  XZR, [SP, #-16]!
 	STP		X12,  X13, [SP, #-16]!
@@ -10028,24 +10028,34 @@ dstrstksz: ; runtime S" .. " stash and return address
 
 	MOV 	W0, #0
 	STRB	W0, [X12]
+	
+	LDRB 	W2, [X23]
+	CMP 	W2, #' '
+	B.eq	121f  
+	ADD		X23, X23, #1
+
+121:
+
+
 
 intern_string_from_buffer:
 
 	; we have to intern if we are compiling.
 	CBNZ	X15, 128f
-	; exit if appending do not store
-	ADRP	X1, append_ptr@PAGE		
-	ADD		X1, X1, append_ptr@PAGEOFF
-	LDR		X1, [X1]
-	CBNZ 	X1, 500f
+
+	CMP		W2, #'+' ; append do not store
+	B.ne	128f
+	BL	 	append_BtoA 
+    B		500f
+ 
 
 128:
 	ADRP	X0, string_buffer@PAGE		
 	ADD		X0, X0, string_buffer@PAGEOFF
+	
 	save_registers
 	BL 		_add_string
 	restore_registers
- 
 
 450:	
 	BL		stackit
@@ -10057,6 +10067,35 @@ intern_string_from_buffer:
 	RET
 
 
+dappendcz:
+
+	save_registers
+	ADRP	X0, append_buffer@PAGE		
+	ADD		X0, X0, append_buffer@PAGEOFF
+	MOV 	W1, #0
+	BL 		 _strchr
+	restore_registers
+	save_registers
+	LDR 	X1, [X16, #-8]
+	MOV 	W2, #255
+	BL		_strncpy
+	restore_registers
+	SUB 	X16, X16, #8
+	RET 
+
+append_BtoA:
+
+	ADRP	X0, append_buffer@PAGE		
+	ADD		X0, X0, append_buffer@PAGEOFF
+	MOV 	W1, #0
+	save_registers
+	BL 		 _strchr
+	ADRP	X1, string_buffer@PAGE		
+	ADD		X1, X1, string_buffer@PAGEOFF
+	MOV 	W2, #255
+	BL		_strncpy
+	restore_registers
+	RET
 
 dstrdotc:
 
@@ -10184,15 +10223,42 @@ dstrstksc: ; compile literal that returns its address.
 	MOV 	W0, #0
 	STRB	W0, [X12]
 
+	LDRB 	W2, [X23]
+	CMP 	W2, #' '
+	B.eq	121f  
+	ADD		X23, X23, #1
+
+	CMP 	W2, #'+'
+	B.ne	121f
+
 	ADRP	X0, string_buffer@PAGE		
 	ADD		X0, X0, string_buffer@PAGEOFF
+
+	save_registers
+	BL 		_add_string
+	restore_registers
+	
+	BL		longlitit
+
+	ADD		X15, X15, #2
+	MOV 	W0, #54 ;  ($+) 
+	STRH 	W0, [X15]
+	 
+	B 		128f 
+
+121:
+
+	ADRP	X0, string_buffer@PAGE		
+	ADD		X0, X0, string_buffer@PAGEOFF
+
 	save_registers
 	BL 		_add_string
 	restore_registers
 	
 	BL		longlitit
  
- 
+
+ 128:
 	LDP		X3, X5, [SP], #16	
 	LDP		X12, X13, [SP], #16	
 	LDP		LR, XZR, [SP], #16		
@@ -10240,6 +10306,15 @@ dslitLz:
 	RET
 
 
+dtostringpool:
+
+	LDR 	X0, [X16, #-8]
+	SUB 	X16, X16, #8
+	save_registers
+	BL 		_add_string
+	restore_registers	
+	B		stackit
+ 
 
 
 dlsbz:  ; [ 
@@ -11648,6 +11723,11 @@ string_buffer:
 .asciz "Strings"
 .zero 4096
  
+string_cbuffer:
+.asciz "Strings"
+.zero 4096
+
+
 .align 16
 slice_string:
 	.zero 4096
@@ -11822,7 +11902,7 @@ dend:
 		makeword "(FORTH)", 			0, 0, 0				; 51
 		makeword "(.')", 				dslitSzdot, 0,  0	; 52
 		makeword "(ALIAS)", 			daliasfromstackz, 0, 0	; 53
-	
+		makeword "($+)", 			    dappendcz, 0, 0	; 54
 
 		makeemptywords 256
 
@@ -11848,8 +11928,8 @@ hashdict:
 		makeword "ALIAS", creatalias, dcreat_invalid, 0	
 		makeword "ASORT", sortalias, dcreat_invalid, 0	
 		makeword "ALIAS^", dvaraddz, 0, alias_table
-		makeword "APPEND$", dvaraddz, 0,  append_buffer
-		makeword "APPEND^", dvaluez, 0,  append_ptr
+		makeword "A$", dSTRINGz, 0,  append_buffer, 0, 
+	 
  
 		makeword "ALIGN8", dalign8 , 0, 0 
 		makeword "ALIGN16", dalign16 , 0, 0 
@@ -11873,7 +11953,7 @@ adict:
 		makeemptywords 256
 
 		makeword "BEGIN" , dbeginz, dbeginc, 0
-		makeword "BUFFER$", dvaraddz, 0,  string_buffer
+		makeword "B$", dvaraddz, 0,  string_buffer
 		makeword "BREAK",  dbreakz, dbreakc, 0
 		makeword "b" , dlocbz, 0, 0
 		makeword "b!" , dlocbsz, 0, 0
@@ -11900,6 +11980,7 @@ bdict:
 		makeword "CPYC" ,  dcopyc, 0, 0
 		makeword "CCPYC" ,  dcopy2c, 0, 0
 		makeword "CCCPYC" ,  dcopy3c, 0, 0
+		makeword "C$", dvaraddz, 0,  string_cbuffer
 		
 cdict:
 		makeemptywords 256
@@ -12151,10 +12232,11 @@ udict:
 vdict:
 
 		makeemptywords 256
+		makeword "WORDS", alldotwords , dcreat_invalid, 0 
 		makeword "WARRAY", dWcreatarray , dcreat_invalid, 0 
 		makeword "WVALUES", dWcreatvalues , dcreat_invalid, 0 
 		makeword "WLOCALS", dlocalsWvalz, 0,  0, 0, 15
-		makeword "WHILE", 0 , dwhilec, 0 
+		makeword "WHILE", dinvalintz , dwhilec, 0 
 		makeword "W!", dwstorz , 0, 0 
 		makeword "W@", dwatz , 0, 0 
 
@@ -12177,9 +12259,7 @@ zdict:
 
 		makeemptywords 256
 
-		makeword "${", dstrappendbegin , 0, 0 
 		makeword "$.", ztypez, 0, 0	
- 		makeword "$}", dstrappendend , 0, 0 
  		makeword "$=", dstrequalz, 0,  0
 		makeword "$==", _dstrequalz, 0,  0
 		makeword "$compare", dstrcmp, 0,  0
@@ -12188,8 +12268,9 @@ zdict:
 		makeword "$find", dstrfind, 0,  0
 		makeword "$contains", dstrcontains, 0,  0
 		makeword "$slice", dstrslice, 0,  0
+		makeword "$+", dappendcz, 0,  0
 		makeword "$''", 	stackit, 	stackit, 	0
-		makeword "$intern", 	intern, 	intern, 	0
+		makeword "$intern", 	dtostringpool, 	dtostringpool, 	0
 	 
 dollardict:
 

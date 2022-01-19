@@ -214,7 +214,7 @@ The **a** is set to zero when the word starts, **a++** adds one.
 Be mindful that this is just another name for **0 LOCALS.**
 
 
-### use LOCALS as parameters ###
+### use LOCALS from parameters ###
 
 You can feed up to 8 parameters from the stack into LOCALS with the PARAMS word.
 
@@ -312,7 +312,7 @@ Is a VALUES view over the (64 bit) long literal space, where large integers, dou
 
 Strings are non standard.
 
-Strings are zero-terminated because that is the world we have lived in ever since UNIX was invented. To emphasize the *very major* differences, string literals here use single quotes.
+Strings are zero-terminated. To emphasize the *very major* differences from standard FORTH, string literals here use single quotes.
 
 
 A string is created with an initial text value like this.
@@ -363,7 +363,40 @@ string zero
 
 $. is a word that prints a string.
 
-The storage for the strings text lives in the string pool a STRING word just points a name at it.
+The storage for the strings text normally lives in the string pool a STRING word just points a name at it.
+
+
+
+### Appending/building strings
+
+Often a string needs to be built from smaller parts
+
+String literals can be appended using $+ 
+
+Any string literal ending in '+ is appended to A$.
+
+Given the address of a string, '+ by itself appends that to A$
+
+
+Ancillary text storage
+
+These are memory blocks outside of the literal pool
+
+A$ is storage for appending, clear with CLR.A$ and then append.
+
+B$ is storage used by the string functions 
+
+C$ is some free storage if you want to copy A$.
+
+To use A$ in a STRING you need to intern it into the string pool
+e.g.
+
+CLR.A$
+' This is some text '+ ' so is this '+ A$  $intern 
+  STRING myText
+
+CLR.A$
+' test '+ ' this '+ A$ $intern TO myText
 
 
 ### Little defining words
@@ -401,33 +434,7 @@ Take a look though your app and if you find some common patterns, define some of
 
 
 
-### Appending/building strings
 
-Often a string needs to be built from smaller parts
-
-These words are meant to help make it less error prone.
-
-```FORTH
-
-${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} $.  
-
-```
-
-The string is composed between the ${ Start building and $} end building words.
-
-Each element of text is added by the comma that follows after it.
-
-At the end the combined text is stored and its address is returned, so it can be named.
-
-
-```FORTH
-
-${ ' ${ starts ' , ' appending ' , ' $} finishes ' , $} 
-STRING appender 
-
-```
-
-In line with general FORTH principles the , is a word not a separator, and comes after the text being appended.  The single quote is a word and must be followed by a space. This reads text until the next single quote.
 
 
 ### Slicing a string
@@ -447,48 +454,18 @@ To save the result from a slice send it somewhere, such as to a STRING e.g.
 
 ```FORTH 
 $'' STRING vehicle
-' this is the age of the train' 23 5 $slice 
-TO vehicle
+' this is the age of the train' 23 5 $slice TO vehicle
 ```
-
-Slices can be appended to a string with $slice followed by a comma inside of an append list.
-
-
-```FORTH 
-
-' British Rail in the 1970s ' STRING br
-' This is the age of the train ' STRING trains
-// taking a slice in the appender.
-${ 
-    ' Back ' ,
-    br 13 13 $slice ,
-    br 0 8 $slice ,
-    ' said it was "' ,   
-    trains 8 10 $slice ,
-    ' " the "' ,
-    trains 23 5 $slice , ' " - yeah right.' , 
-$}
-$.
-```
-
-Example of appending with $slice between ${ and $}.
-
-This has the advantage of not spewing garbage into the string pool when interpeting.
-Although if compiled the strings still need to live somewhere.
 
  
-
 #### Storage used when appending
 
-The BUFFER$ and APPEND$ storage is used while appending.
+The B$ and A$ storage is used while appending.
 
 When used in the interpreter, only the final result is placed in the string pool, the literals being available from the interpreted text.
 
 When used in the compiler any literal text parts have to be stored in the string pool (since these also need somewhere to live.)
-
-While building (appending) strings, APPENDER^ points to the next byte address.
-
-
+ 
 
 ### Stacks
 

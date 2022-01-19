@@ -120,3 +120,10 @@ Then run **make** in a terminal to generate the executable **mf**
 
 
 
+### Font
+
+I use this nice font:
+
+[https://github.com/dokutan/legacy_computing-font](Legacy computing symbols)
+
+That includes useful shapes for terminal graphics

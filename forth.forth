@@ -1,5 +1,5 @@
 // startup
-TICKS 
+
 
 // this is the token space
 4 1024 2 * * HEAPSIZE
@@ -8,8 +8,12 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 // this is the locals stack
 80 256 * HEAPSIZE HEAP^ ALIGN8 TO LSP^
  
+// --------------------------------------------- 
+// everything below here is optional 
+
+
 // save start time from here.
- VALUE _start_ticks
+ TICKS  VALUE _start_ticks
 
 // Offsets from a words header
 8  ADDS >RUN
@@ -48,10 +52,10 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 // -------------------------------------------------------
 // print numbers
 
-10 VALUE BASE
+10 VALUE _base
 
 : U.             
-   BASE /MOD      
+   _base /MOD      
       ?DUP IF          
       U.        
    THEN
@@ -67,7 +71,7 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 
 // copy number to string. 
 : U,             
-   BASE /MOD      
+   _base /MOD      
       ?DUP IF          
       U,        
    THEN
@@ -315,7 +319,7 @@ WC WLOCALS TO _locals_only
 	;
 
 
-: WORDS FINAL^ `` (  _words ;
+:: WORDS FINAL^ `` (  _words ;
 
 : ALLWORDS FINAL^ `` (EXIT)  _words_ ;
 
@@ -349,6 +353,22 @@ UNALIAS pausetime
 // is this is an empty string?
 : $empty? 1 PCHK 0= IF TRUE ELSE C@ 0= THEN  ;
 
+// A..C$ are raw character buffers 
+// A is the append target used by $+
+// B is the general buffer
+// C is just free space 
+
+: CLR.A$ 0 A$ C! ;
+: CLR.B$ 0 B$ C! ;
+: CLR.C$ 0 C$ C! ;
+
+// copy zero term A to C
+: A$>C$
+    A$ C$
+	BEGIN 
+		CPYC
+	OVER C@ 0= 	UNTIL 
+;
 
 // how many times is substr in str
 
