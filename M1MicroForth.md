@@ -366,42 +366,65 @@ $. is a word that prints a string.
 The storage for the strings text normally lives in the string pool a STRING word just points a name at it.
 
 
+Static Strings
+
+A static string is a string that stores its own data outside of the shared strings pool.
+
+These are created with a length in characters (bytes.)
+
+```FORTH
+// define the UTF8 unicode monster
+8 STRING _mstr 0xF0 , 0x9F , 0x91 , 0xBE , 0 , 
+```
+
+Creates a string that points to 8 bytes of its own storage.
+
+These can be loaded with data using the comma operator 
+
+In this case the string is loaded with the UF8 code for the monster symbol. 
+
+If you print it with $. you will see 👾
+
 
 ### Appending/building strings
 
-Often a string needs to be built from smaller parts
+Often a string needs to be built up from smaller parts
 
 String literals can be appended using $+ 
 
-Any string literal ending in '+ is appended to A$.
+Any string literal ending in '+ is just appended to A$.
 
-Given the address of a string, '+ by itself appends that to A$
+Given the address of a string, $+ appends it to A$
 
 
-Ancillary text storage
+#### Ancillary text storage
 
-These are memory blocks outside of the literal pool
+These are not strings.
 
-A$ is storage for appending, clear with CLR.A$ and then append.
+These are memory blocks outside of the strings literal pool.
 
-B$ is storage used by the string functions 
+A$ is storage for appending, clear A$ with CLR.A$ and then append.
 
-C$ is some free storage if you want to copy A$.
+B$ is storage used by the internal string functions 
 
-To use A$ in a STRING you need to intern it into the string pool
+C$ is some free storage if you want to nake a copy of A$.
+
+To use A$ in a regular STRING you need to intern its contents into the string pool.
+
 e.g.
 
+```FORTH
 CLR.A$
 ' This is some text '+ ' so is this '+ A$  $intern 
   STRING myText
 
 CLR.A$
 ' test '+ ' this '+ A$ $intern TO myText
-
+```
 
 ### Little defining words
 
-- As this is an interpeter it is almost always slower to use two words when one word will do.
+- As this is an interpreter it is almost always slower to use two words when one word will do.
 
 - It is also faster if each word *does more*, the overhead of the interpreter is calling each word in the first place.
 
@@ -1808,13 +1831,7 @@ Short for OVER SWAP.
 
 A floating point constant
 
-**PRIVATE** 
-
-PRIVATE word, hides that word.
-
-Avoids cluttering the dictionary with words only used in one other word.
-
-Also hides words used only at startup, or that are so dangerous they should be banned.
+ 
 
 **PAGE** 
 
@@ -2070,6 +2087,8 @@ create a VARIABLE, 10 VARIABLE myThing
 **WORDS** 
 
 Lists the words but not all of them. 
+
+There is a basic version of WORDS built in, so it is always available, it is redefined by the fancier optional colour version in forth.forth.
 
 **WARRAY**
 
