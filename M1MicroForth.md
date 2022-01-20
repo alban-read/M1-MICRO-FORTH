@@ -214,9 +214,38 @@ The **a** is set to zero when the word starts, **a++** adds one.
 Be mindful that this is just another name for **0 LOCALS.**
 
 
+
+The names and addresses of the locals are listed in the table.
+
+
+
+| LOCALS | WLOCALS | Accessor 64 bits | Accessor 32 bits |
+| ------ | ------- | ---------------- | ---------------- |
+| 0      | 0       | a a! a++         |                  |
+|        | 1       |                  |                  |
+| 1      | 2       | b b! b++         |                  |
+|        | 3       |                  |                  |
+| 2      | 4       | c c! c++         |                  |
+|        | 5       |                  |                  |
+| 3      | 6       | d d! d++         |                  |
+|        | 7       |                  |                  |
+| 4      | 8       | e e! e++         |                  |
+|        | 9       |                  |                  |
+| 5      | 10      | f f!             |                  |
+|        | 11      |                  |                  |
+| 6      | 12      | g g!             |                  |
+|        | 13      |                  |                  |
+| 7      | 14      | h h!             | x x!             |
+|        | 15      |                  | y y!             |
+
+e.g. h is 7 LOCALS and it contains 14 WLOCALS and 15 WLOCALS also accessible as x and y.
+
+
+
+
 ### use LOCALS from parameters ###
 
-You can feed up to 8 parameters from the stack into LOCALS with the PARAMS word.
+You can feed up to 8 (64bit) parameters from the stack into LOCALS with the PARAMS word.
 
 ```FORTH
 : sq 1 PARAMS a a * ;
@@ -480,7 +509,7 @@ $'' STRING vehicle
 ' this is the age of the train' 23 5 $slice TO vehicle
 ```
 
- 
+
 #### Storage used when appending
 
 The B$ and A$ storage is used while appending.
@@ -488,7 +517,7 @@ The B$ and A$ storage is used while appending.
 When used in the interpreter, only the final result is placed in the string pool, the literals being available from the interpreted text.
 
 When used in the compiler any literal text parts have to be stored in the string pool (since these also need somewhere to live.)
- 
+
 
 ### Stacks
 

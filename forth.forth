@@ -52,12 +52,14 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 // -------------------------------------------------------
 // print numbers
 
-10 VALUE _base
+10 VALUE BASE
 
-: U.             
-   _base /MOD      
+: HEX 16 TO BASE ;
+
+: _U.             
+   BASE /MOD      
       ?DUP IF          
-      U.        
+      _U.        
    THEN
    DUP 10 < IF
       CHAR 0        
@@ -71,7 +73,7 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 
 // copy number to string. 
 : U,             
-   _base /MOD      
+   BASE /MOD      
       ?DUP IF          
       U,        
    THEN
@@ -84,6 +86,64 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
    +
    ,
    ;
+
+: UWIDTH	 
+	BASE /	 
+	?DUP IF		 
+		UWIDTH 1+	 
+	ELSE
+		1
+	THEN
+;
+
+: U.R		 
+	SWAP	 
+	DUP		 
+	UWIDTH		 
+	ROT		 
+	SWAP -		 
+	SPACES
+	_U.
+;
+
+
+: .R		 
+	SWAP DUP 0< IF
+		NEGATE		 
+		1		 
+		SWAP		 
+		ROT		 
+		1-		 
+	ELSE
+		0 SWAP ROT		 
+	THEN
+		SWAP DUP UWIDTH		 
+		ROT	SWAP - SPACES	 
+		SWAP	 
+	IF			 
+		CHAR - EMIT
+	THEN
+	_U.
+;
+
+: U. _U. SPACE ;
+
+:: . 0 .R SPACE ;
+
+// -------------------------------------------------------
+// Misc 
+ 
+
+
+: MAX 2DUP > IF DROP ELSE NIP THEN ;
+: MIN 2DUP > IF SWAP THEN DROP ;
+: LIMIT ROT MIN MAX ;
+: ODD 1 AND ;
+: EVEN 1 AND  0= ;
+: UM/MOD 2DUP / a! MOD a ;
+: UNDER >R DUP R> ;
+: WITHIN OVER - a! - a  < ;
+ 
 
 
 // -------------------------------------------------------
@@ -174,6 +234,7 @@ WC _left CONSTANT _string_word
 32 STACK _cmp_only
 TRUE      TO _cmp_only
 WC IF 	  TO _cmp_only	
+WC ?IF 	  TO _cmp_only	
 WC UNTIL  TO _cmp_only	
 WC THEN   TO _cmp_only	
 WC WHILE  TO _cmp_only	

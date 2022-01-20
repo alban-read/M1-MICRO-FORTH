@@ -911,7 +911,7 @@ andz:	; and tos with 2os leaving result tos
 	RET
 
 
-negz:	;  negate 
+dnegz:	;  negate 
 	LDR		X1, [X16, #-8]
 	NEG		X1, X1
 	STR		X1, [X16, #-8]
@@ -1103,7 +1103,7 @@ spacesz:
 	SUB		X16, X16, #8
 20:	
 	CMP	X1, #0
-	B.eq	10f
+	B.le	10f
 	MOV	X0, #32
 	STP	X0, X1, [SP, #-16]!
 	save_registers
@@ -2874,6 +2874,16 @@ dtorz:
 	SUB		X16, X16, #8
 	RET
 
+; : 2>r swap >r >r ;
+d2torz:
+	LDP		X1, X0, [X16, #-16]	
+	STR		X1, [X14], #8
+	STR		X0, [X14], #8 
+	SUB		X16, X16, #16
+	RET
+
+
+
 dtorc:
 	RET
 
@@ -2883,7 +2893,14 @@ dfromrz:
 	SUB		X14, X14, #8
 	RET
 
+;  2R> 
+d2fromrz:
+	LDP		X0, X1, [X14, #-16]	
+
+	STP		X1, X0, [X16], #16
+	SUB		X14, X14, #16
 	RET
+ 
 
 dfromrc:
 	RET
@@ -3054,6 +3071,29 @@ dlochsz:
 	LDR		X0,	[X16, #-8]!
 	STR		X0, [X26, #-64]
 	RET
+
+
+dlochxz:	; LOCAL HX
+	LDR		W0, [X26, #-64]	
+	STR		X0, [X16], #8
+	RET
+ 
+dlochxsz:	; LOCAL HX
+	LDR		X0,	[X16, #-8]!
+	STR		W0, [X26, #-64]
+	RET
+
+dlochyz:	; LOCAL HY
+	LDR		W0, [X26, #-68]	
+	STR		X0, [X16], #8
+	RET
+ 
+dlochysz:	; LOCAL HY
+	LDR		X0,	[X16, #-8]!
+	STR	W0, [X26, #-68]
+	RET
+
+
 
 ; SELF and CODE pointers
 dlociz:	;   
@@ -6091,6 +6131,10 @@ difz:
 	CBZ     X15, dinterp_invalid
 	RET
 
+difqz:
+	CBZ     X15, dinterp_invalid
+	RET
+
 
 difc:
 
@@ -6107,6 +6151,24 @@ difc:
 	MOV		X0, #-1
 200:
 	RET			
+
+dqifc:
+
+	MOV		X0, #5 ; (?IF)
+	STRH	W0, [X15]
+	ADD		X15, X15, #2
+	MOV		X0, #4000 
+	STRH	W0, [X15] ; dummy offset
+	MOV		X0, #5 ; (?IF)
+	STP		X0,  X15, [X14], #16 ; save branch
+	B		200f
+
+190:	; error out 
+	MOV		X0, #-1
+200:
+	RET			
+
+
 
 
 dendifz: ; AKA THEN AKA ENDIF
@@ -6131,6 +6193,8 @@ dendifc:
 	B.eq	80f
 	CMP		X2, #3; (IF)
 	B.eq	100f
+	CMP		X2, #5; (?IF)
+	B.eq	100f
 	B		190f  
 
 
@@ -6145,7 +6209,7 @@ dendifc:
 	B		200f
 
 
-100: ; fix up IF
+100: ; fix up IF / ?IF
 	
 	SUB		X4, X15, X5  ; dif between zbran and (IF).
 	ADD		X4, X4, #4
@@ -6213,7 +6277,16 @@ delsec: ;  at compile time inlines the ELSE branch
 
 ; if top of stack is zero branch
 
-dzbranchz:
+
+
+
+dzqbranchz: ; ?IF (dup if)
+
+	LDR		X0, [X16, #-8] 
+	STR		X0, [X16], #8
+
+
+dzbranchz: ; IF
 
 	do_trace
  
@@ -7559,6 +7632,13 @@ ddrop2z: ;
 ddropc: ;	
 	RET	
 
+ddrupz: ; DRUP DROP DUP
+	SUB		X16, X16, #8
+	LDR		X0, [X16, #-8] 
+	STR		X0, [X16], #8
+	RET
+
+
 
 ztypez: ; AKA $.
 
@@ -7593,7 +7673,7 @@ ddupz: ;
 	STR		X0, [X16], #8
 	RET
 	
-ddup2z: ;  
+ddup2z: ;  2DUP aka OVER OVER
 	LDP		X0, X1, [X16, #-16] 
 	STP		X0, X1,  [X16], #16
 	RET
@@ -7634,10 +7714,24 @@ drotc: ;
 	RET		
 
 
+drrotz: ;  -ROT literally ROT ROT
+	LDP		X1, X0, [X16, #-16] 
+	LDR		X2, [X16, #-24]	
+	STP		X0, X2, [X16, #-16]  
+	STR		X1, [X16, #-24] 
+	LDP		X1, X0, [X16, #-16] 
+	LDR		X2, [X16, #-24]	
+	STP		X0, X2, [X16, #-16]  
+	STR		X1, [X16, #-24]   
+	RET
+
+
+
 doverz: ;
 	LDR		X0, [X16, #-16] 
 	STR		X0, [X16], #8
 	RET
+
 
 doverswap:
 	LDR		X0, [X16, #-16] 
@@ -7713,6 +7807,25 @@ lessthanz:
 
 dltc: ;  "<"  
 	RET		
+
+
+
+dltez: ; "<"= less than
+	
+lessthanez:
+	LDR		X0, [X16, #-8] 
+	LDR		X1, [X16, #-16]
+	CMP 	X1, X0		
+	B.gt	10f
+	MVN		X0, XZR ; true
+	B		20f
+10:
+	MOV		X0, XZR
+20:
+	STR		X0, [X16, #-16]
+	SUB		X16, X16, #8
+	RET
+
 
 
 
@@ -11848,7 +11961,7 @@ dend:
 		makeword "(LITL)",  dlitlz, dlitlc,  0			; 2
 		makeword "(IF)", 	dzbranchz, 0,  0			; 3
 		makeword "(ELSE)", dbranchz, 0,  0				; 4
-		makeword "(5)", 0, 0,  0						; 5
+		makeword "(?IF)", 	dzqbranchz, 0,  0			; 5
 		makeword "(6)", 0, 0,  0						; 6
 		makeword "(7)", 0, 0,  0						; 7
 		makeword "(8)", 0, 0,  0						; 8
@@ -11989,6 +12102,7 @@ cdict:
 		makeword "DOWNDO", 0 , ddownerc, 0 
 		makeword "DUP", ddupz , 0, 0 
 		makeword "DDUP", d2dupz , 0, 0 
+		makeword "DRUP", ddrupz , 0, 0 
  		makeword "DROP", ddropz , 0, 0 
 		makeword "DDROP", ddrop2z , 0, 0 
 		makeword "DEPTH", ddepthz , 0, 0 
@@ -12110,7 +12224,7 @@ kdict:
 		makeword "LOCALS", dlocalsvalz, 0,  0, 0, 7
 		makeword "LEAVE",  dinvalintz, dleavec, 0 
 		makeword "LOOP", dinvalintz , dloopc, 0 
-		makeword "LIMIT", dlimited , 0, 0 
+		makeword "LIMITED", dlimited , 0, 0 
 
 		makeword "LAST", get_last_word, 0,  0
 		makeword "LITERALS", darrayvalz, 0,  quadlits, 0, 16384
@@ -12118,14 +12232,14 @@ kdict:
 
 ldict:
 		makeemptywords 256
-		makeword "MOD", dmodz, dmodc, 0	
+		makeword "MOD", dmodz, 0, 0	
 		makeword "MS", dsleepz , 0, 0 
 	
  
 mdict:
 		makeemptywords 256
 
-	
+		makeword "NEGATE", dnegz, 0, 0	
 		makeword "NTH", dnthz, 0, 0	
 		makeword "NIP", dnipz, 0, 0	
 		makeword "NOECHO", noecho, 0, 0	
@@ -12135,6 +12249,7 @@ ndict:
 		makeemptywords 256
 
 		makeword "OR", dorz, 0, 0
+		makeword "OOVER", ddup2z, 0, 0
 		makeword "OVER", doverz, 0, 0
 		makeword "OVERSWAP", doverswap, 0, 0
 		
@@ -12244,16 +12359,18 @@ vdict:
 wdict:
 
 		makeemptywords 256
-		
+			
+  		makeword "x" , dlochxz, 0, 0
+		makeword "x!" , dlochxsz, 0, 0	
 	 
 xdict:
 		makeemptywords 256
-		
-  
+		makeword "y" , dlochyz, 0, 0
+		makeword "y!" , dlochysz, 0, 0	
 	
 ydict:
 		makeemptywords 256
-
+	
 	
 zdict:
 
@@ -12277,7 +12394,7 @@ dollardict:
 	 	makeemptywords 256
 		makeword ".STRINGS", dliststrings , 0, 0 
 		makeword ".'", dstrdotz, dstrdotc , 0
-		makeword ".R", ddotrz, 0 , 0
+		makeword ".RS", ddotrz, 0 , 0
 		makeword ".S", ddotsz, 0 , 0
 		makeword ".VERSION", announce , 0, 0
 		makeword ".", ddotz , 0, 0
@@ -12294,7 +12411,7 @@ dotdict:
 		 
 		makeword "10*", tentimez , 0, 0
 		makeword "10/", tendivz , 0, 0
-
+		makeword "<=", dltez, 0 , 0
 		makeword "0=", dequalzz, 0 , 0
 		makeword "0<", dltzz, 0 , 0
 		makeword "0>", dgtzz, 0 , 0
@@ -12303,16 +12420,19 @@ dotdict:
 
 		makeword "//", dlcmntz , dlcmntc, 0
 		makeword "?DUP", dqdupz, dqdupc, 0
-		makeword ">R", dtorz , dtorc, 0 
+		makeword ">R", dtorz , 0, 0 
+		makeword "2R>", d2fromrz , 0, 0 
+		makeword "2>R", d2torz , 0, 0 
 		makeword "+LOOP", dinvalintz , dploopc, 0
 		makeword "-LOOP", dinvalintz , dmloopc, 0
-	
+		makeword "-ROT", drrotz , 0, 0
 		makeword "<>", dnoteqz, 0 , 0
 		makeword "+!", plustorz, 0 , 0
 		makeword "``", dtickz, dtickc , 0
 		makeword "2DUP", ddup2z , 0, 0 
 		makeword "2DROP", ddrop2z , 0, 0 
 		makeword "?DO", dinvalintz , dqoerc, 0 
+		makeword "?IF", difqz, dqifc,  0 
 		makeword ">LAST" , 		dselectitfromstackz, 0, 0
 
 		;makeword "2VARIABLE", dcreat2vz , 0, 0

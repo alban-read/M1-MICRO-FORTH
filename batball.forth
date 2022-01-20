@@ -130,9 +130,6 @@
 ;
  
 
-ALIAS x a 
-ALIAS y b 
-
 
 2  VALUE batminx
 80 VALUE batmax
@@ -153,16 +150,16 @@ TCOL.red VALUE ballclr
 
 0 VALUE keypresses
 
-: atbat ( x y c --- )
-	3 PARAMS
-	c FCOL 
+: atbat ( x y  --- )
+    x! y!
+	batclr FCOL 
 	x y AT clrln
 	x y AT smallbat $. 	
 ;
 
-: atball ( x y c --- )
-	3 PARAMS
-	c FCOL 
+: atball ( x y  --- )
+    x! y!
+	ballclr FCOL 
 	ballfree 0= IF 	x y AT clrln THEN
 	x y AT ballone $. 	
 ;
@@ -174,10 +171,10 @@ TCOL.red VALUE ballclr
 ;
 
 : showbat ( ) 
-	batclr batx baty atbat ;
+	 batx baty atbat ;
  
 : showball ( ) 
-	ballclr ballx bally atball ;
+	ballx bally atball ;
 
 : ballmove 
 		bally ballx AT 32 EMIT
@@ -287,9 +284,7 @@ BEGIN
 AGAIN
 ;
 
-UNALIAS x
-UNALIAS y
-
+ 
 
 : START 
 	PAGE
