@@ -52,9 +52,10 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 // -------------------------------------------------------
 // print numbers
 
-10 VALUE BASE
+ 
 
 : HEX 16 TO BASE ;
+: DEC 10 TO BASE ;
 
 : _U.             
    BASE /MOD      
@@ -131,7 +132,7 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 :: . 0 .R SPACE ;
 
 // -------------------------------------------------------
-// Misc 
+// Misc words 
  
 
 
@@ -143,8 +144,30 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 : UM/MOD 2DUP / a! MOD a ;
 : UNDER >R DUP R> ;
 : WITHIN OVER - a! - a  < ;
- 
+: ROLL  
+  DUP 0= IF DROP EXIT THEN
+  1- SWAP > a! ROLL  
+  a SWAP
+;
 
+: DUMP ( addr u -- )
+  BASE a!
+  HEX
+  0 DO
+    I 10 MOD 0= IF CR DUP I + 1 U.R CHAR : EMIT THEN
+    I 2 MOD 0= IF SPACE THEN
+    DUP I + C@ DUP 10 < IF CHAR 0 EMIT THEN 1 .R
+  LOOP
+  CR
+  a TO BASE
+;
+
+: MEMMOV ( src dest n -- )
+        0 DO
+    		CPYC
+        LOOP
+        DDROP
+;
 
 // -------------------------------------------------------
 // list ALIAS words 
@@ -265,6 +288,8 @@ WC e	TO _locals_only
 WC f	TO _locals_only	
 WC g	TO _locals_only	
 WC h	TO _locals_only	
+WC x	TO _locals_only	
+WC y	TO _locals_only	
 WC a!	TO _locals_only	
 WC b!	TO _locals_only	
 WC c!	TO _locals_only	
@@ -273,6 +298,8 @@ WC e!	TO _locals_only
 WC f!	TO _locals_only	
 WC g!	TO _locals_only	
 WC h!	TO _locals_only	
+WC x!	TO _locals_only	
+WC y!	TO _locals_only	
 WC a++	TO _locals_only	
 WC b++	TO _locals_only	
 WC c++	TO _locals_only	

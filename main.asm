@@ -977,10 +977,6 @@ emitchz:	; output X0 as char
 emitchc:	; output X0 as char
 	RET
 
-
- 
-
-
 ; flush the stdout stream
 dflushz:
 	save_registers
@@ -991,9 +987,6 @@ dflushz:
 	restore_registers
 	RET
 
-
-
- 
 
 ; TERMINAL commands
 
@@ -1286,6 +1279,70 @@ fprint: ; prints float on top of stack
 	BL		_printf		
 	ADD		SP, SP, #16 
 	restore_registers  
+	RET
+
+
+// NUMBER ( a - n )
+dnumberz:
+
+	STP		X3, X4, [SP, #-16]!
+	STP		X1, X2, [SP, #-16]!
+
+	LDR  	X2, [X16, #-8]
+	SUB 	X16, X16, #8
+
+	MOV 	X0, #0
+
+	ADRP	X8, number_base@PAGE		
+	ADD		X8, X8, number_base@PAGEOFF
+	LDR		X3, [X8]
+
+	LDRB 	W4, [X2], #1
+	CBZ 	X4, 50f
+	MOV 	X5, #0
+	CMP		X4, #'-'
+	B.ne	20f 
+
+10:	
+
+	MUL 	X1, X0, X3
+	MOV 	X0, X1
+	LDRB	W4, [X2], #1
+	CBZ 	X4, 50f
+
+20:
+	SUB 	X4, X4, #48 
+	CMP		X4, #0
+	B.lt	40f 
+
+	CMP 	X4, #9
+	B.le 	30f 
+
+	SUB 	X4, X4, #17
+	CMP		X4, #0
+	B.lt 	40f 
+	ADD		X4, X4, #10
+
+30:
+
+	CMP 	X4, X3
+	B.ge	40f 
+	ADD 	X0, X0, X4 
+	LDRB	W4, [X2]
+	CBZ 	X4, 50f
+	B		10b 
+
+40:
+
+	CMP 	X5, #1
+	B.ne	50f 
+	SUB 	X0, XZR, X0 
+
+50: 
+	STR		X0, [X16], #8
+
+	LDP		X1, X2, [SP], #16
+	LDP		X3, X4, [SP], #16
 	RET
 
 
@@ -1943,9 +2000,6 @@ make_stack: ; X12 base, X13 size
 	ADD		X1, X1, spo@PAGEOFF
 	STR		X0, [X1]			 
 
-
- 
-
 	RET
 
 
@@ -2140,16 +2194,11 @@ fW1:
 	CMP		X21, X22		;  
 	B.ne	251b			; that was 16 bytes..
 
-
-
 	; we found our word, execute its runtime function
  
 	LDR		X2, [X28, #8]  
 	CMP		X2, #0 
 	B.eq	finish_list
-
-
-
 
 	LDR		X0, [X28] ; data (argument)
 	STP		X28, XZR, [SP, #-16]!
@@ -2180,7 +2229,19 @@ finish_list: ; we did not find a defined word.
 	CMP		W0, #'x' 
 	B.ne	chkdec
 	; we have a hex number in X22
-	B 		litint
+	ADRP	X0, zword@PAGE		
+	ADD		X0, X0, zword@PAGEOFF
+
+	save_registers
+	MOV 	W1, #0
+	MOV     W2, #0
+	BL		_strtol
+	restore_registers  
+
+	STR		X0, [X16], #8
+	B 		advance_word
+
+
 	; tolerate a negative number
 
 chkdec:
@@ -2208,7 +2269,7 @@ ntxtdigit:
 	CMP		W0, #'.'
 	B.eq	fltsig
 
-	CMP		W0, #'9'
+	CMP		W0, #'F'
 	B.gt	exnum
 	CMP		W0, #'0'
 	B.lt	exnum
@@ -2229,8 +2290,66 @@ litfloat:
 	B		advance_word
 
 litint:
- 
-	BL		word2number
+	
+	STP		X3, X4, [SP, #-16]!
+	STP		X5, X2, [SP, #-16]!
+
+	MOV 	X0, #0
+
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
+
+	ADRP	X8, number_base@PAGE		
+	ADD		X8, X8, number_base@PAGEOFF
+	LDR		X3, [X8]
+
+	LDRB 	W4, [X22], #1
+	CBZ 	X4, 50f
+	MOV 	X5, #0
+	CMP		X4, #'-'
+	B.ne	20f 
+
+10:	
+
+	MUL 	X1, X0, X3
+	MOV 	X0, X1
+	LDRB	W4, [X22], #1
+	CBZ 	X4, 50f
+
+20:
+	SUB 	X4, X4, #48 
+	CMP		X4, #0
+	B.lt	40f 
+
+	CMP 	X4, #9
+	B.le 	30f 
+
+	SUB 	X4, X4, #17
+	CMP		X4, #0
+	B.lt 	40f 
+	ADD		X4, X4, #10
+
+30:
+
+	CMP 	X4, X3
+	B.ge	40f 
+	ADD 	X0, X0, X4 
+	LDRB	W4, [X22]
+	CBZ 	X4, 50f
+	B		10b 
+
+40:
+
+	CMP 	X5, #1
+	B.ne	50f 
+	SUB 	X0, XZR, X0 
+
+50:
+
+
+	STR		X0, [X16], #8
+ 	LDP		X5, X2, [SP], #16
+	LDP		X3, X4, [SP], #16
 	B		advance_word
 
 	
@@ -2564,7 +2683,7 @@ try_compiling_literal:
 	LDRB    W0, [X22, #1]
 	CMP		W0, #'x' 
 	B.ne	chkdec2
-	; we have a hex number in X22
+	; we have a c style hex number in X22
 
 
 	ADRP	X0, zword@PAGE		
@@ -2588,7 +2707,7 @@ chkdec2:
 	ADD		X22, X22, #1
 	LDRB	W0, [X22]
 
-22:
+22: ; start with number
 	CMP		W0, #'9'
 	B.gt	30f
 	CMP		W0, #'0'
@@ -2600,7 +2719,7 @@ chkdec2:
 	B.eq	24f
 	CMP		W0, #'.'
 	B.eq	405f
-	CMP		W0, #'9'
+	CMP		W0, #'F'
 	B.gt	30f
 	CMP		W0, #'0'
 	B.lt	30f
@@ -2627,15 +2746,67 @@ chkdec2:
 	B 		25f 	; process as long word
  
 its_an_it:
-	save_registers
-	ADRP	X0, zword@PAGE		
-	ADD		X0, X0, zword@PAGEOFF
-	BL 		_atoi
-	restore_registers 
+
+	STP		X3, X4, [SP, #-16]!
+	STP		X5, X2, [SP, #-16]!
+
+	ADRP	X22, zword@PAGE		
+	ADD		X22, X22, zword@PAGEOFF
  
+ 
+	ADRP	X8, number_base@PAGE		
+	ADD		X8, X8, number_base@PAGEOFF
+	LDR		X3, [X8]
+
+	LDRB 	W4, [X22], #1
+	CBZ 	X4, 50f
+	MOV 	X5, #0
+	CMP		X4, #'-'
+	B.ne	20f 
+
+10:	
+
+	MUL 	X1, X0, X3
+	MOV 	X0, X1
+	LDRB	W4, [X22], #1
+	CBZ 	X4, 50f
+
+20:
+	SUB 	X4, X4, #48 
+	CMP		X4, #0
+	B.lt	40f 
+
+	CMP 	X4, #9
+	B.le 	30f 
+
+	SUB 	X4, X4, #17
+	CMP		X4, #0
+	B.lt 	40f 
+	ADD		X4, X4, #10
+
+30:
+
+	CMP 	X4, X3
+	B.ge	40f
+	ADD 	X0, X0, X4 
+	LDRB	W4, [X22]
+	CBZ 	X4, 50f
+	B		10b 
+
+40:
+
+	CMP 	X5, #1
+	B.ne	50f 
+	SUB 	X0, XZR, X0 
+
+50:
+
+
+ 	LDP		X5, X2, [SP], #16
+	LDP		X3, X4, [SP], #16
 
 check_number_size:
-	
+	; X0 - number
 	; halfword numbers ~32k
 	MOV		X3, #4000
 	LSL		X3, X3, #3  
@@ -6959,7 +7130,7 @@ fastrunintz:; interpret the list of tokens at X0
 	SUB		X15, X0, #2
  
 
-	; unrolling the loop here X16 makes this a lot faster, 
+	; unrolling the loop here makes this a lot faster, 
 10:	; next token
 	
 	.rept	16
@@ -6995,7 +7166,7 @@ flattracerunintz:; interpret the list of tokens at X0
 	SUB		X15, X0, #2
 	MOV		X20, X15
 
-	; unrolling the loop here X16 makes this a lot faster, 
+	; unrolling the loop here makes this a lot faster, 
 10:	; next token
 	
 	.rept	32
@@ -7438,6 +7609,14 @@ dsmodz: ; /MOD
 	RET
 
 dsmodc:
+	RET
+
+
+dssmodz: ; S/MOD
+	LDP 	X0, X1,  [X16, #-16]  
+	SDIV	X2, X0, X1
+	MSUB	X3, X2, X1, X0 
+	STP		X3, X2, [X16, #-16]  
 	RET
 
 
@@ -12064,7 +12243,7 @@ hashdict:
 adict:
 
 		makeemptywords 256
-
+	 	makeword "BASE", dvaluez, 0,  number_base	
 		makeword "BEGIN" , dbeginz, dbeginc, 0
 		makeword "B$", dvaraddz, 0,  string_buffer
 		makeword "BREAK",  dbreakz, dbreakc, 0
@@ -12238,7 +12417,7 @@ ldict:
  
 mdict:
 		makeemptywords 256
-
+		makeword "NUMBER", dnumberz, 0, 0	
 		makeword "NEGATE", dnegz, 0, 0	
 		makeword "NTH", dnthz, 0, 0	
 		makeword "NIP", dnipz, 0, 0	
@@ -12558,3 +12737,7 @@ last_word:
 
 redef_word:	
 		.quad	0
+
+
+number_base:	
+		.quad 	10

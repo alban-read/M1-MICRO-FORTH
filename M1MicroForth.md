@@ -128,22 +128,23 @@ e.g.
 
 ```FORTH
 : t1 
-	127 FILLVALUES WLOCALS 
-	// filled the 16 values with 127
-	15 WLOCALS 
-	14 WLOCALS 
+ 127 FILLVALUES WLOCALS 
+ // filled the 16 values with 127
+15 WLOCALS 
+14 WLOCALS 
 	+ . 
-	;
+;
 ```
 
-Should return 254, every high level word, normally gets its own fresh set of LOCALS when it starts.
+Should return 254.
 
-They are not normally shareable between words.
+Every high level word, normally gets its own fresh set of LOCALS when it starts.
+
+They are not *normally* shareable between words.
 
 After t1 runs type 14 WLOCALS . and it will be zero, the command line level has its own set of LOCALS as well.
-
-There is no need to use LOCALS but if you write a word and think it would be handy to have some where else to briefly store a value that is not a global value or the stack, they serve that purpose.
-
+ 
+Locals are fine to use, they are not slower than juggling the stack, and they are easier to reason about.
 
 #### Advanced LOCALS usage
 
@@ -238,8 +239,15 @@ The names and addresses of the locals are listed in the table.
 | 7      | 14      | h h!             | x x!             |
 |        | 15      |                  | y y!             |
 
-e.g. h is 7 LOCALS and it contains 14 WLOCALS and 15 WLOCALS also accessible as x and y.
+e.g. h is 7 LOCALS and it overlaps 14 WLOCALS and 15 WLOCALS also the same slot is accessible in 32bit words as x and y.
 
+
+### less need for >R R>
+
+Standard FORTH tends to use >R and R> for an 'extra space' to keep values.
+Since R is also used for control flow, that is a hairy thing to do, using locals is the normal approach in this implementation.
+
+Just use g! and g instead of >R and R> in common cases.
 
 
 
@@ -455,16 +463,18 @@ CLR.A$
 
 - As this is an interpreter it is almost always slower to use two words when one word will do.
 
-- It is also faster if each word *does more*, the overhead of the interpreter is calling each word in the first place.
+- It is also faster in general if each word *does more*, there can be as much overhead from the interpreter calling each word as there is in the word itself.
 
 
 The compiler also *does not optimize*, so it is often up to the programmer to choose to use a faster optimal word not up to the compiler to invent them on the fly.
 
 A good example is that `1 + ` is slower than `1+` so if your word does `1 +` millions of times, this will have a performance impact.
 
-For this reason FORTH interpreters often come with dozens of little optimized words.
+For this reason FORTH interpreters often come with dozens of little optimized words and this is no exception. DRUP is faster than DUP DROP.
 
-The approach in this implementation is to provide a few words for defining those little words, so you can define the words your specific program actually benefits from.
+Primitive words are written in machine code and are faster than high level words written in FORTH.
+
+An approach in this implementation is to provide a few words for defining some of the optimized words, so you can define the words your specific program actually benefits from.
 
 Shifting left and right
 
@@ -640,13 +650,14 @@ A LOOP can be nested and has an index value *accessed by depth* called I, J, K.
 - I, J, K work within a word, but NOT across words.
 - LEAVE is supported ONCE in a word inside loops.
 - You can not have multiple LEAVES.
-- Partly because multiple loop termination is a garbage idea anyway.
-  - But mainly because it is horrible to code.
-
+- WHILE is supported ONCE.
+- WIERD mash-up combinations of the three different LOOPS do not work.
+	- They do in some FORTHS which is awesome and frightening.
+	
 
 #### Recursion
 
-Recusion is always an option for loops as well.
+Recusion is always an option for looping as well.
 
 Just call yourself in a word, a word knows its own name.
 
@@ -739,16 +750,27 @@ Hello :Alban
 
 #### Thoughts
 
-- Having the interpreter and token compiler implemented in assembly language does provide some benefits, such as testing the token compiled code, since the interpeter is not made out of the same token compiled code being tested.
+- Having the interpreter and token compiler implemented in ordinary assembly language does provide some benefits, such as testing the token compiled code.
+The interpeter is not made out of the same token compiled code being tested.
 
-- The interpreter in assembler, also means it is not as open to high level FORTH as it would be if it was written in FORTH.
-
-- High level FORTH does have a lot of access to the system still, various interrnal objects are also exposed as VALUES to FORTH.
+- The interpreter in assembler, also means it is not as open to high level FORTH extensibility as it would be if it was written in FORTH.
 
 - The implementation misses some of the self-extending awesome powers of standard FORTH.
   - The various compile time words are frozen forever (until you edit them) in the assembly language file.
 - Hiding the gubbins, gizards, and guts of the interpreter in the ASM file, offers the possibility of providing users with useful and safe words with which to write applications.
+-  In 30 years, the FORTH community have added Objects, a CASE statement and FOR NEXT, a couple of dozen versions of each, so in that respect I think language self extensibility is a litle bit over-rated.
 
+#### Other FORTHS
+
+I do really like the FORTHS that bootstrap from a dozen compiled words, and then implement everything in FORTH code, they are elegant and concise.
+
+I loved the FIG forth that arrived as printout, that you could type into a machine code monitor in HEX and then debug the IO for your 8 bit system.
+
+The meta compiled self-hosting FORTHS are amazing. 
+ 
+I really like and enjoy most of the different FORTHS out there, commercial and non commercial.
+
+It is nice when a language is straightforward enough that *anyone* can write a simple version of it, and most fun of all, you can write FORTH (and its interpreter) interactively and iteratively one feature at a time, always have something that works, and builds on itself over time.
 
 
 ### Performance
@@ -768,19 +790,20 @@ Simple machine code is ten or more times faster, optimized machine code is 100 o
 
 There are commercial FORTH compilers that generate code that is closer in speed to machine code.
 
+There was a brief time on 8 bit systems when FORTH could be faster than the dumb non optimizing C compilers they would run, not the case now, the investment in making C fast is unbeatable.
 
+ 
 ### C integration
 
-The intention is to write as much as reasonbly possible in Assembler.
+C functions can be used in FORTH primitives.
 
-- The assembler code can call into C code and does so for a few functions.
-- This is necessary otherwise using only system calls would be limiting even in the terminal.
-- You can add C functions to addons.c and call them from your assembler code.
-- Some existing use of C will be replaced with assembler over time.
+- The assembler code can call into C library code.
+	- e.g. add new C functions to addons.c and call them.
+- Using only system calls would be limiting even in the terminal.
 
-Over time I have added a bit more C code to the project, and used more c functions.
 
-Writing C code is not always easier than writing assembler.
+Writing C code is not always easier than writing assembler, C code is often faster, it is just a fact, the C compiler is very good.
+If code is sufficiently simple, it can still be faster in assembler.
 
 
 
@@ -796,7 +819,7 @@ I started this in November 2021, with a reasonable recollection of how FORTH wor
 
 I have not based this on any particular FORTH design template, so it has some original ideas, for good or ill, although it is essentially the same.
 
-I wanted to get some practice in with the ARM64 so I wrote this in assembler,  FORTH is allegedly written in FORTH normally.
+I wanted to get some practice in with the ARM64 so I wrote this in assembler,  FORTH is allegedly written in FORTH normally, but hardly ever in practice.
 
 First thing I did was get the outer interpreter to work, that is the interpreter that recognizes the difference between a word and a number, pushes a number to the stack and calls a word.
 
