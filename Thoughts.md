@@ -105,3 +105,26 @@ I really want fDO now
 mandel
 
 : ITERFIB 1 1 BEGIN .. dup rot rot + dup 1e9 > until ;
+
+
+
+Optimization thoughts
+
+Very few machine code instructions are needed to compile WORDS to machine code.
+
+The prologue and epilog is always the same.
+
+Get the address of the word in the dictionary relative to dend
+Set up X0, X1
+BL to word 
+
+
+LITERALS 
+Need to understand how to use MOVK to build those directly rather than using the pool.
+
+Branch forward on Zero
+Branch back
+
+And the call sequence 
+
+

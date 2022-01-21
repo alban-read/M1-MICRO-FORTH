@@ -9405,6 +9405,709 @@ dtoc:	; COMPILE in address of next word followed by (*TO)
  
 	RET
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; PLUST TO +TO
+
+; TO e.g. +10 TO MyVALUE
+
+
+
+dwptocz:	
+
+	LDR		X3, [X16, #-8] 		
+	SUB		X16, X16, #8
+
+ptoWupdateit:
+
+	LDR		X2,	 [X3, #8] 
+
+	ADRP	X1, dWvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dWvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	135f 
+
+	ADRP	X1, dWarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dWarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+	ADRP	X1, dWarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dWarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+
+	ADRP	X1, dlocalsWvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsWvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	170f 
+
+	; not a word we understand
+	B		190f
+
+
+
+
+; LIKE +TO but only for byte Sized objects
+dcptocz:	
+
+	LDR		X3, [X16, #-8] 		
+	SUB		X16, X16, #8
+
+ptoCupdateit:
+
+	LDR		X2,	 [X3, #8] 
+
+	ADRP	X1, dCarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	145f 
+
+
+	ADRP	X1, dCarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+	; not a word we understand
+
+	B		190f
+
+
+
+; LIKE +TO but only for 64bit quad L Sized objects
+
+dlptocz:
+
+	LDR		X3, [X16, #-8] 		
+	SUB		X16, X16, #8
+
+ptoLupdateit:
+
+	LDR		X2,	 [X3, #8] 
+
+	ADRP	X1, dvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	155f 
+	
+	ADRP	X1, dvaluez@PAGE	; high level word.	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	B.eq	155f 
+
+	ADRP	X1, darrayaddz@PAGE	; high level word.
+	ADD		X1, X1, darrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+	ADRP	X1, darrayvalz@PAGE	; high level word.
+	ADD		X1, X1, darrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	ADRP	X1, dlocalsvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	180f 
+
+	ADRP	X1, dstackz@PAGE	; high level word.
+	ADD		X1, X1, dstackz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	100f 
+
+	; not a word we understand
+
+	B		190f
+
+
+
+
+
+; Generic +TO checks type of word and changes the data
+; more specialized TO words can check fewer word types.
+;
+
+
+dptocz: ; (+TO) expects address of word to update in X2
+
+
+
+	LDR		X3, [X16, #-8] 
+	SUB		X16, X16, #8
+
+ptoupdateit:
+
+	LDR		X2,	 [X3, #8] 
+
+	; check type of word and select right update functions
+
+	ADRP	X1, dvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	155f 
+	
+	ADRP	X1, dvaluez@PAGE	; high level word.	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	B.eq	155f 
+
+	ADRP	X1, darrayaddz@PAGE	; high level word.
+	ADD		X1, X1, darrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	ADRP	X1, darrayvalz@PAGE	; high level word.
+	ADD		X1, X1, darrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	ADRP	X1, dlocalsvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	180f 
+
+
+	ADRP	X1, dCarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	145f 
+
+
+	ADRP	X1, dCarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+	ADRP	X1, dSTRINGz@PAGE	; high level word.
+	ADD		X1, X1, dSTRINGz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	158f 
+
+
+	ADRP	X1, dWarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dWarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+
+	ADRP	X1, dWarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dWarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+
+	ADRP	X1, dlocalsWvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsWvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	170f 
+
+
+	ADRP	X1, dHWarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dHWarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	120f 
+
+
+	ADRP	X1, dHWarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dHWarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	120f 
+
+	ADRP	X1, dstackz@PAGE	; high level word.
+	ADD		X1, X1, dstackz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	100f 
+
+	; not a word we understand
+
+	B		190f
+
+
+
+
+; The +TO updaters follow
+
+
+100:	; push onto stack
+	LDR		X0, [X3] ; base address
+	LDR		X1, [X3, #32] ; max depth
+	LDR 	X2, [X3, #16] ; stack pos
+	CMP		X2,  X1
+	B.eq	darrayaddz_index_error
+
+	LSL		X2, X2, #3
+	ADD		X1, X2, X0
+	LDR		X0, [X16, #-8] 
+	LDR		X2,	[X1]
+	ADD		X0, X0, X2
+	STR		X0, [X1]  ; store on stack
+
+	SUB		X16, X16, #8
+
+	LDR 	X2, [X3, #16] ; stack pos
+	ADD		X2, X2, #1
+	STR 	X2, [X3, #16] ; stack pos
+	RET
+
+
+
+120:
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+
+	LSL		X2, X2, #1
+	ADD		X1, X2, X0
+	LDR		W0, [X16, #-16] 
+	LDRH 	W2, [X1]
+	ADD		W0, W0, W2
+	STRH	W0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+125:	; HW word
+
+	LDR		X1, [X16, #-8] 
+	LDRH	W0, [X3] ; var or val address
+	LDRH 	W2, [X0]
+	ADD		W1, W1, W2
+	STRH	W1, [X0]  ; store 
+	SUB		X16, X16, #8
+	RET
+
+
+135:	; W word
+
+	LDR		X1, [X16, #-8] 
+	LDR		W0, [X3] ; var or val address
+	LDRH 	W2, [X0]
+	ADD		W1, W1, W2
+	STR		W1, [X0]  ; store 
+	SUB		X16, X16, #8
+	RET
+
+
+
+
+130:
+
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+
+	LSL		X2, X2, #2
+	ADD		X1, X2, X0
+	LDR		W0, [X16, #-16] 
+	LDR		W2, [X1]
+	ADD		W0, W0, W2
+	STR   	W0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+145:	; C byte
+	LDR		X1, [X16, #-8] 
+	LDR		W0, [X3] ; var or val address
+	LDR		W2, [X0]
+	ADD		W1, W1, W2
+	STRB	W1, [X0]  ; store 
+	SUB		X16, X16, #8
+	RET
+
+
+
+150:
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+
+	ADD		X1, X2, X0
+	LDR		W0, [X16, #-16] 
+	LDR 	W2, [X1]
+	ADD		W0, W0, W2
+	STRB   	W0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET	
+
+
+
+
+155:
+
+	; get variable to change
+ 
+	LDR		X1, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	
+	LDR 	X3, [X0]
+	ADD		X1, X1, X3
+
+	STR		X1, [X0]  ; store 
+
+	SUB		X16, X16, #8
+
+	RET
+
+
+158:
+
+	LDR		X1, [X16, #-8] 
+	LDR		X2, [X3]
+	ADD		X1, X1, X2
+	STR		X1, [X3]  ; store 
+	SUB		X16, X16, #8
+	RET
+
+
+
+
+160:
+	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+
+	LSL		X2, X2, #3
+	ADD		X1, X2, X0
+	LDR		X0, [X16, #-16] 
+	LDR		X2, [X1]
+	ADD		X0, X0, X2
+	STR		X0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+
+170: ; update LOCALS (32bit W) (offset from X26)
+
+ 	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #2 ;  
+	SUB		X1, X26, X2 ; LOCALS + index 
+	SUB 	X1, X1, #4
+	LDR		X0, [X16, #-16] 
+	LDR		W2, [X1]
+	ADD		W0, W0, W2
+	STR		W0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+180: ; update LOCALS (64bit) (offset from X26)
+
+ 	LDR		X2, [X16, #-8] 
+	LDR		X0, [X3] ; var or val address
+	LDR		X1, [X3, #32]
+	CMP		X2,  X1
+	B.gt	darrayaddz_index_error
+	LSL		X2, X2, #3 ; full word 8 bytes
+	SUB		X1, X26, X2 ; LOCALS + index 
+	SUB 	X1, X1, #8
+	LDR		X0, [X16, #-16] 
+	LDR		X2, [X1]
+	ADD		X0, X0, X2
+	STR		X0, [X1]  ; store 
+	SUB		X16, X16, #16
+	RET
+
+
+
+; The +TO error
+
+190:	; error out 
+
+	ADRP	X0, tcomer33@PAGE	; high level word.
+	ADD		X0, X0, tcomer33@PAGEOFF
+	B		sayit_err	
+	 
+	RET
+
+
+
+; +TO (interpreted)  just uses generic TO
+
+dplustoz:
+
+100:	
+	save_registers
+	
+	BL		advancespaces
+	BL		collectword
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+120:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f		; not found 
+
+	CMP		X21, #-1	; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
+	; found word, update it
+ 
+	restore_registers
+
+	MOV		X3,  X28
+	
+	B 		ptoupdateit
+
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		120b
+
+190:	; error out 
+	restore_registers
+	SUB 	X16, X16, #8
+	ADRP	X0, tcomer40@PAGE
+	ADD		X0, X0, tcomer40@PAGEOFF
+	B		sayit_err	 
+ 
+
+	RET
+
+
+
+
+
+
+
+; when compiling in +TO we want to check that the words are TO able or fail.
+; we compile in more specific TOs when available.
+
+dplustoc:	; COMPILE in address of next word followed by (*TO)
+
+
+	STP		LR,  XZR, [SP, #-16]!
+
+	BL		advancespaces
+	BL		collectword
+ 
+	BL		empty_wordQ
+	B.eq	190f
+
+	BL		start_point
+
+200:
+	LDR		X21, [X28, #48] ; name field
+
+	CMP		X21, #0		; end of list?
+	B.eq	190f		; not found 
+	CMP		X21, #-1	; undefined entry in list?
+	b.eq	170f
+
+	BL		get_word
+	LDR		X21, [X28, #48] ; name field
+	CMP		X21, X22		; is this our word?
+	B.ne	170f
+
+	LDR		X21, [X28, #56] ; next 8
+	BL		get_word2
+	CMP		X21, X22		;  
+	B.ne	170f			; that was 16 bytes..
+
+
+
+
+	LDR		X2,	 [X28, #8] 
+
+	; variables in four sizes
+
+	ADRP	X1, dvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+	ADRP	X1, dWvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dWvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+	ADRP	X1, dWarrayvalz@PAGE	; high level word.	
+	ADD		X1, X1, dWarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+	ADRP	X1, dHWvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dHWvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	120f 
+
+
+	ADRP	X1, dCvaraddz@PAGE	; high level word.	
+	ADD		X1, X1, dCvaraddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	140f 
+
+
+	; values
+	
+	ADRP	X1, dvaluez@PAGE	; high level word.	
+	ADD		X1, X1, dvaluez@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	; arrays in four sizes
+	ADRP	X1, darrayaddz@PAGE	; high level word.
+	ADD		X1, X1, darrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+	ADRP	X1, dWarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dWarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+
+	ADRP	X1, dlocalsWvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsWvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	130f 
+
+	ADRP	X1, dHWarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dHWarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	120f 
+
+
+	ADRP	X1, dCarrayaddz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayaddz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	140f 
+
+
+	; value arrays in four sizes.
+
+	ADRP	X1, darrayvalz@PAGE	; high level word.
+	ADD		X1, X1, darrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+
+	ADRP	X1, dstackz@PAGE	; high level word.
+	ADD		X1, X1, dstackz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+	; LOCALS
+	ADRP	X1, dlocalsvalz@PAGE	; high level word.
+	ADD		X1, X1, dlocalsvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	160f 
+
+	ADRP	X1, dCarrayvalz@PAGE	; high level word.
+	ADD		X1, X1, dCarrayvalz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+	ADRP	X1, dSTRINGz@PAGE	; high level word.
+	ADD		X1, X1, dSTRINGz@PAGEOFF
+	CMP 	X2, X1
+	B.eq	150f 
+
+	; not a word we understand 
+	B 		190f
+
+
+
+
+; we may specialize (+TO) for the Q(L), W, HW, C data sizes
+
+120:	; HW word
+
+	
+
+130:	; +TO for W sized word
+
+ 	MOV		X0, X28 ; word address
+	BL 		longlitit
+	ADD		X15, X15, #2
+	MOV  	X0, #56; (+WTO) just wide types
+	STRH    W0, [X15]     
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+
+140:	; C byte
+
+ 
+
+150:	; GENERIC  TO knows about all TO-able words
+
+	MOV		X0, X28 ; word address
+	BL 		longlitit
+	ADD		X15, X15, #2
+	MOV  	X0, #55; (+TO) generic
+	STRH    W0, [X15]     
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+	
+160:	; LONG QUAD 64bits 
+
+	MOV		X0, X28 ; word address
+	BL 		longlitit
+	ADD		X15, X15, #2
+	MOV  	X0, #58; (+LTO) generic
+	STRH    W0, [X15]     
+	LDP		LR, XZR, [SP], #16	
+	RET
+
+
+	B  		190f  ; not a word we can update 
+
+170:	; next word in dictionary
+	SUB		X28, X28, #64
+	B		200b
+
+
+190:	; error out 
+
+	ADRP	X0, tcomer33@PAGE	; high level word.
+	ADD		X0, X0, tcomer33@PAGEOFF
+	BL		sayit_err
+
+	LDP		LR, XZR, [SP], #16	
+	MOV		X0, #-1	; not a word TO can use
+ 
+	RET
+
+
+
 
 
 ; LITERALS 
@@ -12195,7 +12898,10 @@ dend:
 		makeword "(.')", 				dslitSzdot, 0,  0	; 52
 		makeword "(ALIAS)", 			daliasfromstackz, 0, 0	; 53
 		makeword "($+)", 			    dappendcz, 0, 0	; 54
-
+		makeword "(+TO)", 				dptocz, 	0,  0	; 55
+		makeword "(+WTO)", 				dwptocz, 	0,  0	; 56
+		makeword "(+CTO)", 				dcptocz, 	0,  0	; 57
+		makeword "(+LTO)", 				dlptocz, 	0,  0	; 58
 		makeemptywords 256
 
 underdict:	
@@ -12602,6 +13308,7 @@ dotdict:
 		makeword ">R", dtorz , 0, 0 
 		makeword "2R>", d2fromrz , 0, 0 
 		makeword "2>R", d2torz , 0, 0 
+		makeword "+TO", dplustoz, dplustoc, 0
 		makeword "+LOOP", dinvalintz , dploopc, 0
 		makeword "-LOOP", dinvalintz , dmloopc, 0
 		makeword "-ROT", drrotz , 0, 0
