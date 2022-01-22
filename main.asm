@@ -8115,41 +8115,102 @@ dvols26: ; vz!
 
 ;; volatile plus store
 
-dvolps1: ; va+!
+dvolps1: ; vc+!
 	LDR		X0, [X16,#-8]
-	FMOV	X1, D6
+	FMOV	X1, D8
 	ADD		X0, X0, X1
-	FMOV 	D6, X0
+	FMOV 	D8, X0
 	SUB 	X16, X16, #8
 	RET
 
-dvolps2: ; vb+!
+dvolps2: ; vd+!
 	LDR		X0, [X16,#-8]
-	FMOV	X1, D7
+	FMOV	X1, D9
 	ADD		X0, X0, X1
-	FMOV 	D7, X0
-	SUB 	X16, X16, #8
-	RET
-
-
-dvolps3: ; vc+!
-	LDR		X0, [X16,#-8]
-	FMOV	X1, D7
-	ADD		X0, X0, X1
-	FMOV 	D7, X0
+	FMOV 	D9, X0
 	SUB 	X16, X16, #8
 	RET
 
 
-dvolps4: ; vd+!
+dvolps3: ; ve+!
 	LDR		X0, [X16,#-8]
-	FMOV	X1, D7
+	FMOV	X1, D10
 	ADD		X0, X0, X1
-	FMOV 	D7, X0
+	FMOV 	D10, X0
 	SUB 	X16, X16, #8
 	RET
 
 
+dvolps4: ; vf+!
+	LDR		X0, [X16,#-8]
+	FMOV	X1, D11
+	ADD		X0, X0, X1
+	FMOV 	D11, X0
+	SUB 	X16, X16, #8
+	RET
+
+;; volatile plus plus
+
+dvolpp1: ; vc++
+	FMOV	X1, D8
+	ADD		X0, X0, X1
+	FMOV 	D8, X0
+	RET
+
+dvolpp2: ; vd++
+	FMOV	X1, D9
+	ADD		X1, X1, #1
+	FMOV 	D9, X0
+	RET
+
+
+dvolpp3: ; ve++
+	FMOV	X1, D10
+	ADD		X1, X1, #1
+	FMOV 	D10, X0
+	RET
+
+
+dvolpp4: ; vf++
+	FMOV	X1, D11
+	ADD		X1, X1, #1
+	FMOV 	D11, X0
+	RET
+
+
+
+; f+!
+
+
+
+;; volatile plus store
+
+dvolfps1: ; vcf+!
+	LDR		D0, [X16,#-8]
+	FADD		D8, D0, D8
+	SUB 	X16, X16, #8
+	RET
+
+dvolfps2: ; vdf+!
+	LDR		D0, [X16,#-8]
+	FADD		D9, D0, D9
+	SUB 	X16, X16, #8
+	RET
+
+
+dvolfps3: ; vef+!
+	LDR		D0, [X16,#-8]
+	FADD		D10, D0, D10
+	SUB 	X16, X16, #8
+	RET
+
+
+dvolfps4: ; vff+!
+	LDR		D0, [X16,#-8]
+	FADD		D11, D0, D11
+	SUB 	X16, X16, #8
+	RET
+	RET
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -13698,6 +13759,22 @@ dotdict:
 		makeword "§y!", dvols25 , 0, 0
 		makeword "§z!", dvols26 , 0, 0
 	 
+		makeword "§c+!", dvolps1 , 0, 0
+		makeword "§d+!", dvolps2 , 0, 0
+		makeword "§e+!", dvolps3 , 0, 0
+		makeword "§f+!", dvolps4 , 0, 0
+
+
+		makeword "§c++", dvolpp1 , 0, 0
+		makeword "§d++", dvolpp2 , 0, 0
+		makeword "§e++", dvolpp3 , 0, 0
+		makeword "§f++", dvolpp4 , 0, 0
+
+		makeword "§cf+!", dvolfps1 , 0, 0
+		makeword "§df+!", dvolfps2 , 0, 0
+		makeword "§ef+!", dvolfps3 , 0, 0
+		makeword "§ff+!", dvolfps4 , 0, 0
+
 
 		;makeword "2VARIABLE", dcreat2vz , 0, 0
 

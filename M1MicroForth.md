@@ -321,7 +321,11 @@ They are global not local, they will have some random value when a word starts, 
 
 The prefix will make them stand out when searching code.
 
+Setting these is NOT faster than using LOCALS or standard VALUES with TO.
 
+These do add that "teletype line-noise with a duplex mismatch during an electrical storm look" to our code that many of us miss.
+
+For §c .. §f there are ++ increment add +! and floating add f+! suffixes, that increment and add values to the volatiles respectively.
 
 #### Self reference
 
