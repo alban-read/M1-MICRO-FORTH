@@ -5,8 +5,8 @@ Can I use X6 as 64 flags rather than one, and get rid of some
 variables in the ASM code? And still be quick?
 
 
-Should BUFFER$ be renamed as B$
-Should APPEND$ be renamed as A$
+Should BUFFER$ be renamed as B$ yes
+Should APPEND$ be renamed as A$ yes
 
 Can I append a character to the end of the literal strings to control what happens to them
 
@@ -14,7 +14,7 @@ Can I append a character to the end of the literal strings to control what happe
 
 ' This stays in the buffer '$  and lives in B$
 
-' This is added to the append buffer '+ added to A$
+' This is added to the append buffer '+ added to A$  yes
 
 ' this is copied to the last alloted memory ',
 
@@ -57,7 +57,7 @@ Should there be a STACKRESET word, and where would the data live ib the header t
 
 
 
-I really want fDO now
+I really want fDO now 
 
 ( calculate and draw mandelbrot fracal )
 

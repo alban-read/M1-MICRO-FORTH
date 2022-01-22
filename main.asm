@@ -15,7 +15,7 @@
 ;; X29 frame ptr for OS/C
 ;; X30 aka LR (the return register)
 ;; X28 data section pointer
-;; X0-X7 and D0-D7, are used to pass arguments to assembly functions, 
+;; X0-X7 and D0-D7, are used to pass arguments  
 ;; X19-X28 callee 
 ;; X8 indirect result 
 
@@ -334,9 +334,6 @@ dfloadx0:
 	STR 	X0, [X16], #8
 	RET
  
-
-
-
 
 dfload:
 save_registers
@@ -2251,9 +2248,10 @@ chkdec:
 	LDRB	W0, [X22]
 	CMP		W0, #'-'
 	B.ne	positv
+
 	ADD		X22, X22, #1
 	LDRB	W0, [X22]
-
+ 
 positv:
 
 	CMP		W0, #'9'
@@ -2304,17 +2302,18 @@ litint:
 	LDR		X3, [X8]
 
 	LDRB 	W4, [X22], #1
-	CBZ 	X4, 50f
 	MOV 	X5, #0
 	CMP		X4, #'-'
 	B.ne	20f 
+	MOV 	X5, #1
+	CBZ 	X4, 40f
 
 10:	
 
 	MUL 	X1, X0, X3
 	MOV 	X0, X1
 	LDRB	W4, [X22], #1
-	CBZ 	X4, 50f
+	CBZ 	X4, 40f
 
 20:
 	SUB 	X4, X4, #48 
@@ -2335,7 +2334,7 @@ litint:
 	B.ge	40f 
 	ADD 	X0, X0, X4 
 	LDRB	W4, [X22]
-	CBZ 	X4, 50f
+	CBZ 	X4, 40f
 	B		10b 
 
 40:
@@ -2345,8 +2344,6 @@ litint:
 	SUB 	X0, XZR, X0 
 
 50:
-
-
 	STR		X0, [X16], #8
  	LDP		X5, X2, [SP], #16
 	LDP		X3, X4, [SP], #16
@@ -2759,17 +2756,20 @@ its_an_it:
 	LDR		X3, [X8]
 
 	LDRB 	W4, [X22], #1
-	CBZ 	X4, 50f
 	MOV 	X5, #0
 	CMP		X4, #'-'
 	B.ne	20f 
+	MOV 	X5, #1
+	CBZ 	X4, 40f
+
+
 
 10:	
 
 	MUL 	X1, X0, X3
 	MOV 	X0, X1
 	LDRB	W4, [X22], #1
-	CBZ 	X4, 50f
+	CBZ 	X4, 40f
 
 20:
 	SUB 	X4, X4, #48 
@@ -2790,7 +2790,7 @@ its_an_it:
 	B.ge	40f
 	ADD 	X0, X0, X4 
 	LDRB	W4, [X22]
-	CBZ 	X4, 50f
+	CBZ 	X4, 40f
 	B		10b 
 
 40:
@@ -2813,6 +2813,9 @@ check_number_size:
 	MOV		X1, X0
 	CMP		X0, X3 
 	B.gt	25f  ; too big to be
+
+	CMP 	X0, #0
+	B.lt	25f 
 
 	MOV		X0, #1 ; #LITS
 	STRH	W0, [X15]
@@ -7835,6 +7838,293 @@ ztypez: ; AKA $.
 
 nothing_to_say:
 	RET
+
+dvol0:
+	STR		D0, [X16], #8
+	RET
+
+dvol1:
+	STR		D1, [X16], #8
+	RET
+
+dvol2:
+	STR		D2, [X16], #8
+	RET
+
+dvol3:
+	STR		D3, [X16], #8
+	RET
+
+dvol4:
+	STR		D4, [X16], #8
+	RET
+
+dvol5:
+	STR		D5, [X16], #8
+	RET
+
+dvol6: ; va
+	STR		D6, [X16], #8
+	RET
+
+dvol7: ; vb
+	STR		D7, [X16], #8
+	RET
+
+dvol8: 
+	STR		D8, [X16], #8
+	RET
+
+dvol9: ; vd
+	STR		D9, [X16], #8
+	RET
+
+dvol10: ; ve
+	STR		D10, [X16], #8
+	RET
+
+dvol11: ;vf
+	STR		D11, [X16], #8
+	RET
+
+dvol12: ; vg
+	STR		D12, [X16], #8
+	RET
+
+dvol13: ; vh
+	STR		D13, [X16], #8
+	RET
+
+dvol14: ; vi
+	STR		D14, [X16], #8
+	RET
+
+dvol15: ; vj
+	STR		D15, [X16], #8
+	RET
+
+dvol16: ; vk
+	STR		D16, [X16], #8
+	RET
+
+dvol17: ;vl
+	STR		D17, [X16], #8
+	RET
+
+dvol18: ; vm
+	STR		D18, [X16], #8
+	RET
+
+dvol19: ; vn
+	STR		D19, [X16], #8
+	RET
+
+dvol20: ; vo
+	STR		D20, [X16], #8
+	RET
+
+dvol21: ; vp
+	STR		D21, [X16], #8
+	RET
+
+dvol22: ; vq
+	STR		D22, [X16], #8
+	RET
+
+dvol23: ; vr
+	STR		D23, [X16], #8
+	RET
+
+
+dvol24: ; vs
+	STR		D24, [X16], #8
+	RET
+
+
+dvol25: ; vt
+	STR		D25, [X16], #8
+	RET
+
+dvol26: ; vu
+	STR		D26, [X16], #8
+	RET
+
+dvol27: ; vv
+	STR		D27, [X16], #8
+	RET
+
+dvol28: ; vw
+	STR		D28, [X16], #8
+	RET
+
+dvol29: ; vx
+	STR		D29, [X16], #8
+	RET
+
+
+dvol30: ; vy
+	STR		D30, [X16], #8
+	RET
+
+
+dvol31: ; vz
+	STR		D31, [X16], #8
+	RET
+
+
+;; volatile store
+
+dvols1: ; va!
+	LDR		D6, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols2: ; vb!
+	LDR		D7, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+
+dvols3: ; vc!
+	LDR		D8, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+
+dvols4: ; vd!
+	LDR		D9, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+
+dvols5: ; ve!
+	LDR		D10, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols6: ; vf!
+	LDR		D11, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols7: ; vg!
+	LDR		D12, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+
+dvols8: ; vh!
+	LDR		D13, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols9: ; vi!
+	LDR		D14, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols10: ; vj!
+	LDR		D15, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols11: ; vk!
+	LDR		D16, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols12: ; vl!
+	LDR		D17, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols13: ; vm!
+	LDR		D18, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols14: ; vn!
+	LDR		D19, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols15: ; vo!
+	LDR		D20, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols16: ; vp!
+	LDR		D21, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+
+dvols17: ; vq!
+	LDR		D22, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols18: ; vr!
+	LDR		D23, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols19: ; vs!
+	LDR		D24, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols20: ; vt!
+	LDR		D25, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols21: ; vu!
+	LDR		D26, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols22: ; vv!
+	LDR		D27, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols23: ; vw!
+	LDR		D28, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols24: ; vx!
+	LDR		D29, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols25: ; vy!
+	LDR		D30, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+dvols26: ; vz!
+	LDR		D31, [X16,#-8]
+	SUB 	X16, X16, #8
+	RET
+
+
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+
+
+
 
 
 ztypec:
@@ -13227,7 +13517,6 @@ udict:
 		makeword "VALUES", dcreatvalues , dcreat_invalid, 0 
 		makeword "VARIABLE", dcreatvz , dcreat_invalid, 0
 	
-
 	 
 vdict:
 
@@ -13320,6 +13609,61 @@ dotdict:
 		makeword "?DO", dinvalintz , dqoerc, 0 
 		makeword "?IF", difqz, dqifc,  0 
 		makeword ">LAST" , 		dselectitfromstackz, 0, 0
+
+		;makeword "§a", dvol6 , 0, 0
+		;makeword "§b", dvol7 , 0, 0
+		makeword "§c", dvol8 , 0, 0
+		makeword "§d", dvol9 , 0, 0
+		makeword "§e", dvol10 , 0, 0
+		makeword "§f", dvol11 , 0, 0
+		makeword "§g", dvol12 , 0, 0
+		makeword "§h", dvol13 , 0, 0
+		makeword "§i", dvol14 , 0, 0
+		makeword "§j", dvol15 , 0, 0
+		makeword "§k", dvol16 , 0, 0
+		makeword "§l", dvol17 , 0, 0
+		makeword "§m", dvol18 , 0, 0
+		makeword "§n", dvol19 , 0, 0
+		makeword "§o", dvol20 , 0, 0
+		makeword "§p", dvol21 , 0, 0
+		makeword "§q", dvol22 , 0, 0
+		makeword "§r", dvol23 , 0, 0
+		makeword "§s", dvol24 , 0, 0
+		makeword "§t", dvol25 , 0, 0
+		makeword "§u", dvol26 , 0, 0
+		makeword "§v", dvol27 , 0, 0
+		makeword "§w", dvol28 , 0, 0
+		makeword "§x", dvol29 , 0, 0
+		makeword "§y", dvol30 , 0, 0
+		makeword "§z", dvol31 , 0, 0
+
+		;makeword "§a!", dvols1 , 0, 0
+		;makeword "§b!", dvols2 , 0, 0
+		makeword "§c!", dvols3 , 0, 0
+		makeword "§d!", dvols4 , 0, 0
+		makeword "§e!", dvols5 , 0, 0
+		makeword "§f!", dvols6 , 0, 0
+		makeword "§g!", dvols7 , 0, 0
+		makeword "§h!", dvols8 , 0, 0
+		makeword "§i!", dvols9 , 0, 0
+		makeword "§j!", dvols10 , 0, 0
+		makeword "§k!", dvols11 , 0, 0
+		makeword "§l!", dvols12 , 0, 0
+		makeword "§m!", dvols13 , 0, 0
+		makeword "§n!", dvols14 , 0, 0
+		makeword "§o!", dvols15 , 0, 0
+		makeword "§p!", dvols16 , 0, 0
+		makeword "§q!", dvols17 , 0, 0
+		makeword "§r!", dvols18 , 0, 0
+		makeword "§s!", dvols19 , 0, 0
+		makeword "§t!", dvols20 , 0, 0
+		makeword "§u!", dvols21 , 0, 0
+		makeword "§v!", dvols22 , 0, 0
+		makeword "§w!", dvols23 , 0, 0
+		makeword "§x!", dvols24 , 0, 0
+		makeword "§y!", dvols25 , 0, 0
+		makeword "§z!", dvols26 , 0, 0
+	 
 
 		;makeword "2VARIABLE", dcreat2vz , 0, 0
 

@@ -287,6 +287,38 @@ is much nicer.
 
 
 
+### Volatile global variables 
+
+These are global variables named §c .. §z 
+
+These are volatile because they are stored in the floating point 64bit registers D8 .. D31.
+
+D0-D7 are freely trashed by C functions and also used by FORTH words so they are not available for general use.
+
+The FORTH words do not use D8 .. D31, so these registers were floating around unused.
+
+Set a volatile variable with the name followed by store (!)
+
+```FORTH
+0 §c!
+```
+
+Read them just with their name.
+
+```FORTH 
+§z
+```
+
+These are floating point registers but you can store any 64bit values in them, including any floating point values.
+
+They can be used for things you might have declared a global variable for.
+
+Also they would be a useful way to set a number of values being fed into a complex primitive function, perhaps the inner loop in something doing floating point maths.
+
+They are global not local, they will have some random value when a word starts, you need to track their use in the application by multiple words.
+
+
+
 #### Self reference
 
 A word can refer to it self in its own definition (recursion) like FIB did above.
@@ -773,7 +805,7 @@ Forth words typically use dozens of tokens, very large words may use a few hundr
 
 It is a simple interpreter but FORTH is also a simple language.
 
-There are commercial FORTH compilers that generate code that is closer in speed to machine code.
+There are commercial FORTH compilers that generate code that is closer in speed to optimized machine code.
 
 There was a brief time on 8 bit systems when FORTH could claim to be faster than the dumb non optimizing C compilers available, that is not the case now. 
 
@@ -782,14 +814,37 @@ There was a brief time on 8 bit systems when FORTH could claim to be faster than
 
 C functions can be used in FORTH primitives.
 
-- The assembler code can call into C library code.
+- The assembler (asm) code can call into C library code.
 	- e.g. add new C functions to addons.c and call them.
 - Using only system calls would be limiting even in the terminal.
 
 
-Writing C code is not always simpler than writing assembler, C code is often faster, that is just a fact, the C compiler is very good.
+Writing C code is not always simpler than writing asm, C code is often faster, that is just a fact, the C compiler is very good.
 
-If code is sufficiently simple, it can still be faster to write it in assembler.
+Balanced against that, optimized C makes heavy use of all of the machines registers, so we have to preserve lots of registers that FORTH uses whenever we call into C, these are wide 64bit registers, stacking and unstacking them uses up memory bandwidth.
+
+So as a rule we want to use C code when we need to, and when the function does significant useful work, and we want to stay in the FORTH programs world most of the time to avoid that call overhead.
+
+
+If code is sufficiently simple, or at odds with the C compilers model of the machine, it can still be faster to write it in assembler.
+
+Finally it is faster in terms of getting things done, to sometimes call C, and then later in the project convert that back to asm or FORTH.
+
+### When to write FORTH
+
+The irony when writing a FORTH intepreter is that your FORTH code is relatively slow, so you may not end up writing very much FORTH.
+
+When a few millisconds does not matter, and when words are rarely used, or a specific to a particular word and not widely shared, FORTH is fine.
+
+It is a bad idea to write FORTH words that are frequently and widely used in a FORTH interpreter as the machine does *decelerate tenfold* when running them.
+
+I view the FORTH as almost the script that controls the asm and C code.
+
+The high level logic of an App should be written in FORTH, some of its key functions if they seem slow should be written in asm and added as primitive words.
+
+As many of the base primitive words as possible should be written in asm.
+
+The faster the base primitives are, the more FORTH you can reasonably write using them.
 
 
 
@@ -1103,11 +1158,11 @@ All the round bracketed words are at a fixed position in the dictionary, the com
 
 The compiler itself has no idea what an IF statement, a DO .. LOOP or a BEGIN .. UNTIL loop actually are.
 
-The compiler just knows that it needs to call any compile time functions when it finds them in a word, and the words all take care of themselves.
+The compiler just knows that it needs to call any compile time functions when it finds them in a word, and the words all work together take care of themselves.
 
 **What is the compiler?**
 
-The compiler is another loop that runs inside of the interpreter loop, it compiles in the tokens for any words with a run time action, and it immediately while compiling, runs the words with compile time actions.  
+The compiler is a loop that runs inside of the interpreter loop, it compiles in the tokens for any words with a run time action and immediately runs the words with compile time actions.  
 
 It also compiles in any literal values.
 
@@ -1161,92 +1216,6 @@ That entry was created for the word above.
 
 Compiling in literals is literally the only smart thing the compiler has to do by itself, the rest of the  work is all defined in the words that work together to compile themselves.
 
-**Example printing a string**
-
-Since there is a pool for text strings, some string statements can just create an literal address into that.
-
-The word **.'** compiles in a lit and **(.')** which does the print
-
-The STRINGS pool can be listed using .STRINGS
-
-A few words compile in literals, a function exists for that called **longlitit.**
-
-```assembly
-
-longlitit: ; COMPILE X0 into word as short or long lit
-
-	; X0 is our literal 
-	STP		X1, X3, [SP, #-16]!
-	STP		X2, X4, [SP, #-16]!
-	; halfword numbers ~32k
-	MOV		X3, #4000
-	LSL		X3, X3, #3  
-	MOV		X1, x0
-	CMP		X0, X3 
-	B.gt	25f  ; too big to be
-
-	MOV		X0, #1 ; #LITS
-	STRH	W0, [X15]
-	ADD		X15, X15, #2
-	STRH	W1, [X15]	; value
-
-	; short literal done
- 	LDP		X2, X4, [SP], #16	
-	LDP		X1, X3, [SP], #16	
-	RET
-
-25:	; long word
-	; we need to find or create this in the literal pool.
-
-	ADRP	X1, quadlits@PAGE	
-	ADD		X1, X1, quadlits@PAGEOFF
-	MOV		X3, XZR
-
-10:
-	LDR		X2, [X1]
-	CMP		X2, X0
-	B.eq	80f
-
-	CMP		X2, #-1  
-	B.eq	70f
-	CMP		X2, #-2 ; end of pool ERROR  
-	B.eq	exit_compiler_pool_full ; TODO: test
-	ADD		X3, X3, #1
-	ADD		X1, X1, #8
-	B		10b	
-
-70:
-	; literal not present 
-	; free slot found, store lit and return value
-
-	STR		X0, [X1]
-	MOV		X0, #2 ; #LITL
-	STRH	W0, [X15]
-	ADD		X15, X15, #2
-	STRH	W3, [X15]	; value = index
-
-	; long literal created and stored
-	LDP		X2, X4, [SP], #16	
-	LDP		X1, X3, [SP], #16	
-	RET
-
-80:
-	; found the literal
-	MOV		X0, #2 ; #LITL
-	STRH	W0, [X15]
-	ADD		X15, X15, #2
-	MOV		X1, X3
-	STRH	W1, [X15]	; value = index
-
-	LDP		X2, X4, [SP], #16	
-	LDP		X1, X3, [SP], #16	
-
-	;LDP		LR, X0, [SP], #16
-	RET
-
-```
-
-
 
 ##### Optimization
 
@@ -1254,16 +1223,8 @@ There is no optimization by this compiler, the words that compile themselves can
 
 The compiler does nothing at all to look at expressions and implement them in an optimized way, it is as dumb as a rock.
 
-It would be nice to add an **OPTIMIZE** word, that takes a TOKEN compiled word and just translates it to the simplest possible machine code, that would also be a good way of learning some of the nitty gritty detail of the ARM instruction set.
+It would be nice to later add an **OPTIMIZE** word, that takes a TOKEN compiled word and just translates it to the simplest possible machine code, that would also be a good way of learning some of the nitty gritty detail of the ARM instruction set.
 
-Not very many instructions need to be understood by a simple optimize word, to get some immmediate and significant speed benefits.
-
-Although a dumb machine code word would probably be ten times faster at branches, a fast compiler needs to inline code and analyze the flow of data to and from the stack for FORTH to become very fast. 
-Essentially you would write code that appeared to be using the stack, and a smart compiler would optimize away all of those stack operations into register loads and stores.
-In some ways that sounds a bit crazy, the use of the stack in FORTH was meant to be efficient in itself :)
-And would be on stack computers.
-
-MPE have commercial Forth products that produce fast code.
 
 
 ## Dictionary
@@ -2002,6 +1963,12 @@ Lists the files in the folder.
 **TO** 
 
 Sets a value, e.g. 10 TO thing.
+
+Also +TO adds to a value.
+
+e.g. 10 +TO thing 
+
+
 
 **TIMEIT**
 

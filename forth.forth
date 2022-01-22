@@ -142,8 +142,8 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 : ODD 1 AND ;
 : EVEN 1 AND  0= ;
 : UM/MOD 2DUP / a! MOD a ;
-: UNDER >R DUP R> ;
-: WITHIN OVER - a! - a  < ;
+: UNDER a! DUPa ;
+: WITHIN OVER -  a! - a  < ;
 : ROLL  
   DUP 0= IF DROP EXIT THEN
   1- SWAP > a! ROLL  
