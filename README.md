@@ -4,7 +4,7 @@
 
 ### Inspiration
 
-Inspired by FORTH, especially micro computer FORTHs of the 1980s.
+Inspired by FORTH, especially the micro computer FORTHs of the 1980s.
 
 ### purpose
 
@@ -27,11 +27,12 @@ Provide a small safe subset of user friendly FORTH (if possible.)
 
 I plan to add sound and 2D sprites and escape from the terminal, in the next phase after this.
 
-After that I will finally be able to program a Mac like it is a micro-computer again, even if it did turn into Unix.
+After that I will finally be able to program a Mac like it is a micro-computer again, even if it did turn into UNIX.
 
 
 ###  M1 MICRO FORTH - a small, simple, non-standard Forth
 
+Runs on the Mac Mini M1 under OSX.
 
 #### Features 
 
@@ -39,60 +40,56 @@ After that I will finally be able to program a Mac like it is a micro-computer a
 Aims to provide a small safe set of user/application level words.
 
 - Strings  
-    - ASCII in this version.
+    - ASCII in this version. Zero terminated.
     - string storage has its own pool, a string literal looks like  `' a string '`. 
     - string words start with $ e.g ```$.``` prints a string.
-    - zero terminated.
     - There are words to name strings
         - ```' Hello World' STRING hello_world```
     - There are words to build new strings (from substrings)
-    - I am still trying to make strings safe to use.
 - The dictionary is simplified into a single array for the headers :-
     - There are no vocabularies, a few hundred words are defined not thousands.
-    - Headers are seperated from 'code' (tokens), literals, and data.
-- The token space for 16bit tokens (compiled words) is separate from data.
-    - The token compiler creates tokens in token space and literals in literal pools.
-- Values are used and several value sizes are supported.
+    - Headers, Token Code, Literals and Data use seperate storage.
+    - Literals are stored in in literal pools.
+- VALUES are used and several value sizes are supported.
     - Values are safer as you do not work with raw addressess.
     - Values are more convenient when most access is read access.
     - Arrays of values are supported.
-- Locals 
-    - A simple and efficient LOCALS implementation.
+- LOCALS 
+    - A simple and efficient LOCALS implementation is used.
 - Introspection
     - Running words can look up their own dictionary entry with SELF^  
     - This allows words to look up their own name, data, and code.
 - Loops
-    - The usual loop constructs
+    - The usual loop constructs, with some limitations.
 - DO LOOP
     - higher lower DO ... LOOP 
     - higher lower DO ... +LOOP
     - higher lower DOWNDO ... LOOP
     - higher lower DOWNDO ... -LOOP
-    - LEAVE is only available once inside each loop.
+    - LEAVE  is only available *once* inside each loop.
 - Indefinite loops
     - BEGIN f UNTIL
     - BEGIN .. f WHILE .. REPEAT
-    - BEGIN .. f IF LEAVE THEN.. AGAIN 
+    - BEGIN .. f IF LEAVE THEN.. AGAIN 00
+    - LEAVE and WHILE are only available *once* inside each loop.0
 - I/O
     - Unix terminal KEY, EMIT, KEY?, NOECHO, RETERM (restore terminal)
     - Simplified ACCEPT to read lines
     - ``` $'' STRING user_name  ACCEPT TO user_name .' Hi ' user_name $. CR ```
-- The interpreter
+- The Interpreter
     - is mostly implemented in ARM64 assembly language.
     - uses a slot for run time and compile time primitives in each words header.
     - compiles words to a token list using half-word (16 bit tokens)
-    - longer literals are shared accross words and replaced with references to literal pools.
-    - Often compile time words, compile a helper function named (nnnnn)
-    - each high level word calls its own machine code interpreter 
-    - there are several versions of the interpreter.
-- Introspection
-    - There are words to SEE words, and to trace word execution.
-    - There are values that are views over the various storage pools.
+    - longer literals are shared accross words and held in literal pools.
+    - each high level word calls its own interpreter 
+- Inspection
+    - There are words to SEE words, and to trace words.
     - It is possible to STEP through words.
 - Memory storage
-    - The least powerful target system has 8GB of memory, and even if the OS uses 3/4 of that by itself, it leaves a vast range of memory for FORTH, given that unrestricted scenario, this implementation allocates as much memory as requested to words.
+    - The least powerful target system has 8GB of memory
+    - Memory for words and data us allocated, and resized dynamically.
 - Word redefinition 
-    - :: redefines an existing high level word, altering the behaviour of all words that use it in their definitions.
+    - :: redefines an existing word.
 
 
 ### Selfie
@@ -105,7 +102,7 @@ Aims to provide a small safe set of user/application level words.
 
 ##### Project rules
 
-This is open source, feel free to fork and improve.
+This is open source, feel free to use, fork, improve.
 
 This project does not accept pull requests.
 
@@ -126,4 +123,4 @@ I use this nice font:
 
 [https://github.com/dokutan/legacy_computing-font](Legacy computing symbols)
 
-That includes useful shapes for terminal graphics
+This font includes useful shapes for terminal graphics

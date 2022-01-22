@@ -134,8 +134,10 @@
 2  VALUE batminx
 80 VALUE batmax
 
-40 VALUE batx
-30 VALUE baty
+40 §x!
+30 §y!
+
+
 0  VALUE batxdir
 TCOL.green VALUE batclr
  
@@ -151,10 +153,9 @@ TCOL.red VALUE ballclr
 0 VALUE keypresses
 
 : atbat ( x y  --- )
-    x! y!
 	batclr FCOL 
-	x y AT clrln
-	x y AT smallbat $. 	
+	§y §x AT clrln
+	§y §x AT smallbat $. 	
 ;
 
 : atball ( x y  --- )
@@ -166,12 +167,12 @@ TCOL.red VALUE ballclr
 
 : batsball 
 	FALSE TO ballfree
-	batx 2 + TO ballx 
-	baty 1- TO bally
+	 §x 2 + TO ballx 
+	 §y 1- TO bally
 ;
 
 : showbat ( ) 
-	 batx baty atbat ;
+	atbat ;
  
 : showball ( ) 
 	ballx bally atball ;
@@ -188,12 +189,12 @@ TCOL.red VALUE ballclr
 
 
 : batmove 
-		batx batxdir + TO batx 
-		batx batmax > IF -1 TO batxdir THEN
-		batx batminx < IF 1 TO batxdir THEN
+		 §x batxdir + §x! 
+		 §x batmax > IF -1 TO batxdir THEN
+		 §x batminx < IF 1 TO batxdir THEN
 		showbat
 		ballfree 0= IF
-			batx 2 + TO ballx 
+			 §x 2 + TO ballx 
 			showball
 		THEN 
 ;
@@ -210,7 +211,7 @@ TCOL.red VALUE ballclr
 
 
 : batleft 
-	batx batminx > IF 
+	 §x batminx > IF 
 		batxdir 1 = IF 
 			0 TO batxdir
 			0 batballxdir
@@ -221,7 +222,7 @@ TCOL.red VALUE ballclr
 	THEN
 ;
 : batright 
-	batx batmax < IF 
+	 §x batmax < IF 
 		batxdir -1 = IF 
 			0 TO batxdir
 			0 batballxdir
