@@ -8113,7 +8113,41 @@ dvols26: ; vz!
 
 
 
+;; volatile plus store
 
+dvolps1: ; va+!
+	LDR		X0, [X16,#-8]
+	FMOV	X1, D6
+	ADD		X0, X0, X1
+	FMOV 	D6, X0
+	SUB 	X16, X16, #8
+	RET
+
+dvolps2: ; vb+!
+	LDR		X0, [X16,#-8]
+	FMOV	X1, D7
+	ADD		X0, X0, X1
+	FMOV 	D7, X0
+	SUB 	X16, X16, #8
+	RET
+
+
+dvolps3: ; vc+!
+	LDR		X0, [X16,#-8]
+	FMOV	X1, D7
+	ADD		X0, X0, X1
+	FMOV 	D7, X0
+	SUB 	X16, X16, #8
+	RET
+
+
+dvolps4: ; vd+!
+	LDR		X0, [X16,#-8]
+	FMOV	X1, D7
+	ADD		X0, X0, X1
+	FMOV 	D7, X0
+	SUB 	X16, X16, #8
+	RET
 
 
 

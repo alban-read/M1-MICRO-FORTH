@@ -291,11 +291,13 @@ is much nicer.
 
 These are global variables named §c .. §z 
 
-These are volatile because they are stored in the floating point 64bit registers D8 .. D31.
+The prefix symbol is found under escape and is not shifted, at least on UK keyboards.
+
+These are *volatile* because they are stored in the floating point 64bit registers D8 .. D31.
 
 D0-D7 are freely trashed by C functions and also used by FORTH words so they are not available for general use.
 
-The FORTH words do not use D8 .. D31, so these registers were floating around unused.
+The 24 remaining registers were floating around unused.
 
 Set a volatile variable with the name followed by store (!)
 
@@ -313,9 +315,11 @@ These are floating point registers but you can store any 64bit values in them, i
 
 They can be used for things you might have declared a global variable for.
 
-Also they would be a useful way to set a number of values being fed into a complex primitive function, perhaps the inner loop in something doing floating point maths.
+Also they would be a useful way to set a number of values being fed into a complex primitive function, perhaps the inner loop in something doing floating point or vector operations.
 
-They are global not local, they will have some random value when a word starts, you need to track their use in the application by multiple words.
+They are global not local, they will have some random value when a word starts, you need to track their use in your application.
+
+The prefix will make them stand out when searching code.
 
 
 
