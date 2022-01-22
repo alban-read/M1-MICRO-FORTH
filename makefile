@@ -9,4 +9,4 @@ all: mf
 	as -march="armv8.2-a+fp16" $(DEBUGFLGS) $(LSTFLGS) $< -o $@
 
 mf: main.asm
-	clang $(CFLAGS) -g  -o mf main.asm addons.c  -O1
+	clang $(CFLAGS) -g  -o mf main.asm addons.c  -O2

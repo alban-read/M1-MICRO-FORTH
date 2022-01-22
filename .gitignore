@@ -8,3 +8,4 @@ test.*
 .vscode/c_cpp_properties.json
 main5.asm
 forth.forth3
+mf

@@ -26,12 +26,15 @@
 ; X14 is the return stack
 ; X13  
 ; X12 is the tertiary pointer
-; X6  is the tracing ON/OFF register
+
+; X6  is the flags status register
+; 	11 - Trace On/Off
+;   10 - Parsing Float
+;	09 - Redefining word
 
 ;; X27 dend (start of dictionary)
 ;; X28 dictionary - current word header in the dictionary searcj=h
-;; X29 the start of the current word.
-
+ 
 ;; X22 word (text)
 ;; X23 also used for text
 
@@ -178,7 +181,7 @@
 
 .macro  trace_show_word
 
-	CBZ		X6, 	999f
+	TBZ		X6, 11, 999f	; TRON?
 
 	STP		LR,  X0, [SP, #-16]!
 	
@@ -207,7 +210,7 @@
  
 .macro  do_trace	
 
-	CBZ		X6, 	999f
+	TBZ		X6, 11, 999f ; TRON?
 	STP		LR,  X0, [SP, #-16]!
 	
 	MOV		X0, X15
@@ -1899,8 +1902,8 @@ dresetz:
 	LSL		X2, X2,#3
 	BL 		fill_mem
 
-	;  disable tracing, X6 = 0
-	MOV		X6, #0
+	;  disable tracing 
+	AND		X6, X6, #0xfffffffffffff7ff
 	BL 		beloud
 
 	; restore terminal
@@ -2061,7 +2064,7 @@ init:
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	; TROFF
-	MOV		X6, #0
+	AND	X6, X6, #0xfffffffffffff7ff
 
 	MOV 	X0, #0 ; not appending
 	ADRP	X1, append_ptr@PAGE		
@@ -2243,7 +2246,7 @@ finish_list: ; we did not find a defined word.
 
 chkdec:
 
-	MOV 	X3, #0 ; not float
+	AND		X6, X6, #0xfffffffffffffdff ; FLOAT=OFF
 
 	LDRB	W0, [X22]
 	CMP		W0, #'-'
@@ -2275,12 +2278,12 @@ ntxtdigit:
 	B		ntxtdigit
 
 fltsig: ; signal we have a float
-	MOV 	X3, #-1
+	ORR		X6, X6, #0x200 ; FLOAT=ON
 	B 		ntxtdigit
 
 digend:
 
-	CBZ 	X3, litint
+	TBZ 	X6, 9, litint ; IF NOT FLOAT
 
 litfloat:
  
@@ -2373,17 +2376,16 @@ compiler:
 
 enter_compiler:
 
-	MOV 	X0, #0
-	ADRP	X8, redef_word@PAGE		
-	ADD		X8, X8, redef_word@PAGEOFF
-	STR		X0, [X8]
+	; REDEF=OFF - default
+	AND		X6, X6, #0xfffffffffffffbff
 
 	LDRB	W0, [X22, #1]
 	CMP		W0, #':'	; redefine?
 	B.ne	not_redefinition
 
-	MOV 	X0, #-1	
-	STR		X0, [X8]
+	; REDEF=ON
+	ORR		X6, X6, #0x400 
+ 
 
 not_redefinition:
 
@@ -2418,10 +2420,9 @@ next_half:
 	b 		scan_next
 
 check_redef:
-	ADRP	X8, redef_word@PAGE		
-	ADD		X8, X8, redef_word@PAGEOFF
-	LDR		X0, [X8]
-	CBNZ	X0, free_and_build_word ; we just redefine this word
+
+	; CHECK REDEF flag
+	TBZ		X0, 10, free_and_build_word 
 	
 scan_next:
 
@@ -2448,7 +2449,7 @@ build_word:
 
 	copy_word_name
 
-	CBZ		X6, faster_mode
+	TBZ		X6, 11,  faster_mode ; TRON?
 
 	ADRP	X1, runintz@PAGE	
 	ADD		X1, X1, runintz@PAGEOFF
@@ -2462,21 +2463,7 @@ faster_mode:
 	STR		X1, [X28, #8]
 
 set_word_runtime:
-
-	;ADRP	X8, redef_word@PAGE		
-	;ADD		X8, X8, redef_word@PAGEOFF
-	;LDR		X0, [X8]
-	;CBZ 	X0, allocnew
-
-	; if redefining word then free existing
  
-	;ADRP	X1, last_word@PAGE			
-	;ADD		X1, X1, last_word@PAGEOFF
-	;LDR		X0, [X1]
-	;LDR 	X0, [X0]
-	;save_registers
-	;BL		_free
-	;restore_registers
 
 allocnew:
 
@@ -2564,11 +2551,6 @@ find_word_token:
 	CMP		X21, X22		; is this our word?
 	B.ne	keep_finding_tokens
 	
-	; yes we have found our word
-	;MOV		X0, #'.'
-	;BL		X0emit
-
-
 	; found word (at X28), get token.
 	MOV		X1, X28
 	MOV		X2, X27 ; dend
@@ -2666,7 +2648,7 @@ try_compiling_literal:
 
 
 
-	MOV     X3, #0 ; not float
+	AND		X6, X6, #0xfffffffffffffdff ; FLOAT=OFF
 20:
 	; look for an integer number  
 	; If found  store a literal in our word.
@@ -2725,15 +2707,11 @@ chkdec2:
 
 405: ; we have a float
 	MOV 	X3, #-1
-	;MOV		X0, #'f'
-	;BL		X0emit
-	B 		23b 
+ 	ORR		X6, X6, #0x200 ; FLOAT=ON
+	B 		23b ; next digit
 
 24:
-	;MOV		X0, #'*'
-	;BL		X0emit
-
-	CBZ 	X3, its_an_it
+	TBZ 	X6, 9, its_an_it ; IF NOT FLOAT
 	save_registers
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
@@ -2761,8 +2739,6 @@ its_an_it:
 	B.ne	20f 
 	MOV 	X5, #1
 	CBZ 	X4, 40f
-
-
 
 10:	
 
@@ -2851,9 +2827,6 @@ check_number_size:
 
 	STR		X0, [X1]	; into the pool
 	
-	;MOV		X0, #'|'
-	;BL		X0emit
-	
 	MOV		X0, #2 ; #LITL
 
 	STRH	W0, [X15]
@@ -2867,8 +2840,6 @@ check_number_size:
 80:
 	; found the literal
 
-	;MOV		X0, #'-'
-	;BL		X0emit
 
 	MOV		X0, #2 ; #LITL
 	STRH	W0, [X15]
@@ -2879,8 +2850,7 @@ check_number_size:
 	B		compile_next_word
 
 30:	; exit number means word not found/not number
-	;MOV		X0, #'?'
-	;BL		X0emit
+
 	B		exit_compiler_unrecognized
 
 
@@ -6603,11 +6573,11 @@ dcallc:	; CALL code field (on stack)
 ; TRACE DISPLAY ON/OFF 
 
 dtronz:
-	MOV		X6, #-1
+	ORR	X6, X6, #0x800
 	RET
 
 dtroffz:
-	MOV		X6, #0
+	AND	X6, X6, #0xfffffffffffff7ff
 	RET
 
 dtraqz:
@@ -7973,6 +7943,8 @@ dvol31: ; vz
 
 
 ;; volatile store
+;; uses floating point registers
+;; oddly not faster than reading data from memory.
 
 dvols1: ; va!
 	LDR		D6, [X16,#-8]
@@ -8181,45 +8153,36 @@ dvolpp4: ; vf++
 
 ; f+!
 
-
-
-;; volatile plus store
+;; volatile floating plus store
 
 dvolfps1: ; vcf+!
 	LDR		D0, [X16,#-8]
-	FADD		D8, D0, D8
+	FADD	D8, D0, D8
 	SUB 	X16, X16, #8
 	RET
 
 dvolfps2: ; vdf+!
 	LDR		D0, [X16,#-8]
-	FADD		D9, D0, D9
+	FADD	D9, D0, D9
 	SUB 	X16, X16, #8
 	RET
 
 
 dvolfps3: ; vef+!
 	LDR		D0, [X16,#-8]
-	FADD		D10, D0, D10
+	FADD	D10, D0, D10
 	SUB 	X16, X16, #8
 	RET
 
 
 dvolfps4: ; vff+!
 	LDR		D0, [X16,#-8]
-	FADD		D11, D0, D11
+	FADD	D11, D0, D11
 	SUB 	X16, X16, #8
 	RET
 	RET
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-
-
-
-
 
 
 ztypec:
@@ -10500,7 +10463,7 @@ dplustoc:	; COMPILE in address of next word followed by (*TO)
 
 dlitz: ; next cell has address of short (half word) inline literal
 	
-	CBZ		X6, dlitz_notrace
+	TBZ		X6, 11, dlitz_notrace
 	STP		LR,  X0, [SP, #-16]!
 	do_trace
 	LDP		LR, X0, [SP], #16	
@@ -13897,8 +13860,7 @@ last_word:
 		.quad 0	
 		.quad 0	
 
-redef_word:	
-		.quad	0
+ 
 
 
 number_base:	

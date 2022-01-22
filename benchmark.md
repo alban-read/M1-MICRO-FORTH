@@ -71,6 +71,11 @@ FLAGS 8190 + EFLAG !
 FLOAD PRIME.forth
 7953  : ms to run ( 79535  ) ns 
  
+8295  : ms to run ( 82956  ) ns 
+8299  : ms to run ( 82998  ) ns 
+
+4463  : ms to run ( 44630  ) ns 
+4344  : ms to run ( 43442  ) ns 
 
 
  
