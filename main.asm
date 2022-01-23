@@ -27,10 +27,12 @@
 ; X13  
 ; X12 is the tertiary pointer
 
-; X6  is the flags status register
+; X6  is the FORTH flags status register
 ; 	11 - Trace On/Off
 ;   10 - Parsing Float
 ;	09 - Redefining word
+; tracks various on/off states
+
 
 ;; X27 dend (start of dictionary)
 ;; X28 dictionary - current word header in the dictionary searcj=h
@@ -176,7 +178,7 @@
 	STR		X0, [X28, #56]
 .endm
 
-; trace words, check for X6<>0 
+; trace words, check for X6 TRACE flag
 ; and print a trace of the inner interpreter
 
 .macro  trace_show_word
@@ -270,8 +272,9 @@ tver:	.ascii  "M1 MICRO FORTH %2.2f JAN 2022\n"
 
 .align 8			
 
-
-
+;
+; Unix system call
+; e.g. ' ls -l' SYSTEM
 dsystem:
 
 	LDR		X0, [X16, #-8]
@@ -311,6 +314,12 @@ derrstrz:
 
 ; load loads a file
 ; and then reverts to stdin
+
+; The three file related things that happen are that
+; On startup forth.forth is loaded.
+; Later files can be loaded with FLOAD file.name
+; And otherwise the interpreter loops on getline from stdin.
+
 
 dfloadfromstackz:
 
@@ -412,6 +421,7 @@ getline:
 	BL		_fclose
 
 	BL 		from_stdin ; revert to stdin
+
 10:
     ; store count read in accepted
 	ADRP	X1, accepted@PAGE
@@ -596,7 +606,11 @@ sayword:
 	ADD		X0, X0, zword@PAGEOFF
 	B		sayit
 			
-
+; calloc is used to allocate memory for word tokens, and variable data storage.
+; the word token size is resized once we know how long a word is with realloc.
+; Forget makes some effort to reclaim space.
+; This was not slower than managing larger pools, and is more flexible.
+; It means FORTH programs can use as much memory as it likes, within reason.
  
 calloc_failed: ; yes it can fail and yes that is totally fatal.
  	STP		LR,  XZR, [SP, #-16]!
@@ -608,6 +622,9 @@ calloc_failed: ; yes it can fail and yes that is totally fatal.
  	; ... this never happens.
  	LDP		LR, XZR, [SP], #16
  	RET
+
+
+; The overflow checks are run when control returns to the interpreter.
 
 sayoverflow:
 	STP		LR,  XZR, [SP, #-16]!
@@ -1116,7 +1133,6 @@ spacesc:
 	RET
 
 
-
 ; special display words 
 
 X0prname:
@@ -1138,7 +1154,6 @@ X0prname:
 	restore_registers  
 16:
 	RET
-
 
 
 X0halfpr:
@@ -1790,7 +1805,7 @@ start_point: ; finds where to start searching the dictionary
 	CMP		W0, #'_'	
 	B.eq	157f
 
-	CMP		W0, #197 ; start of 197, 167 §	
+	CMP		W0, #197 ; start of 197, 167 = §	
 	B.eq	158f
 
 	CMP		W0, #'('	
@@ -2184,12 +2199,14 @@ init:
 	; seed RNG
 	BL 		randomize
 
-	MOVI.2D	V0, #0
+	MOVI.2D	V8, #0
+	MOVI.2D	V9, #0
+	MOVI.2D	V10, #0
+	MOVI.2D	V11, #0
+	MOVI.2D	V29, #0
+	MOVI.2D	V30, #0
+	MOVI.2D	V31, #0
 	
- 
-
-
-
 	; save terminal state
 	MOV		X0, #0
 	ADRP	X1, saved_termios@PAGE	
@@ -2219,10 +2236,11 @@ init:
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
+	
 	; TROFF
 	AND	X6, X6, #0xfffffffffffff7ff
 
-	MOV 	X0, #0 ; not appending
+	MOV 	X0, #0 ; 
 	ADRP	X1, append_ptr@PAGE		
 	ADD		X1, X1, append_ptr@PAGEOFF
 	STR		X0, [X1]
@@ -7253,6 +7271,8 @@ fastrunintz:; interpret the list of tokens at X0
 	STP		XZR, XZR, [X26],#16
 	STP		XZR, XZR, [X26],#16
 
+ 
+
 	; IP
 	SUB		X15, X0, #2
  
@@ -7995,7 +8015,7 @@ dvol7: ; vb
 	STR		D7, [X16], #8
 	RET
 
-dvol8: 
+dvol8: ; vc
 	STR		D8, [X16], #8
 	RET
 
@@ -8279,28 +8299,28 @@ dvolps4: ; vf+!
 
 dvolpp1: ; vc++
 	FMOV	X1, D8
-	ADD		X0, X0, X1
-	FMOV 	D8, X0
+	ADD		X1, X1, #1
+	FMOV 	D8, X1
 	RET
 
 dvolpp2: ; vd++
 	FMOV	X1, D9
 	ADD		X1, X1, #1
-	FMOV 	D9, X0
+	FMOV 	D9, X1
 	RET
 
 
 dvolpp3: ; ve++
 	FMOV	X1, D10
 	ADD		X1, X1, #1
-	FMOV 	D10, X0
+	FMOV 	D10, X1
 	RET
 
 
 dvolpp4: ; vf++
 	FMOV	X1, D11
 	ADD		X1, X1, #1
-	FMOV 	D11, X0
+	FMOV 	D11, X1
 	RET
 
 
@@ -8334,6 +8354,15 @@ dvolfps4: ; vff+!
 	FADD	D11, D0, D11
 	SUB 	X16, X16, #8
 	RET
+
+dvclr:
+	MOVI.2D	V8, #0
+	MOVI.2D	V9, #0
+	MOVI.2D	V10, #0
+	MOVI.2D	V11, #0
+	MOVI.2D	V29, #0
+	MOVI.2D	V30, #0
+	MOVI.2D	V31, #0
 	RET
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -13472,7 +13501,7 @@ hashdict:
 
 		makeemptywords 256
 
-
+		makeword "§clear", dvclr , 0, 0
 		;makeword "§a", dvol6 , 0, 0
 		;makeword "§b", dvol7 , 0, 0
 		makeword "§c", dvol8 , 0, 0

@@ -151,15 +151,18 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 ;
 
 : DUMP ( addr u -- )
-  BASE a!
+  BASE c!
+  2 PARAMS
+  b 8192 < IF EXIT THEN 
+  a 256 > IF EXIT THEN
   HEX
-  0 DO
-    I 10 MOD 0= IF CR DUP I + 1 U.R CHAR : EMIT THEN
+  a 0 DO
+    I 10 MOD 0= IF CR b I + 1 U.R CHAR : EMIT THEN
     I 2 MOD 0= IF SPACE THEN
-    DUP I + C@ DUP 10 < IF CHAR 0 EMIT THEN 1 .R
+    b I + C@ DUP 10 < IF CHAR 0 EMIT THEN 1 .R
   LOOP
   CR
-  a TO BASE
+  c TO BASE
 ;
 
 : MEMMOV ( src dest n -- )
@@ -231,8 +234,6 @@ ALIAS TCOL.white 	37
 // -------------------------------------------------------
 // display and count public words
 
-ALIAS	countword 	a++
-ALIAS	wordcount 	a
 ALIAS 	wordsize	64
 ALIAS 	lastword	255
 
@@ -369,7 +370,8 @@ WC WLOCALS TO _locals_only
 ;
 
 : _words_reset [ FLAT _words_reset ]
-	RMARGIN 1 TO LOCALS ;
+	RMARGIN 1 TO LOCALS 
+ ;
   
 : _words_margin  ( n -- ) [ FLAT _words_margin  ]
 	1 LOCALS SWAP 1+ - 1 TO LOCALS ;
@@ -381,14 +383,14 @@ WC WLOCALS TO _locals_only
 	_words_reset 
      DO 
 		I >NAME C@ DUP '_' <> SWAP lastword <> AND IF
-		 	I _colour_word SPACE countword
+		 	I _colour_word SPACE §c++
 			I >NAME $len _words_margin 
 			_reset? IF CR _words_reset THEN   
 		 THEN 
 	wordsize +LOOP 
 
 	TCOL.reset FCOL
-	CR wordcount . SPACE .' - Counted words. '
+	CR §c . SPACE .' - Counted words. '
 	;
 
 // shows compiler and hidden words
@@ -396,23 +398,21 @@ WC WLOCALS TO _locals_only
 	_words_reset 
      DO 
 		I >NAME C@ lastword <>  IF
-		 	I _colour_word SPACE countword
+		 	I _colour_word SPACE §c++
 			I >NAME $len _words_margin 
 			_reset? IF CR _words_reset THEN   
 		 THEN 
 	wordsize +LOOP 
 
 	TCOL.reset FCOL
-	CR wordcount . SPACE .' - Counted words. '
+	CR §c . SPACE .' - Counted words. '
 	;
 
 
-:: WORDS FINAL^ `` (  _words ;
+:: WORDS FINAL^ `` (  	0 §c! _words ;
 
-: ALLWORDS FINAL^ `` (EXIT)  _words_ ;
+: ALLWORDS FINAL^ `` (EXIT)  0 §c! _words_ ;
 
-UNALIAS	countword 	 
-UNALIAS	wordcount  
 UNALIAS lastword	 
 UNALIAS wordsize	 
 
@@ -491,7 +491,7 @@ UNALIAS counted
 // define the UTF8 unicode monster
 8 STRING _mstr 0xF0 , 0x9F , 0x91 , 0xBE , 0 , 
 
-: MSTR 
+: 👾 
 	_mstr $. ;
 
 : bold.green 
@@ -505,7 +505,7 @@ UNALIAS counted
 : Hi 
 	PAGE
 	CR bold.green 
-	MSTR SPACE .VERSION 
+	👾  SPACE .VERSION 
 	colr.reset 
 	TCOL.blue FCOL
 	WORDS CR
