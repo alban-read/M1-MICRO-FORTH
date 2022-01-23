@@ -473,7 +473,7 @@ Creates a string that points to 8 bytes of its own storage.
 
 These can be loaded with data using the comma operator 
 
-In this case the string is loaded with the UF8 code for the monster symbol. 
+In this case the string is loaded with the 4 byte UF8 code for the monster symbol. 
 
 If you print it with $. you will see 👾
 
@@ -486,6 +486,8 @@ The quote comma operate can append text like this
 // the clear line terminal escape sequence
 
 8 STRING cln 27 , ' [2K',   
+
+// 27 is the escape code , appends.
  
 ```
 
@@ -820,6 +822,21 @@ The interpeter is not made out of the same token compiled code being tested.
   - The various compile time words are frozen forever (until you edit them) in the assembly language file.
 
 
+#### Safety
+
+Safety is a goal, which may seem strange given how unsafe FORTH is.
+
+I want not to crash often, which is a high ambition.
+
+FORTH functions exist to peek and poke values into addresses, which is dangerous.
+
+To add safety the primitive words check for valid word types and bounds, *when that is feasible*, to prevent memory being stomped on by accident.
+
+This does not really slow the interpreter down much, because interpreting high level code is relatively slow, and the primitives are relatively as fast as lightning, so adding a few extra instructions to primitives to check if there is room in a string, before blatting it, and crashing, is just worth it.
+
+I think the crashiness of FORTH is one of the things that put people off it, and made them prefer BASIC back in the day.
+
+
 #### Other FORTHS
 
 I really like the FORTHS that bootstrap from a dozen compiled words, and then implement everything in FORTH code, they are elegant and concise.
@@ -874,7 +891,7 @@ Finally it is faster in terms of getting things done, to sometimes call C, and t
 
 The irony when writing a FORTH intepreter is that your FORTH code is relatively slow, so you may not end up writing very much FORTH.
 
-When a few millisconds does not matter, and when words are rarely used, or a specific to a particular word and not widely shared, FORTH is fine.
+When a few millisconds does not matter, and when words are rarely used, or are specific to a particular word and not widely shared, FORTH is fine.
 
 It is a bad idea to write FORTH words that are frequently and widely used in a FORTH interpreter as the machine does *decelerate tenfold* when running them.
 
@@ -885,6 +902,9 @@ The high level logic of an App should be written in FORTH, some of its key funct
 As many of the base primitive words as possible should be written in asm.
 
 The faster the base primitives are, the more FORTH you can reasonably write using them.
+
+The less FORTH your write when implementing FORTH the better the implementation will be at running FORTH, well maybe.
+
 
 
 
