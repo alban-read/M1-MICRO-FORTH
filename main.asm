@@ -1790,6 +1790,9 @@ start_point: ; finds where to start searching the dictionary
 	CMP		W0, #'_'	
 	B.eq	157f
 
+	CMP		W0, #197 ; start of 197, 167 §	
+	B.eq	158f
+
 	CMP		W0, #'('	
 	B.ne	200f
 
@@ -1815,6 +1818,10 @@ start_point: ; finds where to start searching the dictionary
 	ADD		X28, X28, underdict@PAGEOFF	
 	B		251f
 
+158:
+	ADRP	X28, virtdict@PAGE		
+	ADD		X28, X28, virtdict@PAGEOFF	
+	B		251f
 
 
 200:
@@ -4321,14 +4328,12 @@ dhstorec:	; ( addr value -- )
 	RET
 
 plustorz:
-
-    LDR		X0, [X16, #-8] 
-	LDR		X1, [X16, #-16]
-	
+	LDP		X1, X0, [X16, #-16]!
+	CBZ		X0, itsnull2
 	LDR 	X2, [X0]
 	ADD		X1, X1, X2
 	STR		X1, [X0]
-	SUB		X16, X16, #16
+
 	RET
 
 
@@ -13464,6 +13469,85 @@ underdict:
 
 hashdict:	
 
+
+		makeemptywords 256
+
+
+		;makeword "§a", dvol6 , 0, 0
+		;makeword "§b", dvol7 , 0, 0
+		makeword "§c", dvol8 , 0, 0
+		makeword "§d", dvol9 , 0, 0
+		makeword "§e", dvol10 , 0, 0
+		makeword "§f", dvol11 , 0, 0
+	;	makeword "§g", dvol12 , 0, 0
+	;	makeword "§h", dvol13 , 0, 0
+	;	makeword "§i", dvol14 , 0, 0
+	;	makeword "§j", dvol15 , 0, 0
+	;	makeword "§k", dvol16 , 0, 0
+	;	makeword "§l", dvol17 , 0, 0
+	;	makeword "§m", dvol18 , 0, 0
+	;	makeword "§n", dvol19 , 0, 0
+	;	makeword "§o", dvol20 , 0, 0
+	;	makeword "§p", dvol21 , 0, 0
+	;	makeword "§q", dvol22 , 0, 0
+	;	makeword "§r", dvol23 , 0, 0
+	;	makeword "§s", dvol24 , 0, 0
+	;	makeword "§t", dvol25 , 0, 0
+	;	makeword "§u", dvol26 , 0, 0
+	;	makeword "§v", dvol27 , 0, 0
+	;	makeword "§w", dvol28 , 0, 0
+		makeword "§x", dvol29 , 0, 0
+		makeword "§y", dvol30 , 0, 0
+		makeword "§z", dvol31 , 0, 0
+
+
+		;makeword "§a!", dvols1 , 0, 0
+		;makeword "§b!", dvols2 , 0, 0
+		makeword "§c!", dvols3 , 0, 0
+		makeword "§d!", dvols4 , 0, 0
+		makeword "§e!", dvols5 , 0, 0
+		makeword "§f!", dvols6 , 0, 0
+	;	makeword "§g!", dvols7 , 0, 0
+	;	makeword "§h!", dvols8 , 0, 0
+	;	makeword "§i!", dvols9 , 0, 0
+	;	makeword "§j!", dvols10 , 0, 0
+	;	makeword "§k!", dvols11 , 0, 0
+	;	makeword "§l!", dvols12 , 0, 0
+	;	makeword "§m!", dvols13 , 0, 0
+	;	makeword "§n!", dvols14 , 0, 0
+	;	makeword "§o!", dvols15 , 0, 0
+	;	makeword "§p!", dvols16 , 0, 0
+	;	makeword "§q!", dvols17 , 0, 0
+	;;	makeword "§r!", dvols18 , 0, 0
+	;	makeword "§s!", dvols19 , 0, 0
+	;	makeword "§t!", dvols20 , 0, 0
+	;	makeword "§u!", dvols21 , 0, 0
+	;	makeword "§v!", dvols22 , 0, 0
+	;	makeword "§w!", dvols23 , 0, 0
+		makeword "§x!", dvols24 , 0, 0
+		makeword "§y!", dvols25 , 0, 0
+		makeword "§z!", dvols26 , 0, 0
+
+		makeword "§c_+!", dvolps1 , 0, 0
+		makeword "§d_+!", dvolps2 , 0, 0
+		makeword "§e_+!", dvolps3 , 0, 0
+		makeword "§f_+!", dvolps4 , 0, 0
+
+
+		makeword "§c++", dvolpp1 , 0, 0
+		makeword "§d++", dvolpp2 , 0, 0
+		makeword "§e++", dvolpp3 , 0, 0
+		makeword "§f++", dvolpp4 , 0, 0
+
+		makeword "§c_f+!", dvolfps1 , 0, 0
+		makeword "§d_f+!", dvolfps2 , 0, 0
+		makeword "§e_f+!", dvolfps3 , 0, 0
+		makeword "§f_f+!", dvolfps4 , 0, 0
+
+	 
+virtdict:
+
+
 		; end of inline compiled words, relax
 
 		makeemptywords 256
@@ -13866,76 +13950,7 @@ dotdict:
 		makeword "?IF", difqz, dqifc,  0 
 		makeword ">LAST" , 		dselectitfromstackz, 0, 0
 
-		;makeword "§a", dvol6 , 0, 0
-		;makeword "§b", dvol7 , 0, 0
-		makeword "§c", dvol8 , 0, 0
-		makeword "§d", dvol9 , 0, 0
-		makeword "§e", dvol10 , 0, 0
-		makeword "§f", dvol11 , 0, 0
-		makeword "§g", dvol12 , 0, 0
-		makeword "§h", dvol13 , 0, 0
-		makeword "§i", dvol14 , 0, 0
-		makeword "§j", dvol15 , 0, 0
-		makeword "§k", dvol16 , 0, 0
-		makeword "§l", dvol17 , 0, 0
-		makeword "§m", dvol18 , 0, 0
-		makeword "§n", dvol19 , 0, 0
-		makeword "§o", dvol20 , 0, 0
-		makeword "§p", dvol21 , 0, 0
-		makeword "§q", dvol22 , 0, 0
-		makeword "§r", dvol23 , 0, 0
-		makeword "§s", dvol24 , 0, 0
-		makeword "§t", dvol25 , 0, 0
-		makeword "§u", dvol26 , 0, 0
-		makeword "§v", dvol27 , 0, 0
-		makeword "§w", dvol28 , 0, 0
-		makeword "§x", dvol29 , 0, 0
-		makeword "§y", dvol30 , 0, 0
-		makeword "§z", dvol31 , 0, 0
-
-		;makeword "§a!", dvols1 , 0, 0
-		;makeword "§b!", dvols2 , 0, 0
-		makeword "§c!", dvols3 , 0, 0
-		makeword "§d!", dvols4 , 0, 0
-		makeword "§e!", dvols5 , 0, 0
-		makeword "§f!", dvols6 , 0, 0
-		makeword "§g!", dvols7 , 0, 0
-		makeword "§h!", dvols8 , 0, 0
-		makeword "§i!", dvols9 , 0, 0
-		makeword "§j!", dvols10 , 0, 0
-		makeword "§k!", dvols11 , 0, 0
-		makeword "§l!", dvols12 , 0, 0
-		makeword "§m!", dvols13 , 0, 0
-		makeword "§n!", dvols14 , 0, 0
-		makeword "§o!", dvols15 , 0, 0
-		makeword "§p!", dvols16 , 0, 0
-		makeword "§q!", dvols17 , 0, 0
-		makeword "§r!", dvols18 , 0, 0
-		makeword "§s!", dvols19 , 0, 0
-		makeword "§t!", dvols20 , 0, 0
-		makeword "§u!", dvols21 , 0, 0
-		makeword "§v!", dvols22 , 0, 0
-		makeword "§w!", dvols23 , 0, 0
-		makeword "§x!", dvols24 , 0, 0
-		makeword "§y!", dvols25 , 0, 0
-		makeword "§z!", dvols26 , 0, 0
-	 
-		makeword "§c+!", dvolps1 , 0, 0
-		makeword "§d+!", dvolps2 , 0, 0
-		makeword "§e+!", dvolps3 , 0, 0
-		makeword "§f+!", dvolps4 , 0, 0
-
-
-		makeword "§c++", dvolpp1 , 0, 0
-		makeword "§d++", dvolpp2 , 0, 0
-		makeword "§e++", dvolpp3 , 0, 0
-		makeword "§f++", dvolpp4 , 0, 0
-
-		makeword "§cf+!", dvolfps1 , 0, 0
-		makeword "§df+!", dvolfps2 , 0, 0
-		makeword "§ef+!", dvolfps3 , 0, 0
-		makeword "§ff+!", dvolfps4 , 0, 0
-
+		
 
 		;makeword "2VARIABLE", dcreat2vz , 0, 0
 

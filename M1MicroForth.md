@@ -112,6 +112,8 @@ counter 1+ TO counter
 
 ```
 
+
+
 ### Special values
 
 Some special values are built in.
@@ -303,11 +305,72 @@ e.g.
 
 is much nicer.
 
+### VARIABLES 
+
+Variables are names that point to an address, they return an address not a value.
+
+This is why they are unsafe, they rely on using words that work on raw memory addresses which is a potentially hazardous thing to do.
+
+
+
+```FORTH
+
+\ create a variable
+10 VARIABLE fred 
+ 
+\ add to fred 
+20 fred +!
+
+\ fred returns its address
+fred .
+4307234272 
+
+
+\ fetch the value from fred
+fred @ .
+30 
+
+
+\ TO is a safer way to set the value of fred.
+7 TO fred 
+
+\ reading fred is dangerous
+fred @ . 
+7 
+
+\ set the memory at fred to a value, not safe.
+9 fred ! 
+
+Ok
+SEE fred
+SEE WORD :4307234240 fred        
+       0 :4307234272 		^VALUE [       9 ]
+       8 :4305758228 		VARIABLE 
+
+
+
+\ classic code to create a text buffer
+
+0 VARIABLE buffer 256 ALLOT 
+
+\ try this instead
+' my text ' STRING myText
+
+256 STRING myStaticString
+
+
+
+```
+
+Where possible use VALUES instead, avoid the direct memory read and write words, ! and @.
+
+None the less VARIABLE does exist, it is still useful to get the address of some memory sometimes.
+
 
 
 ### Volatile global variables 
 
-These are processor register (global volatile) variables named §c .. §z 
+These are processor register (global volatile) variables named §c .. §f
 
 The prefix symbol is found under escape and is not shifted, at least on UK keyboards.
 
@@ -326,12 +389,12 @@ Set a volatile variable with the name followed by store (!)
 Read them just with their name.
 
 ```FORTH 
-§z
+§d
 ```
 
 These are floating point registers but you can store any 64bit values in them, including any floating point values.
 
-They may be a useful way to set a number of values being fed into a complex primitive function, perhaps the inner loop in something doing floating point or vector operations.
+They are a useful way to set a number of values being fed into a complex primitive function, perhaps the inner loop in something doing floating point or vector operations.
 
 Although they are global, it is advisable to confine their use to small functions that needs a lot of (probably floating point) temporary values and peform maths operations.
 
@@ -342,6 +405,11 @@ Using these is NOT faster than using LOCALS or standard VALUES with TO.
 These do add that "teletype line-noise with a duplex mismatch during an electrical storm look" to our code that many of us miss.
 
 For §c .. §f there are ++ increment add +! and floating add f+! suffixes, that increment and add values to the volatiles respectively.
+
+I will be using these words to draw some graphics later, I want to use floating point.
+
+Meanwhile here in the terminal I have commented most of them out, not to clutter the dictionary with dozens of words.
+
 
 #### Self reference
 
@@ -473,7 +541,7 @@ Creates a string that points to 8 bytes of its own storage.
 
 These can be loaded with data using the comma operator 
 
-In this case the string is loaded with the UF8 code for the monster symbol. 
+In this case the string is loaded with the 4 byte UF8 code for the monster symbol. 
 
 If you print it with $. you will see 👾
 
@@ -486,6 +554,8 @@ The quote comma operate can append text like this
 // the clear line terminal escape sequence
 
 8 STRING cln 27 , ' [2K',   
+
+// 27 is the escape code , appends.
  
 ```
 
@@ -820,6 +890,21 @@ The interpeter is not made out of the same token compiled code being tested.
   - The various compile time words are frozen forever (until you edit them) in the assembly language file.
 
 
+#### Safety
+
+Safety is a goal, which may seem strange given how unsafe FORTH is.
+
+I want not to crash often, which is a high ambition.
+
+FORTH functions exist to peek and poke values into addresses, which is dangerous.
+
+To add safety the primitive words check for valid word types and bounds, *when that is feasible*, to prevent memory being stomped on by accident.
+
+This does not really slow the interpreter down much, because interpreting high level code is relatively slow, and the primitives are relatively as fast as lightning, so adding a few extra instructions to primitives to check if there is room in a string, before blatting it, and crashing, is just worth it.
+
+I think the crashiness of FORTH is one of the things that put people off it, and made them prefer BASIC back in the day.
+
+
 #### Other FORTHS
 
 I really like the FORTHS that bootstrap from a dozen compiled words, and then implement everything in FORTH code, they are elegant and concise.
@@ -874,7 +959,7 @@ Finally it is faster in terms of getting things done, to sometimes call C, and t
 
 The irony when writing a FORTH intepreter is that your FORTH code is relatively slow, so you may not end up writing very much FORTH.
 
-When a few millisconds does not matter, and when words are rarely used, or a specific to a particular word and not widely shared, FORTH is fine.
+When a few millisconds does not matter, and when words are rarely used, or are specific to a particular word and not widely shared, FORTH is fine.
 
 It is a bad idea to write FORTH words that are frequently and widely used in a FORTH interpreter as the machine does *decelerate tenfold* when running them.
 
@@ -885,6 +970,9 @@ The high level logic of an App should be written in FORTH, some of its key funct
 As many of the base primitive words as possible should be written in asm.
 
 The faster the base primitives are, the more FORTH you can reasonably write using them.
+
+The less FORTH your write when implementing FORTH the better the implementation will be at running FORTH, well maybe.
+
 
 
 
