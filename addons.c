@@ -117,3 +117,4 @@ extern long add_string( const char* s) {
         }
         return l;
 }
+

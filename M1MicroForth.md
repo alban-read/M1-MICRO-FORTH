@@ -92,7 +92,25 @@ To change one entry use TO
 
 Value entry 7 in myvalues becomes 1000.
 
+You can increment values efficiently using +TO
 
++TO is just like TO except it adds its argument to the VALUE.
+
+
+```FORTH
+
+0 VALUE counter
+
+counter 1+ TO counter 
+
+// is the same as 
+
+1 +TO counter 
+
+// which is shorter and faster
+
+
+```
 
 ### Special values
 
@@ -289,7 +307,7 @@ is much nicer.
 
 ### Volatile global variables 
 
-These are global variables named §c .. §z 
+These are processor register (global volatile) variables named §c .. §z 
 
 The prefix symbol is found under escape and is not shifted, at least on UK keyboards.
 
@@ -297,7 +315,7 @@ These are *volatile* because they are stored in the floating point 64bit registe
 
 D0-D7 are freely trashed by C functions and also used by FORTH words so they are not available for general use.
 
-The 24 remaining registers were floating around unused.
+The 24 remaining registers were floating around *often* unused.
 
 Set a volatile variable with the name followed by store (!)
 
@@ -313,15 +331,13 @@ Read them just with their name.
 
 These are floating point registers but you can store any 64bit values in them, including any floating point values.
 
-They can be used for things you might have declared a global variable for.
+They may be a useful way to set a number of values being fed into a complex primitive function, perhaps the inner loop in something doing floating point or vector operations.
 
-Also they would be a useful way to set a number of values being fed into a complex primitive function, perhaps the inner loop in something doing floating point or vector operations.
+Although they are global, it is advisable to confine their use to small functions that needs a lot of (probably floating point) temporary values and peform maths operations.
 
-They are global not local, they will have some random value when a word starts, you need to track their use in your application.
+The § prefix makes them stand out when searching code.
 
-The prefix will make them stand out when searching code.
-
-Setting these is NOT faster than using LOCALS or standard VALUES with TO.
+Using these is NOT faster than using LOCALS or standard VALUES with TO.
 
 These do add that "teletype line-noise with a duplex mismatch during an electrical storm look" to our code that many of us miss.
 
@@ -444,6 +460,8 @@ Static Strings
 
 A static string is a string that stores its own data outside of the shared strings pool.
 
+The idea is to define these using the STRING creating word.
+
 These are created with a length in characters (bytes.)
 
 ```FORTH
@@ -458,6 +476,20 @@ These can be loaded with data using the comma operator
 In this case the string is loaded with the UF8 code for the monster symbol. 
 
 If you print it with $. you will see 👾
+
+The quote comma operate can append text like this 
+
+```FORTH 
+
+12 STRING ' hello world', 
+
+// the clear line terminal escape sequence
+
+8 STRING cln 27 , ' [2K',   
+ 
+```
+
+
 
 
 ### Appending/building strings

@@ -1346,6 +1346,152 @@ dnumberz:
 	RET
 
 
+fnumber:    ; ( a -- f )
+
+	LDRSB	W9, [X0], #1
+	SUB		W8, W9, #48  
+	CMP		W9, #0  
+	AND		W8, W8, #0xFF
+	CCMP	W8, #9, #2, ne
+	B.ls	20f
+
+	AND		W8, W9, #0xFF
+	MOVI.2D	V0, #0
+	CMP		W8, #46  
+	B.eq	60f
+
+10:
+	MOV		W8, #0
+	AND		W9, W9, #0xFFFFFFDF
+	CMP		W9, #69   
+	B.eq 	120f
+	B		201f
+
+20:
+	MOVI.2D	V0, #0
+	FMOV	D1, #10.0 
+
+40:  
+	FMUL	D0, D0, D1
+	SUB	W8, W9, #48     
+	SCVTF	D2, W8
+	FADD	D0, D0, D2
+	LDRSB	W9, [X0], #1
+	SUB		W8, W9, #48  
+	CMP		W9, #0         
+	AND		W8, W8, #0xFF
+	CCMP	W8, #10, #2, ne
+	B.lo	40b
+
+	AND		W8, W9, #0xFF
+	CMP		W8, #46      
+	B.ne	10b
+
+60:
+	LDRB	W11, [X0]
+	CBZ		W11, 207f
+
+	MOV		X8, #0
+	ADD		X10, X0, #1       
+	FMOV	D1, #10.0 
+
+80:     
+	SXTB	W9, W11
+	SUB		W11, W11, #48       
+	AND		W11, W11, #0xFF
+	CMP		W11, #9          
+	B.hi	110f
+
+	FMUL	D0, D0, D1
+	SUB	W9, W9, #48   
+	SCVTF	D2, W9
+	FADD	D0, D0, D2
+	LDRB	W11, [X10, X8]
+	ADD	X8, X8, #1   
+	CBNZ	W11, 80b
+
+	NEG		W8, W8
+	B		201f
+
+110:
+	ADD		X10, X0, X8
+	ADD		X0, X10, #1   
+	NEG		W8, W8
+	AND		W9, W9, #0XFFFFFFDF
+	CMP		W9, #69   
+	B.ne	201f
+
+120:
+	MOV		X10, X0
+	LDRB	W11, [X10], #1
+	MOV		W9, #1
+	CMP		W11, #43    
+	B.eq	150f
+
+	CMP		W11, #45   
+	B.ne	160f
+
+	MOV		W9, #-1
+
+150:
+	ADD		X10, X0, #2   
+	LDRB	W11, [X0, #1]
+
+160:
+	SUB		W12, W11, #48   
+	CMP		W12, #9    
+	B.hi	190f
+
+	MOV		W12, #0
+	MOV		W13, #10
+
+180:    
+	MUL		W12, W12, W13
+	ADD		W11, W12, W11, uxtb
+	SUB		W12, W11, #48   
+	LDRB	W11, [X10], #1
+	SUB		W14, W11, #48    
+	CMP		W14, #10  
+	B.lo	180b
+	B		200f
+
+190:
+	MOV	W12, #0
+
+200:
+	MADD	W8, W12, W9, W8
+	
+201:
+	CMP		W8, #1
+	B.lt	204f
+
+	ADD		W8, W8, #1   
+	FMOV	D1, #10.0
+
+203:        
+	FMUL	D0, D0, D1
+	SUB		W8, W8, #1 
+	CMP		W8, #1  
+	B.gt	203b
+	B		207f
+
+204:
+	TBZ		W8, #31, 207f
+
+	MOV		X9, #-7378697629483820647
+	MOVK	X9, #39322
+	MOVK	X9, #16313, LSL #48
+
+206:      
+	FMOV	D1, X9
+	FMUL	D0, D0, D1
+	ADDS	W8, W8, #1    
+	B.lo	206b
+
+207:
+	RET
+
+
 ; number conversions
 
 word2number:	; converts ascii at word to number
@@ -1372,11 +1518,9 @@ word2fnumber:	; converts ascii at word to float number
 
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
-
 	save_registers
-	BL		_atof
-	restore_registers  
-	
+	BL		fnumber
+	restore_registers
 	STR		D0, [X16], #8
 
 	; check for overflow
@@ -2032,6 +2176,11 @@ init:
 
 	; seed RNG
 	BL 		randomize
+
+	MOVI.2D	V0, #0
+	
+ 
+
 
 
 	; save terminal state
@@ -2715,7 +2864,7 @@ chkdec2:
 	save_registers
 	ADRP	X0, zword@PAGE		
 	ADD		X0, X0, zword@PAGEOFF
-	BL 		_atof
+	BL 		fnumber
 	restore_registers 
 	FMOV  	X0, D0	; float 
 	B 		25f 	; process as long word
@@ -7106,7 +7255,7 @@ fastrunintz:; interpret the list of tokens at X0
 	; unrolling the loop here makes this a lot faster, 
 10:	; next token
 	
-	.rept	16
+	.rept	32
 
 		LDRH	W1, [X15, #2]!
 		CBZ		W1, 90f
@@ -11387,10 +11536,17 @@ intern_string_from_buffer:
 	CBNZ	X15, 128f
 
 	CMP		W2, #'+' ; append do not store
-	B.ne	128f
+	B.ne	126f
 	BL	 	append_BtoA 
     B		500f
  
+126:
+	CMP		W2, #',' ; comma in LAST word
+	B.ne	128f
+	BL	 	append_BtoL
+    B		500f
+ 
+
 
 128:
 	ADRP	X0, string_buffer@PAGE		
@@ -11439,6 +11595,48 @@ append_BtoA:
 	BL		_strncpy
 	restore_registers
 	RET
+
+append_BtoL:  ; append literal to storage in last word
+
+ 
+	; last word had better be a string then
+	ADRP	X8, last_word@PAGE		
+	ADD		X8, X8, last_word@PAGEOFF
+	LDR 	X8, [X8]
+
+	LDR		X2, [X8, #8]
+	ADRP	X1, dSTRINGz@PAGE	; high level word.	
+	ADD		X1, X1, dSTRINGz@PAGEOFF
+	CMP		X1, X2 
+	B.ne	100f 
+	; ok it is a string
+
+	LDR 	X0,	[X8]	  ; dest	
+	MOV 	W1, #0	
+	save_registers
+	BL 		 _strchr
+	restore_registers
+
+
+	LDR 	X3, [X8]  	 ; pointer 
+	SUB 	X3, X0, X3 	 ; pointer - pos
+	LDR		W2, [X8, #32] ; max length 
+	SUB 	X2, X2, X3	  ;  
+	CMP		X2, #0
+	B.le 	100f 
+
+	ADRP	X1, string_buffer@PAGE		
+	ADD		X1, X1, string_buffer@PAGEOFF
+
+	save_registers
+	BL		_strncpy
+	restore_registers
+
+100:	
+
+	RET
+
+
 
 dstrdotc:
 

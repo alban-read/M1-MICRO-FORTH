@@ -6,13 +6,13 @@
 // 
 
 8 STRING coff 
-	27 , '[' , '?' , '2' , '5' , 'l' ,  0 ,	 
+	27 , ' [?25l',  	 
 
 8 STRING con
-	27 , '[' , '?' , '2' , '5' , 'h' ,  0 ,	 
+	27 , ' [?25h',   
 
 8 STRING cln
-	27 , '[' , '2' , 'K' , 0 ,
+	27 , ' [2K',   
  
 
 : curoff coff $. ;
@@ -89,12 +89,14 @@
  
 : makesxls 
 	128 a!
-	640 0 DO 
+	512 0 DO 
 		a sixls I + makesixl 
 		a++
 	8 +LOOP 
 ;
  
+ 3 SHIFTSL 8* 
+
 : .sixl ( n )
 	8* sixls + $.
 ;
@@ -130,14 +132,15 @@
 ;
  
 
+ALIAS x a 
+ALIAS y b 
+
 
 2  VALUE batminx
 80 VALUE batmax
 
-40 §x!
-30 §y!
-
-
+40 VALUE batx
+30 VALUE baty
 0  VALUE batxdir
 TCOL.green VALUE batclr
  
@@ -152,35 +155,36 @@ TCOL.red VALUE ballclr
 
 0 VALUE keypresses
 
-: atbat ( x y  --- )
-	batclr FCOL 
-	§y §x AT clrln
-	§y §x AT smallbat $. 	
+: atbat ( x y c --- )
+	3 PARAMS
+	c FCOL 
+	x y AT clrln
+	x y AT smallbat $. 	
 ;
 
-: atball ( x y  --- )
-    x! y!
-	ballclr FCOL 
+: atball ( x y c --- )
+	3 PARAMS
+	c FCOL 
 	ballfree 0= IF 	x y AT clrln THEN
 	x y AT ballone $. 	
 ;
 
 : batsball 
 	FALSE TO ballfree
-	 §x 2 + TO ballx 
-	 §y 1- TO bally
+	batx 2 + TO ballx 
+	baty 1- TO bally
 ;
 
 : showbat ( ) 
-	atbat ;
+	batclr batx baty atbat ;
  
 : showball ( ) 
-	ballx bally atball ;
+	ballclr ballx bally atball ;
 
 : ballmove 
 		bally ballx AT 32 EMIT
-		ballx ballxdir + TO ballx 
-		bally ballydir + TO bally	
+		ballxdir +TO ballx 
+		ballydir +TO bally	
 		bally 1 < IF 
 			batsball
 		THEN
@@ -189,12 +193,12 @@ TCOL.red VALUE ballclr
 
 
 : batmove 
-		 §x batxdir + §x! 
-		 §x batmax > IF -1 TO batxdir THEN
-		 §x batminx < IF 1 TO batxdir THEN
+		batxdir +TO batx 
+		batx batmax > IF -1 TO batxdir THEN
+		batx batminx < IF 1 TO batxdir THEN
 		showbat
 		ballfree 0= IF
-			 §x 2 + TO ballx 
+			batx 2 + TO ballx 
 			showball
 		THEN 
 ;
@@ -211,7 +215,7 @@ TCOL.red VALUE ballclr
 
 
 : batleft 
-	 §x batminx > IF 
+	batx batminx > IF 
 		batxdir 1 = IF 
 			0 TO batxdir
 			0 batballxdir
@@ -222,7 +226,7 @@ TCOL.red VALUE ballclr
 	THEN
 ;
 : batright 
-	 §x batmax < IF 
+	batx batmax < IF 
 		batxdir -1 = IF 
 			0 TO batxdir
 			0 batballxdir
@@ -242,7 +246,7 @@ showbat showball
 BEGIN
   KEY? IF 
 	
-	keypresses 1+ TO keypresses
+	1 +TO keypresses
 	ballfree 0= keypresses 4 MOD 0= AND IF 
 		 0 TO ballxdir
 	THEN 
@@ -285,7 +289,9 @@ BEGIN
 AGAIN
 ;
 
- 
+UNALIAS x
+UNALIAS y
+
 
 : START 
 	PAGE

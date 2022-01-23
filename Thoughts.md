@@ -17,7 +17,7 @@ Can I append a character to the end of the literal strings to control what happe
 
 ' This is added to the append buffer '+ added to A$  yes
 
-' this is copied to the last alloted memory ',
+' this is copied to the last alloted memory ', yes - as long as it is a string.
 
 
 Can the predefined dictionary word names be elevated into the string pool at startup
