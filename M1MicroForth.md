@@ -374,7 +374,7 @@ These are processor register (global volatile) variables named §c .. §f
 
 The prefix symbol is found under escape and is not shifted, at least on UK keyboards.
 
-These are *volatile* because they are stored in the floating point 64bit registers D8 .. D31.
+These are *volatile* because they are stored in the floating point 64bit registers D8 on.
 
 D0-D7 are freely trashed by C functions and also used by FORTH words so they are not available for general use.
 
@@ -391,23 +391,20 @@ Read them just with their name.
 ```FORTH 
 §d
 
-\ clear the volatiles
+\ clear the volatiles to zero
 §clear
 
 ```
 
+These are the floating point registers but you can store any 64bit values in them, including any floating point values.
 
-
-These are floating point registers but you can store any 64bit values in them, including any floating point values.
-
-They are a useful way to set a number of values being fed into a complex primitive function, perhaps the inner loop in something doing floating point or vector operations.
-
+They are a useful way to feed values into a complex primitive function, perhaps the inner loop in something doing floating point or vector operations.
 
 The § prefix makes them stand out when searching code.
 
 Using these is NOT faster than using LOCALS or standard VALUES with TO.
 
-These do add that "teletype line-noise with a duplex mismatch during an electrical storm look" to our code that many of us miss.
+These do add that "teletype line-noise with a duplex mismatch during an electrical storm look and feel" to our code.
 
 For §c .. §f there are ++ increment add +! and floating add +! suffixes, that increment and add values to the volatiles respectively.
 
@@ -415,7 +412,9 @@ I will be using these words to draw some graphics later, I want to use floating 
 
 Meanwhile here in the terminal I have commented most of them out, not to clutter the dictionary with dozens of words.
 
-I am not sure yet how safe these are to use.
+The available volatiles are c, d, e, f, x, y and z.
+If you need more of the 24 available registers in your code, uncomment them in the asm file.
+
 
 
 #### Self reference

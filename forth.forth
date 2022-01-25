@@ -8,6 +8,8 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 // this is the locals stack
 80 256 * HEAPSIZE HEAP^ ALIGN8 TO LSP^
  
+ 
+
 // --------------------------------------------- 
 // everything below here is optional 
 
@@ -23,8 +25,6 @@ HEAP^ ALIGN8 DUP TO HERE^ TO HLAST^
 40 ADDS >DATA2  
 48 ADDS >NAME
 
-// common constants 
--1 CONSTANT -1
 
 
 // Display time spent in the program

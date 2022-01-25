@@ -1362,7 +1362,14 @@ dnumberz:
 
 
 fnumber:    ; ( a -- f )
+	MOV 	X5, #0
+	LDRB 	W9, [X0] 
+	CMP 	W9, #'-'
+	B.ne 	5f 
+	ADD		X0, X0, #1
+	MOV 	X5, #1
 
+5:
 	LDRSB	W9, [X0], #1
 	SUB		W8, W9, #48  
 	CMP		W9, #0  
@@ -1388,7 +1395,7 @@ fnumber:    ; ( a -- f )
 
 40:  
 	FMUL	D0, D0, D1
-	SUB	W8, W9, #48     
+	SUB		W8, W9, #48     
 	SCVTF	D2, W8
 	FADD	D0, D0, D2
 	LDRSB	W9, [X0], #1
@@ -1418,11 +1425,11 @@ fnumber:    ; ( a -- f )
 	B.hi	110f
 
 	FMUL	D0, D0, D1
-	SUB	W9, W9, #48   
+	SUB		W9, W9, #48   
 	SCVTF	D2, W9
 	FADD	D0, D0, D2
 	LDRB	W11, [X10, X8]
-	ADD	X8, X8, #1   
+	ADD		X8, X8, #1   
 	CBNZ	W11, 80b
 
 	NEG		W8, W8
@@ -1439,15 +1446,10 @@ fnumber:    ; ( a -- f )
 120:
 	MOV		X10, X0
 	LDRB	W11, [X10], #1
+ 
 	MOV		W9, #1
-	CMP		W11, #43    
-	B.eq	150f
-
-	CMP		W11, #45   
-	B.ne	160f
-
-	MOV		W9, #-1
-
+	
+ 
 150:
 	ADD		X10, X0, #2   
 	LDRB	W11, [X0, #1]
@@ -1471,7 +1473,7 @@ fnumber:    ; ( a -- f )
 	B		200f
 
 190:
-	MOV	W12, #0
+	MOV		W12, #0
 
 200:
 	MADD	W8, W12, W9, W8
@@ -1504,6 +1506,11 @@ fnumber:    ; ( a -- f )
 	B.lo	206b
 
 207:
+	CBZ 	X5, 300f 
+
+	FNEG 	D0, D0
+
+300:
 	RET
 
 
@@ -2970,6 +2977,7 @@ check_number_size:
 	MOV		X0, #1 ; #LITS
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
+	ADD 	W1, W1, #64 ; avoid confusion
 	STRH	W1, [X15]	; value
 	ADD		X15, X15, #2
 	B		compile_next_word
@@ -3965,11 +3973,26 @@ dbeginz: ; BEGIN runtime
 	RET
 
 
+
+dbegincz: ; BEGIN runtime
+	MOV		X2,  #'B' ;  BEGIN 
+	STP		X2,  X15, [X14], #16
+
+190:
+	RET	
+
+
 dbeginc: ; COMPILE BEGIN
+
+	MOV		X0, #59 ; (BEGIN)
+	STRH	W0, [X15] 
+ 
+
 	; Stack begins IP
 	MOV		X2,  #'B' ;  BEGIN 
 	STP		X2,  X15, [X14], #16
 	MOV		X0, #0
+
 	RET
  
 
@@ -4095,6 +4118,7 @@ dwhilec: ; COMPILE (WHILE)
 	; pop BEGIN
 	SUB		X14, X14, #16 ;  
 
+	; compile while token and offset
 	MOV		X0, #9 ; (WHILE)
 	STRH	W0, [X15] 
 	ADD		X15, X15, #2
@@ -4102,10 +4126,10 @@ dwhilec: ; COMPILE (WHILE)
 	STRH	W0, [X15] ; dummy offset
 
 	; push WHILE for REPEAT
-	MOV		X0, #9 ;  
-	STP		X0,  X15, [X14], #16 ; save branch
-	MOV		X0, #0
-	RET
+	;MOV		X0, #9 ;  
+	;STP		X0,  X15, [X14], #16 ; save branch
+	;MOV		X0, #0
+	;RET
 
 
 190:	; WHILE needs BEGIN
@@ -4131,19 +4155,30 @@ drepeatz: ; REPEAT
 170:
 	RET
 
+; repeat needs to look for multiple whiles it may contain
 
 drepeatc:	; COMPILE REPEAT
+
 	STP		LR,  X12, [SP, #-16]!
 
-	LDP		X1,  X12,  [X14, #-16]  
-	CMP		X1, #9 ; WHILE
-	B.ne 	20f
+	
+
+	; LDP		X1,  X12,  [X14, #-16]  
+	; CMP		X1, #9 ; WHILE
+	; B.ne 	20f
 
 	; FIX UP (WHILE)
-	SUB		X0, X15, X12 ; BEGIN - WHILE - REPEAT
-	ADD		X0, X0, #2
-	STRH	W0, [X12]	 ; store that
-	SUB 	X14, X14, #16
+	; SUB		X0, X15, X12 ; BEGIN - WHILE - REPEAT
+	; ADD		X0, X0, #2
+	; STRH	W0, [X12]	 ; store that
+	; SUB 	X14, X14, #16
+
+
+
+
+
+
+
 
 30:
 	MOV		X0, #0 
@@ -4169,6 +4204,19 @@ RET
 
 ; : t2 BEGIN 1+ DUP 10 > IF LEAVE THEN DUP . CR AGAIN .' fini ' DROP ;
 
+dagaincz:	; AGAIN
+
+	do_trace
+	LDP		X2, X5,  [X14, #-16] ; X5 is branch
+	CMP		X2, #'B' ;BEGIN
+	B.ne	190f
+ 
+	MOV		X15, X5	; back we go
+ 
+	RET
+
+
+
 dagainz:	; AGAIN
 
 	CBZ     X15, dinterp_invalid
@@ -4191,6 +4239,9 @@ dagainc:	; COMPILE AGAIN
 	 
 	STP		LR,  X12, [SP, #-16]!
 	
+	MOV		X0, #60 ; (AGAIN)
+	STRH	W0, [X15] 
+
 	LDP		X1, X12,  [X14, #-16] ; X5 is branch
 	CMP		X1, #13 ; (LEAVE) we MAY have a leave to patch
 	B.ne 	20f
@@ -6435,6 +6486,7 @@ dcharc: ; char - convert Char to small lit while compiling.
 	B.eq	20f
 
 20:	
+	ADD 	W0, W0, #64 ; avoid confusion
 	STRH	W0, [X15]	; value
 	ADD		X23, X23, #1
 	MOV 	X0, #0
@@ -6518,7 +6570,7 @@ dendifc:
 	
 	SUB		X4, X15, X5  ; dif between zbran and else.
 	ADD		X4, X4, #0
-	ADD		W4, W4, #32 ; avoid confusion
+	ADD		W4, W4, #64 ; avoid confusion
 	STRH	W4, [X5]	; store that
 
 	MOV		X0, #0
@@ -6529,7 +6581,7 @@ dendifc:
 	
 	SUB		X4, X15, X5  ; dif between zbran and (IF).
 	ADD		X4, X4, #4
-	ADD		W4, W4, #32 ; avoid confusion
+	ADD		W4, W4, #64 ; avoid confusion
 	STRH	W4, [X5]	; store that
 
 	MOV		X0, #0
@@ -6579,7 +6631,7 @@ delsec: ;  at compile time inlines the ELSE branch
 	
 	SUB		X4, X15, X5  ; dif between zbran and else.
 	ADD		X4, X4, #4
-	ADD		W4, W4, #32 ; avoid confusion
+	ADD		W4, W4, #64 ; avoid confusion
 	STRH	W4, [X5]	; store that
 
 	MOV		X0, #0
@@ -6615,7 +6667,7 @@ dzbranchz_notrace:
 80:
 	
 	LDRH	W0, [X15, #2]	; offset to endif
-	SUB		W0, W0, #32		; avoid confusion 
+	SUB		W0, W0, #64		; avoid confusion 
 
 	SUB		X0, X0, #2
 	ADD		X15, X15, X0	; change IP
@@ -6637,7 +6689,7 @@ dbranchz: ; (ELSE)
 	
 	do_trace	
 	LDRH	W0, [X15, #2]	; offset to endif
-	SUB		W0, W0, #32		; avoid confusion 
+	SUB		W0, W0, #64		; avoid confusion 
 	ADD		X15, X15, X0	; change IP
 
 	RET
@@ -9029,6 +9081,7 @@ longlitit: ; COMPILE X0 into word as short or long lit
 	MOV		X0, #1 ; #LITS
 	STRH	W0, [X15]
 	ADD		X15, X15, #2
+	ADD		W1, W1, #64 ; avoid confusion
 	STRH	W1, [X15]	; value
 
 	; short literal done
@@ -10655,10 +10708,11 @@ dlitz_notrace:
 	
 	ADD		X15, X15, #2		
 	LDRH	W0, [X15]
+	SUB 	W0, W0, #64 ; avoid confusion
 
 	B		stackit 
 
-dlitc: ; compile address of variable
+dlitc: ; compile address of variable 
 	RET
 
 
@@ -10666,6 +10720,7 @@ dlitlz: ; next cell has address of quad literal, held in pool
 	
 	ADD		X15, X15, #2	
 	LDRH	W0, [X15] 
+ 
  
 	ADRP	X1, quadlits@PAGE	
 	ADD		X1, X1, quadlits@PAGEOFF
@@ -13270,15 +13325,71 @@ quadbase: .quad quadlits
 quadlits:	
 ; long literal values for all words in dictionary
 
+	; I just want the tokens to start at 60
+	; above the small values the compiler looks for
+	.quad  1
+	.quad  2
+	.quad  3
+	.quad  4
+	.quad  5
+	.quad  6
+	.quad  7
+	.quad  8
+	.quad  9
+	.quad  10
+	.quad  11
+	.quad  12
+	.quad  13
+	.quad  14
+	.quad  15
 	.quad  16
+	.quad  17
+	.quad  18
+	.quad  19
+	.quad  20
+	.quad  21
+	.quad  22
+	.quad  23
+	.quad  24
+	.quad  25
+	.quad  26
+	.quad  27
+	.quad  28
+	.quad  29
+	.quad  30
+	.quad  31
 	.quad  32
+	.quad  33
+	.quad  34
+	.quad  35
+	.quad  36
+	.quad  37
+	.quad  38
+	.quad  39
+	.quad  40
+	.quad  41
+	.quad  42
+	.quad  43
+	.quad  44
+	.quad  45
+	.quad  46
+	.quad  47
+	.quad  48
 	.quad  128 
 	.quad  256 
 	.quad  512
 	.quad  1024
+	.quad  2048
+	.quad  4096
+	.quad  8192
+	.quad  16384
+	.quad  65536
+	.quad  131072 
+	.quad  262144 
+	.quad  524288 
 
 	.rept  16384	; <-- increase if literal pool full error arises.
-	.quad -1
+	.quad -1		; never occurs here as it is a defined constant
 	.endr
 	.quad  -2 ; end of literal pool. 
 	.quad  -2 
@@ -13409,10 +13520,16 @@ dend:
 
 		; primitive code word headings.
 
-		; first 32 words 
+		; first 16 words
+		; the compiler knows these words take the next token as an argument.
+		
+		; first 64 words 
 		; these are placed in this order fixed forever 
+		
 		; otherwise adding words breaks the compiler.
 		; the compiler references these token numbers.
+		; the compiler also searches for these, to avoid confusion
+		; data slots (for branches, small literals, etc) are stored +64.
 
 		; these hash words are inline compile only
 	
@@ -13482,6 +13599,11 @@ dend:
 		makeword "(+WTO)", 				dwptocz, 	0,  0	; 56
 		makeword "(+CTO)", 				dcptocz, 	0,  0	; 57
 		makeword "(+LTO)", 				dlptocz, 	0,  0	; 58
+		makeword "(BEGIN)", 			dbegincz, 	0,  0	; 59
+		makeword "(AGAIN)", 			dagaincz, 	0,  0	; 60
+		makeword "(REPEAT)", 			0, 	0,  0	; 61
+		makeword "(62)", 			dbegincz, 	0,  0	; 62
+		makeword "(63)", 			dbegincz, 	0,  0	; 63
 		makeemptywords 256
 
 underdict:	
@@ -13951,7 +14073,12 @@ dotdict:
 
 		makeword "*/", dstarslshz, 0,  10
 		makeword "*/MOD", dstarslshzmod, 0,  10
-		 
+
+		; hardcoded as MUST NOT be literals
+		makeword "-1", dconstz , 0, -1 
+		makeword "-2", dconstz , 0, -2 
+		;
+		
 		makeword "10*", tentimez , 0, 0
 		makeword "10/", tendivz , 0, 0
 		makeword "<=", dltez, 0 , 0
