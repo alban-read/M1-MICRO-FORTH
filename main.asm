@@ -4116,21 +4116,16 @@ dwhilec: ; COMPILE (WHILE)
 	B.ne	190f
 
 	; pop BEGIN
-	SUB		X14, X14, #16 ;  
+	; SUB		X14, X14, #16 ;  
 
-	; compile while token and offset
+ 
 	MOV		X0, #9 ; (WHILE)
 	STRH	W0, [X15] 
 	ADD		X15, X15, #2
-	MOV		X0, #1234 
+	MOV		X0, #27 ; open slot
 	STRH	W0, [X15] ; dummy offset
-
-	; push WHILE for REPEAT
-	;MOV		X0, #9 ;  
-	;STP		X0,  X15, [X14], #16 ; save branch
-	;MOV		X0, #0
-	;RET
-
+	RET
+ 
 
 190:	; WHILE needs BEGIN
 
@@ -4143,6 +4138,21 @@ dwhilec: ; COMPILE (WHILE)
  
 ; BEGIN -- f WHILE -- REPEAT
 
+
+drepeatcz: ; REPEAT
+	do_trace
+
+	LDP		X2, X5,  [X14, #-16] ; X5 is branch
+	CMP		X2, #'B' ;BEGIN
+	B.ne	190f
+
+	MOV		X15, X5	; back we go
+170:
+	; pop BEGIN as we continue forward.
+	SUB		X14, X14, #16 ;  
+	RET
+
+
 drepeatz: ; REPEAT
 	CBZ     X15, dinterp_invalid
 	do_trace
@@ -4153,38 +4163,126 @@ drepeatz: ; REPEAT
 
 	MOV		X15, X5	; back we go
 170:
+	SUB		X14, X14, #16 ;  
 	RET
 
 ; repeat needs to look for multiple whiles it may contain
 
+; : t1 BEGIN a 10 < WHILE a . a++ REPEAT ;
+
 drepeatc:	; COMPILE REPEAT
 
 	STP		LR,  X12, [SP, #-16]!
+	STP		X5,  X3, [SP, #-16]!
 
-	
+ 	SUB		X14, X14, #16 ;  drop begin stacked
 
-	; LDP		X1,  X12,  [X14, #-16]  
-	; CMP		X1, #9 ; WHILE
-	; B.ne 	20f
-
-	; FIX UP (WHILE)
-	; SUB		X0, X15, X12 ; BEGIN - WHILE - REPEAT
-	; ADD		X0, X0, #2
-	; STRH	W0, [X12]	 ; store that
-	; SUB 	X14, X14, #16
-
-
-
-
-
-
-
-
-30:
-	MOV		X0, #0 
-	LDP		LR, X12, [SP], #16	
+	ADRP	X1, last_word@PAGE		
+	ADD		X1, X1, last_word@PAGEOFF
+	LDR		X1, [X1]
+	LDR 	X3, [X1] ; base of the tokens
  
-RET
+	MOV		X0, #61 ; (REPEAT)
+	STRH	W0, [X15] 
+	
+	SUB 	X12, X15, #2 ; my position -2
+	
+	MOV 	X5, #0	; loop depth
+
+	; we now scan the word backwards from here to the start
+
+
+10:	
+
+	; trace what we are doing
+	BL		saycr
+	MOV 	X0, X12
+	BL 		X0addrpr
+	LDRH	W0, [X12]
+	BL 		X0halfpr
+	MOV 	X0, X5 
+	BL 		X0halfpr
+	; end trace
+	CBNZ 	X5, 50f ; not at our loop level
+
+ 	LDRH	W0, [X12]
+	CMP 	W0, #27 ; open slot?
+	B.ne	20f 	 
+	
+	SUB 	X12, X12, #2 ; check for while token
+	LDRH 	W0, [X12]	
+	CMP 	W0, #9 
+	B.ne	94f	
+
+	; if we get here we have a valid while slot
+	; that we need to update
+
+	; trace
+
+	BL		saycr
+	MOV 	X0, X12
+	BL 		X0addrpr
+
+	LDRH	W0, [X12]
+	BL 		X0halfpr
+	MOV 	X0, X5 
+	BL 		X0halfpr
+
+	SUB 	X0, X15, X12 
+	BL 		X0halfpr	; raw offset
+	; end trace
+	
+	ADD 	X12, X12, #2 
+	SUB 	X0, X15, X12 
+	ADD 	X0, X0, #62 ; avoid confusion -2
+	STRH 	W0, [X12]
+	SUB  	X12, X12, #4 ; below token and slot
+
+20:
+
+
+
+
+50:
+	; depth checks
+	LDRH 	W0, [X12] 
+	CMP 	W0, #59 ; (BEGIN) 
+	B.ne	55f
+	SUB 	X5, X5, #1 ; below 	
+	B 		94f
+
+55: 
+	LDRH 	W0, [X12] 
+	CMP 	W0, #60 ; (AGAIN) 
+	B.ne	56f
+	ADD 	X5, X5, #1 ; above 	
+	B 		94f
+
+56: 
+	LDRH 	W0, [X12] 
+	CMP 	W0, #60 ; (REPEAT) 
+	B.ne	57f
+	ADD 	X5, X5, #1 ; above 	
+	B 		94f
+
+
+57:	; TODO (UNTIL)
+
+
+
+94:
+	SUB 	X12, X12, #2
+
+95:
+	CMP 	X12, X3 
+	B.gt 	10b
+
+160:
+	MOV		X0, #0 
+	LDP		X5, X3, [SP], #16	
+	LDP		LR, X12, [SP], #16	
+
+	RET
 
 
 170:	; Error - no BEGIN for our REPEAT.
@@ -4646,7 +4744,6 @@ dseez:
 
 	LDR		X0, [X28]	
 	BL		X0addrpr
-
 
 
 12010:
@@ -13564,7 +13661,7 @@ dend:
 		makeword "(END)", 		dendz, 0 , 0			; 24
 		makeword "(DOCOL)",		0, 	0,  0				; 25
 		makeword "(?DOER)", 	stckqdoargsz, 	0,  0	; 26
-		makeword "(27)", 		0, 	0,  0				; 27
+		makeword "<OPENSLOT", 	0, 	0,  0				; 27
 		makeword "(28)", 		0, 	0,  0				; 28
 		makeword "(29)", 		0, 	0,  0				; 29
 		makeword "(@)", 		datz, 	0,  0			; 30
@@ -13601,7 +13698,7 @@ dend:
 		makeword "(+LTO)", 				dlptocz, 	0,  0	; 58
 		makeword "(BEGIN)", 			dbegincz, 	0,  0	; 59
 		makeword "(AGAIN)", 			dagaincz, 	0,  0	; 60
-		makeword "(REPEAT)", 			0, 	0,  0	; 61
+		makeword "(REPEAT)", 			drepeatcz, 	0,  0	; 61
 		makeword "(62)", 			dbegincz, 	0,  0	; 62
 		makeword "(63)", 			dbegincz, 	0,  0	; 63
 		makeemptywords 256
