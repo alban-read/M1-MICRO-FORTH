@@ -8,7 +8,7 @@ Inspired by FORTH, especially the micro computer FORTHs of the 1980s.
 
 ### purpose
 
-Learn ARM64, have fun, create useful things.
+Learn ARM64, have fun, create useful things.ßß
 
 Provide a small safe subset of user friendly FORTH (if possible.)
 
@@ -16,18 +16,11 @@ Provide a small safe subset of user friendly FORTH (if possible.)
 
 - The "write a small FORTH in 10,000 lines of assembly or less", is almost complete.
 
-- The write "ten thousand lines of FORTH to test the small FORTH works correctly and safely" is now in progress.
+- The write "ten thousand lines of FORTH to test the small FORTH works correctly and safely" is planned next.
 
 - The application is running in the terminal for now.
 
-    - I find running things in a game loop, is a really good way to test they work, so I am writing some dumb terminal games.
-
-- During this phase I also plan to rewrite some of the brutally stupid 'algorithms' in the interpreter.
-    - Any that waste shed loads of memory, or are slow.
-
-I plan to add sound and 2D sprites and escape from the terminal, in the next phase after this.
-
-After that I will finally be able to program a Mac like it is a micro-computer again, even if it did turn into UNIX.
+- There has been a months long delay since easter thanks to persistent 'brain fog' from mild Covid.
 
 
 ###  M1 MICRO FORTH - a small, simple, non-standard Forth
@@ -43,19 +36,20 @@ Aims to provide a small safe set of user/application level words.
     - ASCII in this version. Zero terminated.
     - string storage has its own pool, a string literal looks like  `' a string '`. 
     - string words start with $ e.g ```$.``` prints a string.
+    - identical strings are interned in the pool once.
     - There are words to name strings
         - ```' Hello World' STRING hello_world```
     - There are words to build new strings (from substrings)
 - The dictionary is simplified into a single array for the headers :-
     - There are no vocabularies, a few hundred words are defined not thousands.
-    - Headers, Token Code, Literals and Data use seperate storage.
-    - Literals are stored in in literal pools.
+    - Headers, Token Code, Literals and Data use seperate storage areas.
+    - Literals are stored in various literal pools.
 - VALUES are used and several value sizes are supported.
     - Values are safer as you do not work with raw addressess.
     - Values are more convenient when most access is read access.
     - Arrays of values are supported.
 - LOCALS 
-    - A simple and efficient LOCALS implementation is used.
+    - A simple LOCALS implementation is used.
 - Introspection
     - Running words can look up their own dictionary entry with SELF^  
     - This allows words to look up their own name, data, and code.
@@ -66,7 +60,7 @@ Aims to provide a small safe set of user/application level words.
     - higher lower DO ... +LOOP
     - higher lower DOWNDO ... LOOP
     - higher lower DOWNDO ... -LOOP
-    - LEAVE  is only available *once* inside each loop.
+    - LEAVE  is for the moment only available *once* inside each loop.
 - Indefinite loops
     - BEGIN f UNTIL
     - BEGIN .. f WHILE .. REPEAT
@@ -74,20 +68,21 @@ Aims to provide a small safe set of user/application level words.
     - LEAVE and WHILE are only available *once* inside each loop.0
 - I/O
     - Unix terminal KEY, EMIT, KEY?, NOECHO, RETERM (restore terminal)
-    - Simplified ACCEPT to read lines
+    - Simplified ACCEPT used to read lines
     - ``` $'' STRING user_name  ACCEPT TO user_name .' Hi ' user_name $. CR ```
 - The Interpreter
     - is mostly implemented in ARM64 assembly language.
+    - some C and use of standard C library.
     - uses a slot for run time and compile time primitives in each words header.
-    - compiles words to a token list using half-word (16 bit tokens)
-    - longer literals are shared accross words and held in literal pools.
+    - compiles words to a token list using half-word sized (16 bit) tokens.
+    - longer literals are shared accross words and interned in literal pools.
     - each high level word calls its own interpreter 
 - Inspection
     - There are words to SEE words, and to trace words.
     - It is possible to STEP through words.
 - Memory storage
     - The least powerful target system has 8GB of memory
-    - Memory for words and data us allocated, and resized dynamically.
+    - Memory for words and data is allocated, and resized dynamically.
 - Word redefinition 
     - :: redefines an existing word.
 

@@ -4067,8 +4067,10 @@ duntilc: ; COMPILE in UNTIL
 
 
 ; : t3 BEGIN  1 + DUP 10 < WHILE DUP . CR REPEAT ;
-dwhilez: ; WHILE needs a foward branch to REPEAT
-	CBZ     X15, dinterp_invalid
+
+dwhilez: ; WHILE needs its foward branch to REPEAT
+
+	CBZ     X15, dinterp_invalid 
 	do_trace
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
@@ -4088,8 +4090,8 @@ dwhilez: ; WHILE needs a foward branch to REPEAT
 
 	ADD		X15, X15, #2
 	LDRH	W5, [X15]
-	SUB		X5, X5, #2
-	ADD		X15, X15, X5 ; jump to REPEAT
+	SUB		X5, X5, #62	; avoid confusion
+	ADD		X15, X15, X5 ; jump forward to REPEAT
 170:
 	RET 
 
@@ -4139,32 +4141,37 @@ dwhilec: ; COMPILE (WHILE)
 ; BEGIN -- f WHILE -- REPEAT
 
 
-drepeatcz: ; REPEAT
+drepeatcz: ; REPEAT compiled in (REPEAT)
+
+	STP		LR,  X12, [SP, #-16]!
 	do_trace
 
 	LDP		X2, X5,  [X14, #-16] ; X5 is branch
 	CMP		X2, #'B' ;BEGIN
 	B.ne	190f
 
+
+
+	LDR 	W0, [X15]
+	BL		X0halfpr
+
+	LDR 	W0, [X15]
+	SUB 	X0, X0, #64 	; avoid confusion
+	SUB 	X0, X15, X0	; back we go
+
 	MOV		X15, X5	; back we go
+
 170:
 	; pop BEGIN as we continue forward.
-	SUB		X14, X14, #16 ;  
+ 	;ADD		X15, X15, #2	; skip param
+	LDP		LR, X12, [SP], #16	
 	RET
 
 
 drepeatz: ; REPEAT
 	CBZ     X15, dinterp_invalid
-	do_trace
-
-	LDP		X2, X5,  [X14, #-16] ; X5 is branch
-	CMP		X2, #'B' ;BEGIN
-	B.ne	190f
-
-	MOV		X15, X5	; back we go
-170:
-	SUB		X14, X14, #16 ;  
 	RET
+
 
 ; repeat needs to look for multiple whiles it may contain
 
@@ -4175,22 +4182,56 @@ drepeatc:	; COMPILE REPEAT
 	STP		LR,  X12, [SP, #-16]!
 	STP		X5,  X3, [SP, #-16]!
 
+	; look for begin ignore leave
+	; detect loop crossing if then
+10:
+	LDP		X1, X2,  [X14, #-16]  
+	CMP 	X1, #'B'
+	B.ne	20f	
  	SUB		X14, X14, #16 ;  drop begin stacked
+	B 		40f 
+
+20:
+	CMP 	X1, #13 ; (LEAVE)
+	B.ne	30f
+	SUB		X14, X14, #16 ;  drop leave stacked
+
+30:
+	CMP 	X1, #3 ; (IF)
+	B.eq	170f 
+	B 		10b 
+
+40:
+
+	; restack begin
+
+	;MOV		X0, #'B' ;  
+	;STP		X0,  X2, [X14], #16 
+
 
 	ADRP	X1, last_word@PAGE		
 	ADD		X1, X1, last_word@PAGEOFF
 	LDR		X1, [X1]
 	LDR 	X3, [X1] ; base of the tokens
- 
-	MOV		X0, #61 ; (REPEAT)
+
+	; my position -2
+	SUB 	X12, X15, #2 
+
+	; compile in repeat and slot
+	MOV		X0, #6 ; (REPEAT)
 	STRH	W0, [X15] 
-	
-	SUB 	X12, X15, #2 ; my position -2
+	ADD		X15, X15, #2
+	MOV 	W0, #72
+	STRH	W0, [X15] 
+ 	
+
+
 	
 	MOV 	X5, #0	; loop depth
 
 	; we now scan the word backwards from here to the start
 
+repeatc:
 
 10:	
 
@@ -4207,12 +4248,17 @@ drepeatc:	; COMPILE REPEAT
 
  	LDRH	W0, [X12]
 	CMP 	W0, #27 ; open slot?
-	B.ne	20f 	 
+	B.ne	50f 	 
 	
+
+	; we detected an open slot (token 27)
+	; we now look for tokens that use an open slot
+	; leave and while
+
 	SUB 	X12, X12, #2 ; check for while token
 	LDRH 	W0, [X12]	
-	CMP 	W0, #9 
-	B.ne	94f	
+	CMP 	W0, #9 ; (WHILE)
+	B.ne	20f	
 
 	; if we get here we have a valid while slot
 	; that we need to update
@@ -4231,23 +4277,74 @@ drepeatc:	; COMPILE REPEAT
 	SUB 	X0, X15, X12 
 	BL 		X0halfpr	; raw offset
 	; end trace
-	
+
 	ADD 	X12, X12, #2 
 	SUB 	X0, X15, X12 
-	ADD 	X0, X0, #62 ; avoid confusion -2
+	ADD 	X0, X0, #62 ; avoid confusion  
+	STRH 	W0, [X12]
+	SUB  	X12, X12, #4 ; below token and slot
+	B 		50f 
+	; finish with while
+
+
+20:
+	LDRH 	W0, [X12]	
+	CMP 	W0, #13 ; (LEAVE) 
+	B.ne	94f	
+ 
+
+	; if we get here we have a valid leave slot
+	; that we need to update
+
+	; trace
+
+	BL		saycr
+	MOV 	X0, X12
+	BL 		X0addrpr
+
+	LDRH	W0, [X12]
+	BL 		X0halfpr
+	MOV 	X0, X5 
+	BL 		X0halfpr
+
+	SUB 	X0, X15, X12 
+	BL 		X0halfpr	; raw offset
+	; end trace
+
+	ADD 	X12, X12, #2 
+	SUB 	X0, X15, X12 
+	ADD 	X0, X0, #66 ; avoid confusion -2
 	STRH 	W0, [X12]
 	SUB  	X12, X12, #4 ; below token and slot
 
-20:
+	B 	50f
 
-
+25:
 
 
 50:
 	; depth checks
+
+
 	LDRH 	W0, [X12] 
 	CMP 	W0, #59 ; (BEGIN) 
 	B.ne	55f
+	CBNZ	X5, 53f 
+	
+	; this is our begin so we can stop looking
+	MOV 	X0, #'<'
+	BL 		X0emit
+
+	; fix up begin branch
+	SUB 	X0, X15, X12 
+	ADD 	X0, X0, #62 	; avoid confusion  64 -2
+	STRH 	W0, [X15]	
+
+
+
+	B 	160f
+
+53:
 	SUB 	X5, X5, #1 ; below 	
 	B 		94f
 
@@ -4260,7 +4357,7 @@ drepeatc:	; COMPILE REPEAT
 
 56: 
 	LDRH 	W0, [X12] 
-	CMP 	W0, #60 ; (REPEAT) 
+	CMP 	W0, #6 ; (REPEAT) 
 	B.ne	57f
 	ADD 	X5, X5, #1 ; above 	
 	B 		94f
@@ -4275,7 +4372,7 @@ drepeatc:	; COMPILE REPEAT
 
 95:
 	CMP 	X12, X3 
-	B.gt 	10b
+	B.ge 	10b
 
 160:
 	MOV		X0, #0 
@@ -4399,12 +4496,11 @@ dleavez:	; just LEAVE the enclosing loop
 	CMP		X2, #'B' ;BEGIN
 	B.ne	190f
 
-	; I am in a BEGIN loop, pop it now and AGAIN will end
+	; I am in a BEGIN loop, 
+	; pop BEGIN and jump past loop end.
 	SUB		X14, X14, #16
-
-	; however I want to LEAVE right NOW not after one extra step.
-
 	LDRH	W0, [X15, #2]
+	SUB 	X0, X0, #64 
 	ADD		X15, X15, X0 ; change IP
 
 	do_trace
@@ -4418,6 +4514,7 @@ dleavez:	; just LEAVE the enclosing loop
 
 	SUB		X14, X14, #32
 	LDRH	W0, [X15, #2]
+	SUB 	X0, X0, #64 ; avoid confusion
 	ADD		X15, X15, X0 ; change IP
 	RET
 
@@ -4439,7 +4536,7 @@ dleavec:	; COMPILE LEAVE create branch slot, look out for IF
 	MOV		X0, #13 ; (LEAVE)
 	STRH	W0, [X15] 
 	ADD		X15, X15, #2
-	MOV		X0, #4321
+	MOV		X0, #27 ; (open slot)
 	STRH	W0, [X15] ; slot
 
 	LDP		X1, X2,  [X14, #-16]  
@@ -6634,14 +6731,10 @@ dqifc:
 	RET			
 
 
-
-
 dendifz: ; AKA THEN AKA ENDIF
 	CBZ     X15, dinterp_invalid
 	RET
 
-
-	
 
 ; ENDIF	
 ; We are part of IF ..  ENDIF or IF .. ELSE  .. ENDIF
@@ -13638,7 +13731,7 @@ dend:
 		makeword "(IF)", 	dzbranchz, 0,  0			; 3
 		makeword "(ELSE)", dbranchz, 0,  0				; 4
 		makeword "(?IF)", 	dzqbranchz, 0,  0			; 5
-		makeword "(6)", 0, 0,  0						; 6
+		makeword "(REPEAT)", drepeatcz, 0,  0			; 6
 		makeword "(7)", 0, 0,  0						; 7
 		makeword "(8)", 0, 0,  0						; 8
 		makeword "(WHILE)", dwhilez, 0,  0				; 9
@@ -13698,7 +13791,7 @@ dend:
 		makeword "(+LTO)", 				dlptocz, 	0,  0	; 58
 		makeword "(BEGIN)", 			dbegincz, 	0,  0	; 59
 		makeword "(AGAIN)", 			dagaincz, 	0,  0	; 60
-		makeword "(REPEAT)", 			drepeatcz, 	0,  0	; 61
+		makeword "(61)", 			0, 	0,  0	; 61
 		makeword "(62)", 			dbegincz, 	0,  0	; 62
 		makeword "(63)", 			dbegincz, 	0,  0	; 63
 		makeemptywords 256

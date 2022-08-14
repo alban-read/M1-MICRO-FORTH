@@ -12,12 +12,13 @@ This FORTH is implemented mainly in AARCH64 assembly language (main.asm), and ru
 
 This is not a standard implementation, I am aiming to provide a *very small* set of practical FORTH like words that improve comfort, safety and convenience for the user of the language (such as me.) 
 
-- Throwing in 'everything and the kitchen sink in case it may some day be useful' is contrary to FORTH principles.
+- Throwing in 'everything and the kitchen sink in case it may some day be useful' is counter to FORTH principles.
 
-- I expect to extend the ASM file as I write my own apps, I plan to test and script my apps in FORTH and assembly language, with C to connect with the OS.
+- I expect to extend the ASM file as I write my own apps, I plan to test and script my apps in FORTH and assembly language, using C to connect with the OS.
+- There is no assembler defined in FORTH, the machines assembler is used.
 
 
-Untyped - Storage has no type, words are only aware of the *size of storage cells* not what they contain.
+Untyped - Storage has no type other than the *size of storage cells* used.
 
 The syntax follows FORTH closely, including reverse polish notation, composition of new words *(functions)* by word concatenation, very similar control flow constructs etc.
 
@@ -27,12 +28,12 @@ The compiler compiles words to tokens, which are then executed by a simpler inte
 
 The inner interpreter:-
 
-- is not running all of the time in this implementation.
+- is not running at the command line in this implementation.
 
-- only runs when a high level word is executing, otherwise the interpreter and compiler are just running machine code, the interpeter and compiler are not written in FORTH.
+- only runs when a high level word is executing, otherwise the  command line interpreter and compiler are just running machine code, the interpeter and compiler are written in ASM, they are not written in FORTH.
 
 
-Each high level word invokes an interpreter to run itself, multiple different versions of the interpreter(s) exist, and they can be selected after the word has been compiled or while it is being compiled.
+Each high level word invokes a version of the inner interpreter to run itself, multiple different versions of the interpreter(s) exist, and they can be selected after the word has been compiled or while it is being compiled.
 
 I am using a certain ammount of *brute force and ignorance* in the current design of this program, which may not scale, but which works for the moment, in the spirit of getting up and running.  
 
@@ -53,28 +54,32 @@ Values are preferred to VARIABLES, as they are much safer to use, and simpler to
 
 - A value has no type, it could be used to represent an int, float, char etc.
 
-- A value has only a size in bits, the base VALUE is 64 bits.
+- A value has only a size in bits, the base VALUE size is 64 bits.
 
 
 ```FORTH
 199 VALUE myvalue
 ```
 
-A value is read and printed with dot.
+A value may be read (fetched to the stack) by calling itself, and then printed with dot.
+
 ```FORTH
 myvalue .
 ```
-A value is changed with the TO word
+
+A value is set with the TO word
 ```FORTH
 200 TO myvalue
 ```
+
 The default cell size for values is 8 (64 bits) each element can store a large integer value or a double float, they are untyped other than bit length.
 
 An array of values is created with the VALUES plural word.
 ```FORTH
 128 VALUES myvalues 
 ```
-The VALUES are allotted from pools of memory that are zero filled, so all values will initially read as 0.
+
+These VALUES are allotted from pools of memory that are zero filled, so all values will initially read as 0.
 
 To change every value.
 ```FORTH
@@ -82,7 +87,7 @@ To change every value.
 ```
 Every entry in myvalues becomes 1.
 
-To change one entry use TO
+To change one entry use TO while providing the new value and index 
 
 ```FORTH
 1000 7 TO myvalues 
@@ -90,7 +95,7 @@ To change one entry use TO
 7 myvalues .
 ```
 
-Value entry 7 in myvalues becomes 1000.
+Value entry 7 in myvalues is set to 1000.
 
 You can increment values efficiently using +TO
 
@@ -125,26 +130,26 @@ These are not FORTH standard words.
 
 I believe that LOCALS are key to making FORTH words easier and safer.
 
-LOCALS provide each word with eight (64bit) local variables.
+LOCALS provide each word with only eight (64bit) local variables.
 
-- LOCALS is a special array of values of length 8 (0..7) that provide some small local memory storage for each word invocation. 
+- LOCALS can be treated as a special array of values of length 8 (0..7) that provide some small local memory storage for each word invocation. 
 
 - LOCALS backing memory is implemented as a stack, allowing about 250 levels of depth.
 
-On entry to a word LOCALS are erased, all values will be read as zero.
+On entry to a word LOCALS are erased, all values will be initally read as zero.
 
-- LOCALS cease to exist and are reused when a word ends.
+- LOCALS cease to exist and are later reused when a word ends.
 
 
 Storage for WLOCALS
 
-- WLOCALS use the same memory as LOCALS providing word sized access (32bits) to 16 (0..15) Values.
+- WLOCALS use the same memory as LOCALS providing word sized access (32bits) to 16 (0..15) Values (rather than 8.)
 
 - If it is more convenient to have 16 smaller values use WLOCALS instead of LOCALS
 
 - These are both just views over the same 64 bytes of memory in the local memory stack.
 
-To recap locals are recreated between **:** and **;** 
+To recap locals are auto created between **:** and **;** 
 
 e.g.
 
@@ -179,25 +184,25 @@ You may have a recursive word that you do not want to eat into the LOCALS stack.
 ```FORTH
 : FIB ( n -- n1 ) [ FLAT FIB ] DUP 1> IF  1- DUP 1- FIB SWAP FIB + THEN ;
 ```
-This makes FIB a very, very, tiny fraction faster, since the LOCALS are not slow.
+This makes FIB a very, very, tiny fraction faster, since the allocation of LOCALS are not slow.
 
 
 ##### LOCAL Accessor words.
 
-A **FLAT** word has no locals of its own so it sees the locals of its parent word, that is the word that called it, or the command line.
+A **FLAT** word has no locals of its own - it sees the locals of its parent word, the parent being the word that called it, or the command line.
 
 - Using the standard local access can be cumbersome, the name LOCALS does not mean much.
 
-- **FLAT** words can be used to create words for accessing the parents locals, in the simplest case this just lets you give local variables some sensible names.
+- **FLAT** words can be used to create new words for accessing the parents locals, in the simplest case this just lets you give local variables with some meaningful names.
 
 
 ```FORTH
 // allocate a local to our speed.
 
-: set-speed [ FLAT set-speed ]
+: set-speed ( n -- ) [ FLAT set-speed ]
 	0 TO LOCALS ;
 
-: speed [ FLAT speed ] 
+: speed ( -- n ) [ FLAT speed ] 
 	0 LOCALS ; 
 
 : test 
@@ -206,7 +211,7 @@ A **FLAT** word has no locals of its own so it sees the locals of its parent wor
 
 ```
 
-set-speed and speed are working on the LOCALS shared with test.
+set-speed and speed are working on the LOCALS array shared with test.
 
 Accessor words *could* do a lot more, like checking that the given speed is valid etc.
 
@@ -219,7 +224,7 @@ You can simply read LOCALS also using some predefined accessors.
 
 These are named a .. h 
 
-Set them with *n* a .. h! 
+Set them with *n* a! .. h! 
 e.g.
 
 ```FORTH
@@ -228,7 +233,7 @@ e.g.
 Prints 10.
 
 There is a handy accessor for just counting.
-Provided for a, b, c and d.
+Provided only for a, b, c and d.
 
 ```FORTH 
 a++
@@ -237,7 +242,7 @@ a++
 The **a** is set to zero when the word starts, **a++** adds one.
 
 
-LOCALS whatever we name them use the same storage, some of the names overlap with each other.
+LOCALS whatever we name them use the same storage meaning some of the names overlap with each other.
 
 
 The names and addresses of the locals are listed in the table.
@@ -273,23 +278,23 @@ h is also accessible as two 32bit words called x and y.
 ### less need for >R R>
 
 Standard FORTH tends to use >R and R> for 'extra space' to keep values.
-Since R is also used for control flow, that seems like a dangerous thing to do, using locals is the normal approach in this implementation.
+Since R is also used for control flow, that seems like a dangerous thing to do, using locals is the normal approach in this FORTH implementation.
 
 Just use e! and e instead of >R and R> in common cases.
 
 ### use LOCALS from parameters ###
 
-You can feed up to 8 (64bit) parameters from the stack into LOCALS with the PARAMS word.
+You can feed up to 8 (64bit) parameters from the stack into the words LOCALS with the PARAMS word.
 
 ```FORTH
 : sq 1 PARAMS a a * ;
 ```
 
-`1 PARAMS` loads the argument into a.
+`1 PARAMS` loads 1 argument from the stack into a.
 
 If there are not enough parameters on the stack this will cause an error.
 
-The LOCALS are available in several way
+The LOCALS are available in several ways
 
 For example they can be accessed with a .. h
 
@@ -362,7 +367,7 @@ SEE WORD :4307234240 fred
 
 ```
 
-Where possible use VALUES instead, avoid the direct memory read and write words, ! and @.
+Where possible use VALUES instead of variables to avoid the direct memory read and write words, ! and @.
 
 None the less VARIABLE does exist, it is still useful to get the address of some memory sometimes.
 
@@ -404,13 +409,12 @@ The § prefix makes them stand out when searching code.
 
 Using these is NOT faster than using LOCALS or standard VALUES with TO.
 
-These do add that "teletype line-noise with a duplex mismatch during an electrical storm look and feel" to our code.
 
 For §c .. §f there are ++ increment add +! and floating add +! suffixes, that increment and add values to the volatiles respectively.
 
 I will be using these words to draw some graphics later, I want to use floating point.
 
-Meanwhile here in the terminal I have commented most of them out, not to clutter the dictionary with dozens of words.
+ 
 
 The available volatiles are c, d, e, f, x, y and z.
 If you need more of the 24 available registers in your code, uncomment them in the asm file.
@@ -419,7 +423,7 @@ If you need more of the 24 available registers in your code, uncomment them in t
 
 #### Self reference
 
-A word can refer to it self in its own definition (recursion) like FIB did above.
+A word can refer to itself in its own definition (recursion) like FIB did above.
 
 Also a word has pointers to itself available.
 
@@ -427,9 +431,9 @@ There are two special variables that allow a word to see it is own address.
 
 These are 
 
-- **CODE^** which points to the words token code.
+- **CODE^** which points to the current words token code.
 
-- **SELF^** which points to the words dictionary header.
+- **SELF^** which points to the current words dictionary header.
 
 In a **FLAT** word, these usefully both point at the parent words CODE and HEADER.
 
@@ -455,20 +459,18 @@ SELF^ may be more useful, as a word can use it to look inside its own dictionary
 A word can print its own name for example with 
 
 ```FORTH
-SELF^ 48 + $. 
+SELF^ >NAME $. 
 ```
 
 Again a new flat word could be created to print its parents name
 
 ```FORTH
 
-48 ADDS >NAME
-
 : .name [ FLAT .name ] SELF^ >NAME $. ;
 
 ```
 
-These two values are stored on the LOCALS stack, below the locals.
+These two values (SELF^ and CODE^ ) are stored on the LOCALS stack, below the locals.
 
 
 
@@ -476,7 +478,7 @@ These two values are stored on the LOCALS stack, below the locals.
 
 Strings are intentionally non standard.
 
-Strings are zero-terminated. To emphasize the *major* differences from standard FORTH, string literals here use single quotes not double quotes.
+Strings are zero-terminated. To emphasize the *major* differences from standard FORTH, string literals here use single quotes not normal FORTH double quotes.
 
 
 A string is created with an initial text value like this.
@@ -499,11 +501,11 @@ $'' STRING myEmptyString
 Is how to create an initially empty string.
 
 
-- A string should not normally be mutated, each unique string exists only once in the string pool, changing one would impact all usages everywhere in a program.
+- A string should not normally be mutated, each unique string exists only once in the string pool, changing one would impact all other usages everywhere in a program.
 
 - Strings can be compared with $= and $== which check if they are same and $COMPARE wich checks if one is equal, greater, or less than the other.
 
--  The STRING word points to the string pool storage and gives it a name.
+-  The STRING word creates a new word that points to the string pool storage and gives it a name.
 
 Just as you can create a STRING you can also create a number of strings.
 
@@ -536,7 +538,7 @@ A static string is a string that stores its own data outside of the shared strin
 
 The idea is to define these using the STRING creating word.
 
-These are created with a length in characters (bytes.)
+These are created with an additional length in characters (bytes.)
 
 ```FORTH
 // define the UTF8 unicode monster
@@ -551,7 +553,7 @@ In this case the string is loaded with the 4 byte UF8 code for the monster symbo
 
 If you print it with $. you will see 👾
 
-The quote comma operate can append text like this 
+The quote comma operator can append text like this 
 
 ```FORTH 
 
@@ -677,7 +679,7 @@ There is a hardly visible stack used for the local variables made available to e
 
 #### Stack values
 
-We also have stack values, these are extremely simple, and only allow values to be pushed or popped. There are none of the features of the main parameter stack.
+We also have user stacks, these are extremely simple, and only allow values to be pushed or popped. There are none of the features of the main parameter stack.
 
 Like most stacks, the last thing added is the first thing removed LIFO (last in first out)
 
@@ -709,7 +711,7 @@ file_handles .
 
 - The storage of a stack is initially set to all zeros.
 
-- A STACK resembles a VALUES object, that maintains a reference to the last item pushed.
+- A STACK resembles a VALUES array object, that maintains its own reference to the last item pushed.
 
  
 
@@ -718,7 +720,7 @@ file_handles .
 
 Floating point words begin with f e.g. f.
 
-Numbers containing a decimal point . are taken to be floating point numbers.
+Numbers containing a decimal point . are assumed to be floating point numbers.
 
 The same parameter stack is used, which may hold 64 bit (double) floats or 64 bit (quad) integers.
 
@@ -766,7 +768,7 @@ It also works in a compiled word e.g.
 
 #### Compiled Loops
 
-These loops work only inside of compiled words.
+These loops work only inside of compiled words, not at the command line.
 
 DO LOOP counts between Finish and Start 
 
@@ -786,7 +788,7 @@ A LOOP can be nested and has an index value *accessed by depth* called I, J, K.
 #### Loop limitations
 
 - I, J, K work within a word, but NOT across words.
-- LEAVE is supported ONCE in a word inside loops.
+- LEAVE is supported ONCE in a word inside of loops.
 - You can not have multiple LEAVES.
 - WHILE is supported only ONCE.
 - WIERD mash-up combinations of the three different LOOPS do not work.
@@ -807,7 +809,7 @@ Any repeating word can also be expressed using **BEGIN** .. **EXIT** .. **AGAIN*
 
 ### Input and output.
 
-The IO is presently set up for the UNIX terminal.
+The I/O is presently set up for the UNIX terminal.
 
 The interpreter accepts lines from the terminal, with buffering, the input is often STDIN, although the input can sometimes be a file, as it is at startup.
 
@@ -847,11 +849,11 @@ FORTH typically only implements `PAGE` to clear the screen and `AT-XY` to place 
 
 The input normally just uses UNIX getline.
  
-You can load another file with FLOAD filename (from the ok prompt)
+You direct FORTH console to load from a file with FLOAD filename (from the ok prompt only)
 
 ##### Line input
 
-You can accept a line of text from the user with ACCEPT e.g.
+You can accept a line of text from a user with ACCEPT e.g.
 
 ```FORTH
 
@@ -906,7 +908,7 @@ FORTH functions exist to peek and poke values into addresses, which is dangerous
 
 To add safety the primitive words check for valid word types and bounds, *when that is feasible*, to prevent memory being stomped on by accident.
 
-This does not really slow the interpreter down much, because interpreting high level code is relatively slow, and the primitives are relatively as fast as lightning, so adding a few extra instructions to primitives to check if there is room in a string, before blatting it, and crashing, is just worth it.
+This does not really slow the interpreter down much, because interpreting high level code is relatively slow, and the primitives are comparatively as fast as lightning, so adding a few extra instructions to primitives to check if there is room in a string, before blatting it, and crashing, is just worth it.
 
 I think the crashiness of FORTH is one of the things that put people off it, and made them prefer BASIC back in the day.
 
@@ -915,13 +917,13 @@ I think the crashiness of FORTH is one of the things that put people off it, and
 
 I really like the FORTHS that bootstrap from a dozen compiled words, and then implement everything in FORTH code, they are elegant and concise.
 
-I loved the FIG forth that arrived as printout, that you could type into a machine code monitor in HEX and then debug the IO for your 8 bit system.
+I loved the FIG forth that arrived as printout, that you could type into a machine code monitor in HEX and then debug the I/O for your 8 bit system.
 
 The meta compiled self-hosting FORTHS are amazing. 
  
 I like and enjoy most of the different FORTHS out there, commercial and non commercial.
 
-It is nice when a language is straightforward enough that *anyone* can write a simple version of it, and most fun of all, you can write FORTH (and its interpreter) interactively and iteratively one feature at a time, always have something that works, and builds on itself over time.
+It is nice when a language is straightforward enough that *anyone* can write a simple version of it, and most fun of all, you can write a FORTH (and its interpreter) interactively and iteratively one feature at a time, so you always have something that works, and builds on itself over time.
 
 
 ### Performance
@@ -938,7 +940,9 @@ It is a simple interpreter but FORTH is also a simple language.
 
 There are commercial FORTH compilers that generate code that is closer in speed to optimized machine code.
 
-There was a brief time on 8 bit systems when FORTH could claim to be faster than the dumb non optimizing C compilers available, that is not the case now. 
+There was a brief time on 8 bit systems when FORTH could claim to be faster than the dumb non optimizing C compilers available at that time, that is not the case now. 
+
+It is also not likely that simple assembler code is faster than C, although it should be smaller.
 
  
 ### C integration
@@ -950,11 +954,11 @@ C functions can be used in FORTH primitives.
 - Using only system calls would be limiting even in the terminal.
 
 
-Writing C code is not always simpler than writing asm, C code is often faster, that is just a fact, the C compiler is very good.
+Writing C code is not always simpler than writing asm, C code is often faster, that is just a fact, the modern C compiler is very good.
 
 Balanced against that, optimized C makes heavy use of all of the machines registers, so we have to preserve lots of registers that FORTH uses whenever we call into C, these are wide 64bit registers, stacking and unstacking them uses up memory bandwidth.
 
-So as a rule we want to use C code when we need to, and when the function does significant useful work, and we want to stay in the FORTH programs world most of the time to avoid that call overhead.
+So as a rule we want to use C code when we need to, and when the function does significant useful work, and we want to stay in the FORTH  world most of the time to avoid that call overhead.
 
 
 If code is sufficiently simple, or at odds with the C compilers model of the machine, it can still be faster to write it in assembler.
@@ -977,8 +981,12 @@ As many of the base primitive words as possible should be written in asm.
 
 The faster the base primitives are, the more FORTH you can reasonably write using them.
 
-The less FORTH your write when implementing FORTH the better the implementation will be at running FORTH, well maybe.
 
+Since this is an interpreter, The less FORTH used when implementing FORTH the better the implementation will be at running FORTH.
+
+This is not the case if your FORTH is an optimizing compiler, in that case the more of FORTH is written in FORTH, the better.
+
+Honestly most implementations of FORTH I have seen, are not written in FORTH.
 
 
 
@@ -992,7 +1000,7 @@ This interactivity is what makes it fun (in my experience.)
 
 I started this in November 2021, with a reasonable recollection of how FORTH works, no experience with AARCH64 (although I do like ARM32) and a blank screen in Visual Code.
 
-I have not based this on any particular FORTH design template, so it has some original ideas, for good or ill, although it is essentially the same.
+I have not based this on any particular FORTH design template, so it may have some original ideas, for good or ill, although it is essentially the same.
 
 I wanted to get some practice in with the ARM64 so I wrote this in assembler,  FORTH is allegedly written in FORTH normally, but hardly ever in practice.
 
@@ -1042,7 +1050,7 @@ In this implementation a compiled word is just a list of tokens.
 
 The PRIM RUN for a compiled word, is the address of an interpreter that knows how to handle the list of tokens.
 
-1373 happens to be the TOKEN for DUP at the moment.
+1373 happens to be the TOKEN for DUP at that moment.
 
 ```FORTH
 ` DUP NTH .
@@ -1065,9 +1073,9 @@ The FORTH compiler is very simple and small and can be built up over time; becau
 
 Although this implementation only uses native code primitive words in the compiler, the overall pattern is the same as other FORTH versions, words are expected to help compile themselves.
 
-The computer only runs machine code, so something has to run the token 'compiled' code, everything a computer runs is machine code, and anything else is just data.
+A computer only runs machine code, so something has to run the token 'compiled' code, everything a computer runs is machine code, and anything else is just data.
 
-The fucntion that runs the token code is the *inner interpreter*, given wa list of TOKENS its only job is to find the machine code for each one, and call it.
+The function that runs the token code is the *inner interpreter*, given a list of TOKENS its only job is to find the machine code for each one, and then call it.
 
 There are many ways to implement this, I settled on something simple:-
 
@@ -1123,7 +1131,7 @@ SEE WORD :4374851456 IF
       48 :IF          		NAME
 ```
 
-IF seen here has no tokens or data, it has a PRIM run and PRIM comp.
+IF seen here has no tokens or data, it has a PRIM run and PRIM comp function.
 
 At the OK prompt type IF.
 
@@ -1292,7 +1300,7 @@ All the round bracketed words are at a fixed position in the dictionary, the com
 
 The compiler itself has no idea what an IF statement, a DO .. LOOP or a BEGIN .. UNTIL loop actually are.
 
-The compiler just knows that it needs to call any compile time functions when it finds them in a word, and the words all work together take care of themselves.
+The compiler just knows that it needs to call any compile time functions when it finds them in a word, and the words all work together to take care of themselves.
 
 **What is the compiler?**
 
@@ -1438,7 +1446,7 @@ ten is now 10.
 Using ALIAS a single word (or number) is aliased with a new name.
 You can UNALIAS ten and ten will be undefined again.
 
-ALIAS is just a *magic trick* that provides a new additional name for an existing word.
+ALIAS is just a *magic trick* in the interpeter that provides a new additional name for an existing word.
 
 It does not create anything real in the dictionary and can not be used with a string literal for example.
 
@@ -1706,7 +1714,7 @@ Used to set all the elements in an ARRAY to a value.
 
 A dangerouse but fast memory block filling word.
 A potential hazard.
-Copyrighted by ARM, Released as BSD licensed so at least no one will be sued when they accidentally write the same nice but still obvious code.
+Code was Copyrighted by ARM, Released as BSD licensed so at least no one will be sued when they accidentally write the same nice but still (I suspect) obvious code.
 
 **FREE**
 
@@ -1720,12 +1728,13 @@ f<> f= f>=0 f<0 f<= f>= f< f> f. f+ f- f* f/ fsqrt fneg fabs s>f f>s
 
 Mainly the ARM floating point instructions.
 
-These use the same stack, there is no floating point stack, and no set of floating point stack words, I do not see the point in a seperare stack for floats.
+These use the same stack, there is no floating point stack, and no set of floating point stack words, I do not see the point in a separate stack for floats.
 
 
 **FFIB** 
 
-Machine code FIB.
+A Machine code FIB for comparison.
+
 
 **FORGET** 
 
@@ -1747,7 +1756,7 @@ If you just want to *change an existing word*, consider redefining the word with
 
 Caution
 
-If you forget a word that other words use, they will fail, and even stranger things will happen when another word gets created in the slot it used to have.
+If you forget a word that other words use, they will fail, and even stranger things may happen if another word gets created in the slot it used to have.
 
 
 **FINAL^** 
@@ -1818,7 +1827,7 @@ Hazardous.
 
 Sets the current value of the instruction pointer.
 May be useful when debugging a word.
-Hazardous
+Hazardous. tricky.
 
 **IP+**
 Hazardous
@@ -1899,7 +1908,7 @@ You can **LEAVE** a LOOP and continue where LOOP ends, but only once.
 
 LIMITED word
 
-Limits the steps a word can take, used to step through a word, while you attempt to understand how logic let you down again.
+Limits the steps a word can take, used to step through a word, while you attempt to understand how your own logic let you down again.
 
 See the (not yet written) debugging section above.
 
@@ -2086,7 +2095,7 @@ Points to the running words dictionary slot.
 
 **SYSTEM**
 
-Issues a system command
+Issues a system command from a string.
 
 ' ls -l ' SYSTEM 
 
@@ -2106,7 +2115,7 @@ e.g. 10 +TO thing
 
 **TIMEIT**
 
-TIMEIT *word*, displays a words runtime.
+TIMEIT *word*, displays a words run time.
 
 That is it displays how long a word takes to run.
 
